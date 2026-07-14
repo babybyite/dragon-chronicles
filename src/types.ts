@@ -16,8 +16,25 @@ export type StatBlock = {
 
 export type Gender = "female" | "male" | "nonbinary";
 export type LifeStatus = "alive" | "missing" | "dead";
-export type RelationshipKind = "kin" | "friend" | "rival" | "lover" | "spouse" | "liege" | "vassal" | "mentor" | "enemy";
+export type RelationshipKind = "kin" | "friend" | "rival" | "lover" | "spouse" | "liege" | "vassal" | "mentor" | "enemy" | "ward";
 export type PoliticalRank = "wanderer" | "courtier" | "knight" | "lord" | "high_lord" | "royal" | "sovereign";
+export type BirthStatus = "royal" | "noble" | "bastard" | "commoner";
+export type Origin = "northlands" | "southern_isles" | "eastern_courts" | "western_marches" | "steppe" | "deep_cities";
+
+export type Appearance = {
+  hairStyle: string;
+  hairColor: string;
+  faceTrait: string;
+  clothing: string;
+  clothColor: string;
+};
+
+export type VitalTrack = {
+  health: number;
+  happiness: number;
+  strength: number;
+  honor: number;
+};
 
 export type Trait = {
   id: string;
@@ -54,8 +71,13 @@ export type Character = {
   gender: Gender;
   bornYear: Year;
   deathYear?: Year;
+  causeOfDeath?: string;
   status: LifeStatus;
   rank: PoliticalRank;
+  birthStatus?: BirthStatus;
+  origin?: Origin;
+  appearance?: Appearance;
+  vitals?: VitalTrack;
   bloodlineId: Id;
   parentIds: Id[];
   spouseIds: Id[];
@@ -66,6 +88,20 @@ export type Character = {
   inventoryIds: Id[];
   gold: number;
   secrets: string[];
+  dragonId?: Id;
+  wardOfId?: Id;
+};
+
+export type Dragon = {
+  id: Id;
+  name: string;
+  riderId?: Id;
+  bornYear: Year;
+  status: LifeStatus;
+  trust: number;
+  ferocity: number;
+  color: string;
+  temperament: "gentle" | "proud" | "wild" | "brooding" | "playful" | "cruel";
 };
 
 export type Family = {
@@ -189,12 +225,38 @@ export type DialogueLine = {
   mood: "warm" | "cold" | "scheming" | "afraid" | "furious" | "solemn" | "playful";
 };
 
+export type ChronicleYearLog = {
+  year: Year;
+  lines: string[];
+  actionsUsed: number;
+};
+
+export type Milestone = {
+  id: Id;
+  title: string;
+  year: Year;
+  characterId?: Id;
+};
+
+export type LifeSummary = {
+  id: Id;
+  characterId: Id;
+  name: string;
+  ageAtDeath: number;
+  causeOfDeath: string;
+  generations: number;
+  yearsLived: number;
+  throneYears: number;
+  text: string;
+};
+
 export type GameWorld = {
   schemaVersion: number;
   seed: string;
   year: Year;
   playerCharacterId: Id;
   characters: Record<Id, Character>;
+  dragons: Record<Id, Dragon>;
   bloodlines: Record<Id, Bloodline>;
   families: Record<Id, Family>;
   relationships: Record<Id, Relationship>;
@@ -204,6 +266,11 @@ export type GameWorld = {
   quests: Record<Id, Quest>;
   items: Record<Id, Item>;
   eventLog: GameEvent[];
+  yearLog: ChronicleYearLog[];
+  milestones: Milestone[];
+  summaries: LifeSummary[];
+  generations: number;
+  finished: boolean;
   flags: Record<string, unknown>;
 };
 
