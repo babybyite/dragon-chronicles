@@ -97,4 +97,15 @@ npm run typecheck
 npm run build
 ```
 
+## Test The Core
+
+This is not a playable mobile build yet, but the simulation core has a smoke test:
+
+```bash
+npm install
+npm run smoke
+```
+
+The smoke test creates a dynasty, visits the throne room, talks to an NPC, attempts a dragon claim, advances one year, and serializes a save file.
+
 This repo currently contains the core library only. The next layer should be a mobile prototype that renders characters, events, family trees, and choices from this state.
