@@ -1,6 +1,6 @@
 import type { Character, Dragon, GameWorld, Id, RelationshipKind } from "./types.js";
 import type { Rng } from "./rng.js";
-import { clamp, id } from "./rng.js";
+import { clamp, createRng, id } from "./rng.js";
 import { createCharacter } from "./characters.js";
 import { linkChild } from "./families.js";
 import { createMarriage } from "./relationships.js";
@@ -342,18 +342,5 @@ function replaceCharacter(world: GameWorld, character: Character): GameWorld {
 }
 
 function worldRng(world: GameWorld, label: string): Rng {
-  const seed = `${world.seed}:${label}:${world.year}:${world.eventLog.length}:${world.yearLog.length}`;
-  return {
-    ...worldSeedRng(seed),
-    seed
-  };
-}
-
-function worldSeedRng(seed: string): Rng {
-  // Dynamic import would make this awkward for consumers; keep the helper local by requiring caller-facing rng only at module scope.
-  const state = { rng: undefined as Rng | undefined };
-  if (!state.rng) {
-    throw new Error("worldSeedRng placeholder should be replaced by createRng during build.");
-  }
-  return state.rng;
+  return createRng(`${world.seed}:${label}:${world.year}:${world.eventLog.length}:${world.yearLog.length}`);
 }
