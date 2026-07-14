@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 type ThemeName = "dark" | "pastel";
-type Screen = "menu" | "builder1" | "builder2" | "chronicle" | "load" | "past" | "settings" | "family" | "relationships" | "possessions";
+type Screen = "menu" | "builder1" | "builder2" | "chronicle" | "load" | "past" | "settings" | "family" | "relationships" | "possessions" | "paper";
 type BirthStatus = "Royal" | "Noble" | "Bastard" | "Commoner";
 type Sex = "Female" | "Male";
 
@@ -45,6 +45,8 @@ type Person = {
   spouseId?: string;
   isWard?: boolean;
   isFullSibling?: boolean;
+  royalTitle?: "Ruling King" | "Ruling Queen";
+  successionRank?: number;
   visibleBastardSigns?: boolean;
   memory?: string[];
   alive: boolean;
@@ -67,6 +69,8 @@ type Relation = {
   spouseId?: string;
   isWard?: boolean;
   isFullSibling?: boolean;
+  royalTitle?: "Ruling King" | "Ruling Queen";
+  successionRank?: number;
   familyPersonId?: string;
   visibleBastardSigns?: boolean;
   actionUses: Record<string, number>;
@@ -105,12 +109,15 @@ type Story = {
     causeOfDeath?: string;
   };
   family: Person[];
+  royalFamily: Person[];
   relations: Relation[];
   currentYear: number;
   yearLog: { year: number; lines: string[] }[];
   placeUses: Record<string, number>;
   milestones: { id: string; title: string; year: number }[];
   pendingBirth?: PendingBirth | null;
+  outerPolitics: string[];
+  innerPolitics: string[];
   finished: boolean;
   summary?: string;
 };
@@ -125,6 +132,7 @@ const themes = {
     accent: "#b5122b",
     line: "#4f4f59",
     silver: "#c4c7cc",
+    gold: "#f0c45c",
     good: "#9fb29b",
     warning: "#d6a84b"
   },
@@ -137,6 +145,7 @@ const themes = {
     accent: "#c7839d",
     line: "#d9d0dc",
     silver: "#a8aab3",
+    gold: "#b9932f",
     good: "#9aad92",
     warning: "#b99354"
   }
@@ -149,6 +158,7 @@ const menuBackgrounds = {
 
 const firstNames = ["Aelira", "Mirelle", "Vaessa", "Rowan", "Lucian", "Dorian", "Veyr", "Sable", "Corenna", "Tavik"];
 const childNames = ["Elian", "Mara", "Neris", "Orren", "Lysa", "Theo", "Asha", "Rook", "Selene", "Bryn"];
+const extraNames = ["Ilyra", "Cassian", "Maelor", "Nyra", "Edric", "Rhaen", "Tamsin", "Gareth", "Yselle", "Kael", "Nadia", "Osric", "Helena", "Jory", "Maric", "Evara", "Tristan", "Liora"];
 const familyNames = ["Duskblade", "Ashcroft", "Ravenshade", "Embermere", "Wintermere", "Crownfall"];
 const bloodlines = ["Child of Atlantis", "Wolf Cub", "Witch Blood", "Common Blood"];
 const origins = ["Northlands", "Southern Isles", "Eastern Courts", "Western Marches", "Steppe", "Deep Cities"];
@@ -221,6 +231,62 @@ function roll(chance: number): boolean {
   return Math.random() < chance;
 }
 
+function fullName(person: { firstName: string; familyName: string }): string {
+  return `${person.firstName} ${person.familyName}`;
+}
+
+function uniqueNameFor(familyName: string, usedNames: Set<string>, preferred?: string): string {
+  const candidates = [preferred, ...firstNames, ...childNames, ...extraNames].filter((name): name is string => Boolean(name));
+  const found = candidates.find((name) => !usedNames.has(`${name} ${familyName}`.toLowerCase()));
+  if (found) {
+    usedNames.add(`${found} ${familyName}`.toLowerCase());
+    return found;
+  }
+  let suffix = 2;
+  while (usedNames.has(`${preferred ?? "Aeron"} ${suffix} ${familyName}`.toLowerCase())) suffix += 1;
+  const fallback = `${preferred ?? "Aeron"} ${suffix}`;
+  usedNames.add(`${fallback} ${familyName}`.toLowerCase());
+  return fallback;
+}
+
+function reserveExistingNames(people: Array<{ firstName: string; familyName: string }>): Set<string> {
+  return new Set(people.map((person) => fullName(person).toLowerCase()));
+}
+
+function usedNamesForStory(story: Story): Set<string> {
+  return reserveExistingNames([story.player, ...story.family, ...story.royalFamily, ...story.relations]);
+}
+
+function normalizeUniqueNames<T extends { firstName: string; familyName: string }>(items: T[], usedNames: Set<string>): T[] {
+  return items.map((item) => {
+    const key = fullName(item).toLowerCase();
+    if (!usedNames.has(key)) {
+      usedNames.add(key);
+      return item;
+    }
+    return { ...item, firstName: uniqueNameFor(item.familyName, usedNames, item.firstName) };
+  });
+}
+
+function normalizeNewRelationNames(relations: Relation[], usedNames: Set<string>): Relation[] {
+  return relations.map((relation) => {
+    if (relation.familyPersonId) return relation;
+    const key = fullName(relation).toLowerCase();
+    if (!usedNames.has(key)) {
+      usedNames.add(key);
+      return relation;
+    }
+    return { ...relation, firstName: uniqueNameFor(relation.familyName, usedNames, relation.firstName) };
+  });
+}
+
+function successionLabel(person: Person | Relation): string | null {
+  if (person.royalTitle) return person.royalTitle;
+  if (!person.successionRank) return null;
+  const suffix = person.successionRank === 1 ? "st" : person.successionRank === 2 ? "nd" : person.successionRank === 3 ? "rd" : "th";
+  return `${person.successionRank}${suffix} in line to the Throne`;
+}
+
 function makePerson(input: Partial<Person> & { relation: string; familyName: string; age: number }): Person {
   return {
     id: input.id ?? uid(),
@@ -235,6 +301,8 @@ function makePerson(input: Partial<Person> & { relation: string; familyName: str
     spouseId: input.spouseId,
     isWard: input.isWard,
     isFullSibling: input.isFullSibling,
+    royalTitle: input.royalTitle,
+    successionRank: input.successionRank,
     visibleBastardSigns: input.visibleBastardSigns,
     memory: input.memory ?? [],
     alive: input.alive ?? true
@@ -258,6 +326,8 @@ function relationFromPerson(person: Person): Relation {
     spouseId: person.spouseId,
     isWard: person.isWard,
     isFullSibling: person.isFullSibling,
+    royalTitle: person.royalTitle,
+    successionRank: person.successionRank,
     familyPersonId: person.id,
     visibleBastardSigns: person.visibleBastardSigns,
     actionUses: {},
@@ -343,7 +413,92 @@ function buildStartingFamily(player: Story["player"]): Person[] {
     bloodline: pick([player.bloodline, "Common Blood"]),
     parentIds: [auntOrUncle.id]
   });
-  return [paternalGrandfather, paternalGrandmother, mother, father, sibling, auntOrUncle, cousin];
+  const coreFamily = [mother, father, sibling];
+  const optionalFamily = [paternalGrandfather, paternalGrandmother, auntOrUncle, cousin].filter(() => roll(0.72));
+  if (player.birthStatus === "Bastard" && roll(0.62)) {
+    const marriedParent = pick([father, mother]);
+    const spouse = makePerson({
+      relation: marriedParent.relation === "Father" ? "Father's Spouse" : "Mother's Spouse",
+      familyName: marriedParent.familyName,
+      sex: marriedParent.sex === "Male" ? "Female" : "Male",
+      age: clamp(marriedParent.age + rand(-10, 8), player.age + 14, 92),
+      birthStatus: marriedParent.birthStatus,
+      bloodline: pick([marriedParent.bloodline, "Common Blood"])
+    });
+    marriedParent.spouseId = spouse.id;
+    spouse.spouseId = marriedParent.id;
+    optionalFamily.push(spouse);
+  }
+  return [...coreFamily, ...optionalFamily].slice(0, 10);
+}
+
+function buildRoyalFamily(player: Story["player"], family: Person[], usedNames: Set<string>): { family: Person[]; royalFamily: Person[] } {
+  if (player.birthStatus === "Royal") {
+    const updatedFamily = family.map((person) => {
+      if (person.relation === "Father") return { ...person, birthStatus: "Royal" as BirthStatus, royalTitle: "Ruling King" as const };
+      if (person.relation === "Mother") return { ...person, birthStatus: "Royal" as BirthStatus, royalTitle: "Ruling Queen" as const };
+      if (person.relation === "Sibling") return { ...person, birthStatus: "Royal" as BirthStatus, successionRank: 2 };
+      return person.birthStatus === "Commoner" ? person : { ...person, birthStatus: person.birthStatus === "Bastard" ? person.birthStatus : "Royal" as BirthStatus };
+    });
+    const playerAsRoyal = makePerson({
+      id: player.id,
+      firstName: player.firstName,
+      familyName: player.familyName,
+      sex: player.sex,
+      relation: "You",
+      age: player.age,
+      birthStatus: "Royal",
+      bloodline: player.bloodline,
+      parentIds: updatedFamily.filter((person) => person.relation === "Mother" || person.relation === "Father").map((person) => person.id),
+      successionRank: 1
+    });
+    return { family: updatedFamily, royalFamily: [playerAsRoyal, ...updatedFamily.filter((person) => person.birthStatus === "Royal")] };
+  }
+
+  const royalHouse = "Crownfall";
+  const king = makePerson({
+    firstName: uniqueNameFor(royalHouse, usedNames, pick(firstNames)),
+    familyName: royalHouse,
+    relation: "King",
+    sex: "Male",
+    age: rand(36, 74),
+    birthStatus: "Royal",
+    bloodline: pick(["Child of Atlantis", "Witch Blood", "Common Blood"]),
+    royalTitle: "Ruling King"
+  });
+  const queen = makePerson({
+    firstName: uniqueNameFor(royalHouse, usedNames, pick(firstNames)),
+    familyName: royalHouse,
+    relation: "Queen",
+    sex: "Female",
+    age: clamp(king.age + rand(-14, 8), 24, 82),
+    birthStatus: "Royal",
+    bloodline: pick(["Child of Atlantis", "Witch Blood", "Common Blood"]),
+    royalTitle: "Ruling Queen",
+    spouseId: king.id
+  });
+  king.spouseId = queen.id;
+  const heir = makePerson({
+    firstName: uniqueNameFor(royalHouse, usedNames, pick(firstNames)),
+    familyName: royalHouse,
+    relation: "Heir",
+    age: rand(14, 36),
+    birthStatus: "Royal",
+    bloodline: pick([king.bloodline, queen.bloodline]),
+    parentIds: [king.id, queen.id],
+    successionRank: 1
+  });
+  const spare = makePerson({
+    firstName: uniqueNameFor(royalHouse, usedNames, pick(firstNames)),
+    familyName: royalHouse,
+    relation: "Royal Spare",
+    age: clamp(heir.age + rand(-8, 8), 0, 40),
+    birthStatus: "Royal",
+    bloodline: pick([king.bloodline, queen.bloodline]),
+    parentIds: [king.id, queen.id],
+    successionRank: 2
+  });
+  return { family, royalFamily: [king, queen, heir, spare] };
 }
 
 function createKnownRelation(input: Partial<Relation> & { relation: string; age: number; birthStatus: BirthStatus }): Relation {
@@ -364,6 +519,8 @@ function createKnownRelation(input: Partial<Relation> & { relation: string; age:
     spouseId: input.spouseId,
     isWard: input.isWard,
     isFullSibling: input.isFullSibling,
+    royalTitle: input.royalTitle,
+    successionRank: input.successionRank,
     familyPersonId: input.familyPersonId,
     visibleBastardSigns: input.visibleBastardSigns,
     actionUses: input.actionUses ?? {},
@@ -547,11 +704,14 @@ export default function App() {
   function startStory() {
     const visibleBastardSigns = draft.birthStatus === "Bastard" && roll(draft.bloodline === "Common Blood" ? 0.35 : 0.58);
     const legitimacyDoubt = draft.birthStatus === "Bastard" ? rand(25, 70) + (visibleBastardSigns ? 18 : 0) : 0;
+    const usedNames = new Set<string>();
+    const playerFamilyName = draft.familyName.trim() || pick(familyNames);
+    const playerFirstName = uniqueNameFor(playerFamilyName, usedNames, draft.firstName.trim() || pick(firstNames));
     const player = {
       ...draft,
       id: uid(),
-      firstName: draft.firstName.trim() || pick(firstNames),
-      familyName: draft.familyName.trim() || pick(familyNames),
+      firstName: playerFirstName,
+      familyName: playerFamilyName,
       age: draft.startAge,
       alive: true,
       health: 70,
@@ -565,8 +725,11 @@ export default function App() {
       fertility: rand(38, 78) + (draft.bloodline === "Witch Blood" || draft.bloodline === "Child of Atlantis" ? 8 : 0),
       memory: []
     };
-    const family = buildStartingFamily(player);
-    const relations = buildStartingRelations(player, family);
+    const startingFamily = normalizeUniqueNames(buildStartingFamily(player), usedNames);
+    const royalBuild = buildRoyalFamily(player, startingFamily, usedNames);
+    const family = royalBuild.family;
+    const royalFamily = royalBuild.royalFamily;
+    const relations = normalizeNewRelationNames(buildStartingRelations(player, family), usedNames);
     const firstLines = [
       `${player.firstName} ${player.familyName} began this year as ${articleFor(player.birthStatus)} ${player.birthStatus.toLowerCase()} of ${player.bloodline}, dressed in ${player.clothColor.toLowerCase()} ${player.clothing.toLowerCase()}.`,
       player.birthStatus === "Bastard"
@@ -578,6 +741,7 @@ export default function App() {
       title: `${player.familyName} Chronicle`,
       player,
       family,
+      royalFamily,
       relations,
       currentYear: player.age,
       yearLog: [
@@ -589,6 +753,14 @@ export default function App() {
       placeUses: {},
       milestones: [],
       pendingBirth: null,
+      outerPolitics: [
+        "The Marcher princes test the border roads with patrols and polite letters.",
+        "Merchants report higher tariffs at the southern ports."
+      ],
+      innerPolitics: [
+        "The court watches the royal succession closely.",
+        "Servants whisper that one council seat may soon change hands."
+      ],
       finished: false
     };
     setStories((current) => [story, ...current]);
@@ -619,7 +791,7 @@ export default function App() {
     }
 
     const encounter = Math.random() < encounterChance(activeStory.player.birthStatus, place);
-    const newRelation = encounter ? createRelationFromPlace(activeStory, place) : null;
+    const newRelation = encounter ? normalizeNewRelationNames([createRelationFromPlace(activeStory, place)], usedNamesForStory(activeStory))[0] : null;
     const line = describePlaceVisit(activeStory, place, used + 1, newRelation);
 
     patchActive((story) => ({
@@ -851,18 +1023,25 @@ export default function App() {
       });
       const backgroundLines = relationUpdates.map((item) => item.line).filter((line): line is string => Boolean(line)).slice(0, 5);
       const lines = player.alive ? [opening, ...backgroundLines] : [opening, ...backgroundLines, `${player.firstName} died of ${player.causeOfDeath}. The chronicle falls silent for now.`];
+      const familyUpdates = story.family.map((person) => {
+        const matchingRelation = relationUpdates.find((item) => item.relation.familyPersonId === person.id || item.relation.id === person.id)?.relation;
+        return {
+          ...person,
+          age: person.alive ? person.age + 1 : person.age,
+          alive: matchingRelation ? matchingRelation.alive : person.alive,
+          memory: matchingRelation ? matchingRelation.memory : person.memory
+        };
+      });
       return {
         ...story,
         currentYear: nextYear,
         player,
-        family: story.family.map((person) => {
-          const matchingRelation = relationUpdates.find((item) => item.relation.familyPersonId === person.id || item.relation.id === person.id)?.relation;
-          return {
-            ...person,
-            age: person.alive ? person.age + 1 : person.age,
-            alive: matchingRelation ? matchingRelation.alive : person.alive,
-            memory: matchingRelation ? matchingRelation.memory : person.memory
-          };
+        family: familyUpdates,
+        royalFamily: story.royalFamily.map((person) => {
+          if (person.id === story.player.id) return { ...person, age: player.age, alive: player.alive };
+          const matchingFamily = familyUpdates.find((familyPerson) => familyPerson.id === person.id);
+          if (matchingFamily) return { ...person, age: matchingFamily.age, alive: matchingFamily.alive };
+          return { ...person, age: person.alive ? person.age + 1 : person.age };
         }),
         relations: relationUpdates.map((item) => item.relation),
         placeUses: {},
@@ -883,9 +1062,10 @@ export default function App() {
     const pending = activeStory.pendingBirth;
     patchActive((story) => {
       const otherParent = pending.parentRelationId ? story.relations.find((relation) => relation.id === pending.parentRelationId) : undefined;
+      const usedNames = usedNamesForStory(story);
       const babies = Array.from({ length: pending.babyCount }, (_, index) =>
         makePerson({
-          firstName: babyNames[index]?.trim() || pending.defaultNames[index] || pick(childNames),
+          firstName: uniqueNameFor(story.player.familyName, usedNames, babyNames[index]?.trim() || pending.defaultNames[index] || pick(childNames)),
           familyName: story.player.familyName,
           sex: pending.babySexes[index],
           age: 0,
@@ -1025,17 +1205,20 @@ export default function App() {
 
   function nameById(id?: string): string | null {
     if (!id || !activeStory) return null;
-    if (id === activeStory.player.id) return activeStory.player.firstName;
+    if (id === activeStory.player.id) return fullName(activeStory.player);
     const familyPerson = activeStory.family.find((person) => person.id === id);
-    if (familyPerson) return familyPerson.firstName;
+    if (familyPerson) return fullName(familyPerson);
+    const royalPerson = activeStory.royalFamily.find((person) => person.id === id);
+    if (royalPerson) return fullName(royalPerson);
     const relation = activeStory.relations.find((candidate) => candidate.id === id);
-    return relation ? relation.firstName : null;
+    return relation ? fullName(relation) : null;
   }
 
   function marriageText(person: Person): string | null {
     const spouseName = nameById(person.spouseId);
     if (spouseName) return `Married to ${spouseName}`;
-    if ((person.relation === "Mother" || person.relation === "Father") && activeStory?.player.birthStatus === "Bastard") return "Not married to co-parent";
+    if ((person.relation === "Mother" || person.relation === "Father") && activeStory?.player.birthStatus === "Bastard") return person.age >= 14 ? "Not married; not married to co-parent" : "Not married to co-parent";
+    if (person.age >= 14) return "Not married";
     return null;
   }
 
@@ -1127,6 +1310,7 @@ export default function App() {
           <Button small label="Family Tree" onPress={() => setScreen("family")} />
           <Button small label="Relationships" onPress={() => setScreen("relationships")} />
           <Button small label="Possessions" onPress={() => setScreen("possessions")} />
+          <Button small label="Daily Paper" onPress={() => setScreen("paper")} />
           {["Bastard", "Commoner"].includes(activeStory.player.birthStatus) ? <Button small label="Labour" onPress={labour} disabled={activeStory.finished} /> : null}
           <Button small label="Age Up" onPress={ageUp} disabled={activeStory.finished} />
         </View>
@@ -1180,6 +1364,42 @@ export default function App() {
               </View>
             </View>
           ))}
+        </Card>
+        <Button label="Back" onPress={() => setScreen("chronicle")} />
+      </Shell>
+    );
+  }
+
+  if (screen === "paper" && activeStory) {
+    const rulers = activeStory.royalFamily.filter((person) => person.royalTitle);
+    const heirs = activeStory.royalFamily.filter((person) => person.successionRank).sort((a, b) => (a.successionRank ?? 99) - (b.successionRank ?? 99));
+    return (
+      <Shell>
+        <View style={styles.rowBetween}>
+          <Text style={[styles.titleSmall, { color: C.text }]}>Daily Paper</Text>
+          <Button small label="Back" onPress={() => setScreen("chronicle")} />
+        </View>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Royal Family Tree</Text>
+          <View style={styles.treeRow}>
+            {rulers.map((person) => <TreeNode key={person.id} person={person} />)}
+          </View>
+          {heirs.length > 0 ? (
+            <>
+              <Text style={[styles.treeLine, { color: C.dim }]}>|</Text>
+              <View style={styles.treeRow}>
+                {heirs.map((person) => <TreeNode key={person.id} person={person} />)}
+              </View>
+            </>
+          ) : null}
+        </Card>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Outer Politics</Text>
+          {activeStory.outerPolitics.map((line) => <Text key={line} style={[styles.body, { color: C.text }]}>{line}</Text>)}
+        </Card>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Inner Politics</Text>
+          {activeStory.innerPolitics.map((line) => <Text key={line} style={[styles.body, { color: C.text }]}>{line}</Text>)}
         </Card>
         <Button label="Back" onPress={() => setScreen("chronicle")} />
       </Shell>
@@ -1258,11 +1478,13 @@ export default function App() {
 
   function TreeNode({ person, highlight = false }: { person: Person; highlight?: boolean }) {
     const married = marriageText(person);
+    const royalLabel = successionLabel(person);
     return (
       <View style={[styles.treeNode, { backgroundColor: highlight ? C.accent : C.panel, borderColor: highlight ? C.accent : C.line }]}>
         <Text style={[styles.treeNodeName, { color: "#fff" }]}>{person.firstName} {person.familyName}</Text>
         <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.relation} - {person.sex} - age {person.age}</Text>
         <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.birthStatus} - {person.bloodline}</Text>
+        {royalLabel ? <Text style={{ color: C.gold, fontWeight: "800" }}>{royalLabel}</Text> : null}
         {married ? <Text style={{ color: highlight ? "#fff" : C.warning }}>{married}</Text> : null}
       </View>
     );
@@ -1282,7 +1504,9 @@ export default function App() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.heading, { color: C.text }]}>{relation.firstName} {relation.familyName}</Text>
                 <Text style={{ color: C.dim }}>{relation.relation} - {relation.sex} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
-                {relation.spouseId ? <Text style={{ color: C.warning }}>{relation.spouseId === activeStory.player.id ? "Married to you" : `Married to ${nameById(relation.spouseId) ?? "someone"}`}</Text> : null}
+                {successionLabel(relation) ? <Text style={{ color: C.gold, fontWeight: "800" }}>{successionLabel(relation)}</Text> : null}
+                {relation.spouseId ? <Text style={{ color: C.warning }}>{relation.spouseId === activeStory.player.id ? `Married to ${fullName(activeStory.player)} (you)` : `Married to ${nameById(relation.spouseId) ?? "someone"}`}</Text> : null}
+                {!relation.spouseId && relation.age >= 14 ? <Text style={{ color: C.warning }}>Not married</Text> : null}
                 {!relation.spouseId && (relation.relation === "Mother" || relation.relation === "Father") && activeStory.player.birthStatus === "Bastard" ? <Text style={{ color: C.warning }}>Not married to co-parent</Text> : null}
                 {relation.isWard ? <Text style={{ color: C.warning }}>Ward - not romanceable</Text> : null}
                 {!relation.alive ? <Text style={{ color: C.warning }}>Dead</Text> : null}
