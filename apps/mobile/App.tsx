@@ -435,6 +435,10 @@ function isRomanceEligible(story: Story, relation: Relation): boolean {
   return story.player.age >= 14 && relation.age >= 14 && relation.alive && !isCloseFamily(relation);
 }
 
+function isOppositeSex(story: Story, relation: Relation): boolean {
+  return story.player.sex !== relation.sex;
+}
+
 function availableRelationActions(story: Story, relation: Relation): string[] {
   const actions = ["Talk", "Drink Together", "Fight", "Try to Learn Secret", "Form Alliance"];
   const canConvinceLegitimacy =
@@ -446,7 +450,7 @@ function availableRelationActions(story: Story, relation: Relation): string[] {
   if (canConvinceLegitimacy) actions.push("Convince of Legitimacy");
   if (isRomanceEligible(story, relation)) {
     actions.push("Give Rose");
-    if (!story.player.spouseId && !relation.spouseId) actions.push("Propose Marriage");
+    if (isOppositeSex(story, relation) && !story.player.spouseId && !relation.spouseId) actions.push("Propose Marriage");
     if (story.player.sex === "Female" || relation.spouseId === story.player.id) actions.push("Lay With");
   }
   if (story.player.age >= 24 && relation.age <= 12 && !relation.isWard) actions.push("Take Ward");
@@ -456,6 +460,7 @@ function availableRelationActions(story: Story, relation: Relation): string[] {
 
 function mayCreateChild(story: Story, relation: Relation): boolean {
   if (story.player.age < 14 || relation.age < 14) return false;
+  if (!isOppositeSex(story, relation)) return false;
   if (story.player.sex === "Male" && relation.spouseId !== story.player.id) return false;
   const motherAge = story.player.sex === "Female" ? story.player.age : relation.age;
   if (motherAge > 48) return roll(0.01);
@@ -717,6 +722,10 @@ export default function App() {
       delta.honor = 4;
       line = `${activeStory.player.firstName} pressed ${relation.firstName} to see the blood, not the insult. The claim sounded ${activeStory.player.visibleBastardSigns ? "dangerous because it was visible" : "carefully plausible"}.`;
     } else if (action === "Propose Marriage") {
+      if (!isOppositeSex(activeStory, relation)) {
+        addLine(`${activeStory.player.firstName} cannot initiate marriage with ${relation.firstName}; marriage is limited to male and female pairs in this prototype.`);
+        return;
+      }
       const acceptance = relation.trust + relation.romance + activeStory.player.honor - relation.resentment + rand(-20, 25);
       if (acceptance >= 95 && !activeStory.player.spouseId && !relation.spouseId) {
         spouseId = relation.id;
@@ -995,7 +1004,7 @@ export default function App() {
           <Text style={styles.faceText}>{p.firstName.slice(0, 1)}</Text>
         </View>
         <Text style={[styles.portraitName, { color: C.text }]}>{p.firstName}</Text>
-        <Text style={[styles.portraitDetail, { color: C.dim }]}>{p.hairColor} - {p.faceTrait}</Text>
+        <Text style={[styles.portraitDetail, { color: C.dim }]}>{p.sex} - {p.hairColor} - {p.faceTrait}</Text>
       </View>
     );
   }
@@ -1104,6 +1113,7 @@ export default function App() {
         </View>
         <Card>
           <Text style={[styles.heading, { color: C.text }]}>{activeStory.player.firstName} {activeStory.player.familyName}</Text>
+          <Text style={{ color: C.dim }}>Sex: {activeStory.player.sex}</Text>
           <Text style={{ color: C.dim }}>{activeStory.player.birthStatus} - {activeStory.player.bloodline} - {activeStory.player.origin}</Text>
           <Text style={{ color: C.dim }}>{activeStory.player.clothColor} {activeStory.player.clothing} - {activeStory.player.faceTrait}</Text>
           <Text style={{ color: C.dim }}>Gold: {activeStory.player.gold}</Text>
@@ -1251,7 +1261,7 @@ export default function App() {
     return (
       <View style={[styles.treeNode, { backgroundColor: highlight ? C.accent : C.panel, borderColor: highlight ? C.accent : C.line }]}>
         <Text style={[styles.treeNodeName, { color: "#fff" }]}>{person.firstName} {person.familyName}</Text>
-        <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.relation} - age {person.age}</Text>
+        <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.relation} - {person.sex} - age {person.age}</Text>
         <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.birthStatus} - {person.bloodline}</Text>
         {married ? <Text style={{ color: highlight ? "#fff" : C.warning }}>{married}</Text> : null}
       </View>
@@ -1271,7 +1281,7 @@ export default function App() {
             <View style={styles.rowBetween}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.heading, { color: C.text }]}>{relation.firstName} {relation.familyName}</Text>
-                <Text style={{ color: C.dim }}>{relation.relation} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
+                <Text style={{ color: C.dim }}>{relation.relation} - {relation.sex} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
                 {relation.spouseId ? <Text style={{ color: C.warning }}>{relation.spouseId === activeStory.player.id ? "Married to you" : `Married to ${nameById(relation.spouseId) ?? "someone"}`}</Text> : null}
                 {!relation.spouseId && (relation.relation === "Mother" || relation.relation === "Father") && activeStory.player.birthStatus === "Bastard" ? <Text style={{ color: C.warning }}>Not married to co-parent</Text> : null}
                 {relation.isWard ? <Text style={{ color: C.warning }}>Ward - not romanceable</Text> : null}
@@ -1303,7 +1313,7 @@ export default function App() {
         {active.map((story) => (
           <Card key={story.id}>
             <Text style={[styles.heading, { color: C.text }]}>{story.title}</Text>
-            <Text style={{ color: C.dim }}>{story.player.firstName}, age {story.player.age}, year {story.currentYear}</Text>
+            <Text style={{ color: C.dim }}>{story.player.firstName}, {story.player.sex}, age {story.player.age}, year {story.currentYear}</Text>
             <Button small label="Open" onPress={() => { setActiveStoryId(story.id); setScreen("chronicle"); }} />
           </Card>
         ))}
