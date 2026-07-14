@@ -44,6 +44,7 @@ type Person = {
   parentIds: string[];
   spouseId?: string;
   isWard?: boolean;
+  isFullSibling?: boolean;
   visibleBastardSigns?: boolean;
   memory?: string[];
   alive: boolean;
@@ -65,6 +66,7 @@ type Relation = {
   alive: boolean;
   spouseId?: string;
   isWard?: boolean;
+  isFullSibling?: boolean;
   familyPersonId?: string;
   visibleBastardSigns?: boolean;
   actionUses: Record<string, number>;
@@ -178,10 +180,10 @@ const placesByStatus: Record<BirthStatus, string[]> = {
 const servantRelations = ["servant", "cook", "stable hand", "maid", "guard", "cupbearer", "scribe", "washer", "page"];
 const courtRelations = ["cousin", "courtier", "knight", "lady-in-waiting", "lordling", "royal cousin", "steward", "heir's companion", "political rival"];
 const possessionsByStatus: Record<BirthStatus, string[]> = {
-  Royal: ["signet ring", "state cloak", "jeweled dagger", "private chambers key", "two court outfits"],
-  Noble: ["house ring", "riding cloak", "court invitation", "fine boots"],
-  Bastard: ["worn family token", "travel cloak", "hidden letter", "serviceable dagger"],
-  Commoner: ["market purse", "needle kit", "sturdy boots", "blanket roll"]
+  Royal: ["signet ring", "state cloak", "jeweled dagger", "private chambers key", "court slippers", "silver comb", "sealed writ"],
+  Noble: ["house ring", "riding cloak", "court invitation", "fine boots", "embroidered gloves", "small dagger", "ledger of favors"],
+  Bastard: ["worn family token", "travel cloak", "hidden letter", "serviceable dagger", "patched boots", "plain purse", "old blanket"],
+  Commoner: ["market purse", "needle kit", "sturdy boots", "blanket roll", "work knife", "bread tin", "wooden charm"]
 };
 
 const initialDraft: CharacterDraft = {
@@ -232,6 +234,7 @@ function makePerson(input: Partial<Person> & { relation: string; familyName: str
     parentIds: input.parentIds ?? [],
     spouseId: input.spouseId,
     isWard: input.isWard,
+    isFullSibling: input.isFullSibling,
     visibleBastardSigns: input.visibleBastardSigns,
     memory: input.memory ?? [],
     alive: input.alive ?? true
@@ -254,6 +257,7 @@ function relationFromPerson(person: Person): Relation {
     resentment: 0,
     spouseId: person.spouseId,
     isWard: person.isWard,
+    isFullSibling: person.isFullSibling,
     familyPersonId: person.id,
     visibleBastardSigns: person.visibleBastardSigns,
     actionUses: {},
@@ -270,6 +274,24 @@ function buildStartingFamily(player: Story["player"]): Person[] {
   const motherStatus: BirthStatus =
     player.birthStatus === "Royal" ? pick<BirthStatus>(["Royal", "Noble"]) : player.birthStatus === "Noble" ? "Noble" : player.birthStatus === "Bastard" ? pick<BirthStatus>(["Commoner", "Commoner", "Noble", "Royal"]) : "Commoner";
   const nobleBastardMother = player.birthStatus === "Bastard" && (motherStatus === "Noble" || motherStatus === "Royal");
+  const paternalGrandfather = makePerson({
+    relation: "Grandfather",
+    familyName: player.familyName,
+    sex: "Male",
+    age: player.age + rand(48, 68),
+    birthStatus: fatherStatus,
+    bloodline: pick([player.bloodline, "Common Blood"])
+  });
+  const paternalGrandmother = makePerson({
+    relation: "Grandmother",
+    familyName: player.familyName,
+    sex: "Female",
+    age: player.age + rand(46, 66),
+    birthStatus: fatherStatus === "Royal" ? pick<BirthStatus>(["Royal", "Noble"]) : fatherStatus,
+    bloodline: pick([player.bloodline, "Common Blood"])
+  });
+  paternalGrandfather.spouseId = paternalGrandmother.id;
+  paternalGrandmother.spouseId = paternalGrandfather.id;
   const mother = makePerson({
     relation: "Mother",
     familyName: motherStatus === "Commoner" && player.birthStatus === "Bastard" ? pick(["Riverborn", "No-House", "Miller", "Dockhand"]) : player.familyName,
@@ -287,17 +309,41 @@ function buildStartingFamily(player: Story["player"]): Person[] {
     age: player.age + 27,
     birthStatus: fatherStatus,
     bloodline: pick([player.bloodline, "Common Blood", player.bloodline]),
+    parentIds: [paternalGrandfather.id, paternalGrandmother.id],
     memory: player.birthStatus === "Bastard" ? ["His blood gives the child a dangerous claim, whether he names it or not."] : []
   });
+  if (player.birthStatus !== "Bastard") {
+    father.spouseId = mother.id;
+    mother.spouseId = father.id;
+  }
   const sibling = makePerson({
-    relation: "Sibling",
+    relation: player.birthStatus === "Bastard" ? "Half Sibling" : "Sibling",
     familyName: player.familyName,
     age: clamp(player.age + pick([-3, -1, 2, 4]), 0, 80),
     birthStatus: player.birthStatus === "Bastard" ? pick<BirthStatus>(["Noble", "Bastard"]) : player.birthStatus,
     bloodline: player.bloodline,
-    parentIds: [mother.id, father.id]
+    parentIds: player.birthStatus === "Bastard" ? [father.id] : [mother.id, father.id],
+    isFullSibling: player.birthStatus !== "Bastard"
   });
-  return [mother, father, sibling];
+  const auntOrUncle = makePerson({
+    relation: pick(["Aunt", "Uncle"]),
+    familyName: player.familyName,
+    sex: roll(0.5) ? "Female" : "Male",
+    age: clamp(father.age + pick([-8, -4, 4, 8]), player.age + 16, 95),
+    birthStatus: fatherStatus,
+    bloodline: pick([player.bloodline, "Common Blood"]),
+    parentIds: [paternalGrandfather.id, paternalGrandmother.id]
+  });
+  auntOrUncle.relation = auntOrUncle.sex === "Female" ? "Aunt" : "Uncle";
+  const cousin = makePerson({
+    relation: "Cousin",
+    familyName: player.familyName,
+    age: clamp(player.age + pick([-8, -4, 0, 5, 10]), 0, 80),
+    birthStatus: fatherStatus,
+    bloodline: pick([player.bloodline, "Common Blood"]),
+    parentIds: [auntOrUncle.id]
+  });
+  return [paternalGrandfather, paternalGrandmother, mother, father, sibling, auntOrUncle, cousin];
 }
 
 function createKnownRelation(input: Partial<Relation> & { relation: string; age: number; birthStatus: BirthStatus }): Relation {
@@ -317,6 +363,7 @@ function createKnownRelation(input: Partial<Relation> & { relation: string; age:
     alive: input.alive ?? true,
     spouseId: input.spouseId,
     isWard: input.isWard,
+    isFullSibling: input.isFullSibling,
     familyPersonId: input.familyPersonId,
     visibleBastardSigns: input.visibleBastardSigns,
     actionUses: input.actionUses ?? {},
@@ -375,8 +422,13 @@ function initialGold(status: BirthStatus): number {
   return rand(20, 150);
 }
 
+function initialPossessions(status: BirthStatus): string[] {
+  const targetCount = rand(3, Math.min(7, possessionsByStatus[status].length));
+  return [...possessionsByStatus[status]].sort(() => Math.random() - 0.5).slice(0, targetCount);
+}
+
 function isCloseFamily(relation: Relation): boolean {
-  return ["Mother", "Father", "Sibling", "Child", "Ward"].includes(relation.relation) || relation.isWard === true;
+  return ["Mother", "Father", "Sibling", "Half Sibling", "Child", "Ward"].includes(relation.relation) || relation.isWard === true;
 }
 
 function isRomanceEligible(story: Story, relation: Relation): boolean {
@@ -385,7 +437,13 @@ function isRomanceEligible(story: Story, relation: Relation): boolean {
 
 function availableRelationActions(story: Story, relation: Relation): string[] {
   const actions = ["Talk", "Drink Together", "Fight", "Try to Learn Secret", "Form Alliance"];
-  if (story.player.birthStatus === "Bastard" && relation.birthStatus !== "Commoner") actions.push("Convince of Legitimacy");
+  const canConvinceLegitimacy =
+    story.player.birthStatus === "Bastard" &&
+    relation.birthStatus !== "Commoner" &&
+    relation.relation !== "Mother" &&
+    relation.relation !== "Father" &&
+    !(relation.relation === "Sibling" && relation.isFullSibling);
+  if (canConvinceLegitimacy) actions.push("Convince of Legitimacy");
   if (isRomanceEligible(story, relation)) {
     actions.push("Give Rose");
     if (!story.player.spouseId && !relation.spouseId) actions.push("Propose Marriage");
@@ -496,7 +554,7 @@ export default function App() {
       strength: 55,
       honor: 50,
       gold: initialGold(draft.birthStatus),
-      possessions: possessionsByStatus[draft.birthStatus],
+      possessions: initialPossessions(draft.birthStatus),
       visibleBastardSigns,
       legitimacyDoubt,
       fertility: rand(38, 78) + (draft.bloodline === "Witch Blood" || draft.bloodline === "Child of Atlantis" ? 8 : 0),
@@ -569,6 +627,45 @@ export default function App() {
       },
       relations: newRelation ? [newRelation, ...story.relations] : story.relations,
       placeUses: { ...story.placeUses, [place]: used + 1 }
+    }));
+    addLine(line);
+  }
+
+  function labour() {
+    if (!activeStory || activeStory.finished || !["Bastard", "Commoner"].includes(activeStory.player.birthStatus)) return;
+    const earned = activeStory.player.birthStatus === "Bastard" ? rand(7, 24) : rand(5, 18);
+    const line = `${activeStory.player.firstName} took labour for coin, earning ${earned} gold and a little honest exhaustion.`;
+    patchActive((story) => ({
+      ...story,
+      player: {
+        ...story.player,
+        gold: story.player.gold + earned,
+        health: clamp(story.player.health - 2, 0, 100),
+        strength: clamp(story.player.strength + 1, 0, 100),
+        happiness: clamp(story.player.happiness - 1, 0, 100),
+        memory: [...story.player.memory, line].slice(-40)
+      }
+    }));
+    addLine(line);
+  }
+
+  function changePossession(item: string, action: "Sell" | "Abandon" | "Delete") {
+    if (!activeStory) return;
+    const value = action === "Sell" ? rand(6, 80) : 0;
+    const line =
+      action === "Sell"
+        ? `${activeStory.player.firstName} sold ${item} for ${value} gold.`
+        : action === "Abandon"
+          ? `${activeStory.player.firstName} abandoned ${item}; some things are lighter when left behind.`
+          : `${activeStory.player.firstName} removed ${item} from the record.`;
+    patchActive((story) => ({
+      ...story,
+      player: {
+        ...story.player,
+        gold: story.player.gold + value,
+        possessions: story.player.possessions.filter((possession) => possession !== item),
+        memory: [...story.player.memory, line].slice(-40)
+      }
     }));
     addLine(line);
   }
@@ -917,6 +1014,22 @@ export default function App() {
     );
   }
 
+  function nameById(id?: string): string | null {
+    if (!id || !activeStory) return null;
+    if (id === activeStory.player.id) return activeStory.player.firstName;
+    const familyPerson = activeStory.family.find((person) => person.id === id);
+    if (familyPerson) return familyPerson.firstName;
+    const relation = activeStory.relations.find((candidate) => candidate.id === id);
+    return relation ? relation.firstName : null;
+  }
+
+  function marriageText(person: Person): string | null {
+    const spouseName = nameById(person.spouseId);
+    if (spouseName) return `Married to ${spouseName}`;
+    if ((person.relation === "Mother" || person.relation === "Father") && activeStory?.player.birthStatus === "Bastard") return "Not married to co-parent";
+    return null;
+  }
+
   if (screen === "menu") {
     return (
       <Shell menuBackground>
@@ -1004,6 +1117,7 @@ export default function App() {
           <Button small label="Family Tree" onPress={() => setScreen("family")} />
           <Button small label="Relationships" onPress={() => setScreen("relationships")} />
           <Button small label="Possessions" onPress={() => setScreen("possessions")} />
+          {["Bastard", "Commoner"].includes(activeStory.player.birthStatus) ? <Button small label="Labour" onPress={labour} disabled={activeStory.finished} /> : null}
           <Button small label="Age Up" onPress={ageUp} disabled={activeStory.finished} />
         </View>
         <Card>
@@ -1045,7 +1159,17 @@ export default function App() {
         </Card>
         <Card>
           <Text style={[styles.heading, { color: C.text }]}>Possessions</Text>
-          {activeStory.player.possessions.map((item) => <Text key={item} style={[styles.body, { color: C.text }]}>{item}</Text>)}
+          {activeStory.player.possessions.length === 0 ? <Text style={[styles.body, { color: C.text }]}>Nothing carried.</Text> : null}
+          {activeStory.player.possessions.map((item) => (
+            <View key={item} style={[styles.itemRow, { borderColor: C.line }]}>
+              <Text style={[styles.body, styles.itemName, { color: C.text }]}>{item}</Text>
+              <View style={styles.wrapRow}>
+                <Button small label="Sell" onPress={() => changePossession(item, "Sell")} />
+                <Button small label="Abandon" onPress={() => changePossession(item, "Abandon")} />
+                <Button small label="Delete" onPress={() => changePossession(item, "Delete")} />
+              </View>
+            </View>
+          ))}
         </Card>
         <Button label="Back" onPress={() => setScreen("chronicle")} />
       </Shell>
@@ -1054,9 +1178,27 @@ export default function App() {
 
   if (screen === "family" && activeStory) {
     const player = activeStory.player;
+    const grandparents = activeStory.family.filter((person) => person.relation === "Grandfather" || person.relation === "Grandmother");
     const parents = activeStory.family.filter((person) => person.relation === "Mother" || person.relation === "Father");
-    const siblings = activeStory.family.filter((person) => person.relation === "Sibling");
+    const auntUncles = activeStory.family.filter((person) => person.relation === "Aunt" || person.relation === "Uncle");
+    const cousins = activeStory.family.filter((person) => person.relation === "Cousin");
+    const siblings = activeStory.family.filter((person) => person.relation === "Sibling" || person.relation === "Half Sibling");
     const childrenAndWards = activeStory.family.filter((person) => person.relation === "Child" || person.relation === "Ward");
+    const spouseRelation = activeStory.player.spouseId ? activeStory.relations.find((relation) => relation.id === activeStory.player.spouseId) : undefined;
+    const spousePerson = spouseRelation
+      ? makePerson({
+          id: spouseRelation.id,
+          firstName: spouseRelation.firstName,
+          familyName: spouseRelation.familyName,
+          sex: spouseRelation.sex,
+          relation: "Spouse",
+          age: spouseRelation.age,
+          birthStatus: spouseRelation.birthStatus,
+          bloodline: spouseRelation.bloodline,
+          spouseId: player.id
+        })
+      : null;
+    const playerNode: Person = { id: player.id, firstName: player.firstName, familyName: player.familyName, sex: player.sex, age: player.age, birthStatus: player.birthStatus, bloodline: player.bloodline, relation: "You", parentIds: parents.map((parent) => parent.id), spouseId: spousePerson?.id, alive: player.alive };
     return (
       <Shell>
         <Text style={[styles.titleSmall, { color: C.text }]}>Family Tree</Text>
@@ -1068,17 +1210,27 @@ export default function App() {
         <Text style={[styles.subtitle, { color: C.dim }]}>Drag or scroll sideways to move through the tree.</Text>
         <ScrollView horizontal style={[styles.treeViewport, { borderColor: C.line }]}>
           <View style={[styles.treeCanvas, { transform: [{ scale: treeZoom }] }]}>
+            <Text style={[styles.treeSectionLabel, { color: C.dim }]}>Grandparents</Text>
+            <View style={styles.treeRow}>{grandparents.map((person) => <TreeNode key={person.id} person={person} />)}</View>
+            <Text style={[styles.treeLine, { color: C.dim }]}>|</Text>
+            <Text style={[styles.treeSectionLabel, { color: C.dim }]}>Parents, Aunts, Uncles</Text>
             <View style={styles.treeRow}>
               {parents.map((person) => <TreeNode key={person.id} person={person} />)}
+              {auntUncles.map((person) => <TreeNode key={person.id} person={person} />)}
             </View>
             <Text style={[styles.treeLine, { color: C.dim }]}>|</Text>
+            <Text style={[styles.treeSectionLabel, { color: C.dim }]}>You, Siblings, Cousins</Text>
             <View style={styles.treeRow}>
-              <TreeNode person={{ id: player.id, firstName: player.firstName, familyName: player.familyName, sex: player.sex, age: player.age, birthStatus: player.birthStatus, bloodline: player.bloodline, relation: "Player", parentIds: parents.map((parent) => parent.id), alive: player.alive }} highlight />
-            </View>
-            <Text style={[styles.treeLine, { color: C.dim }]}>|</Text>
-            <View style={styles.treeRow}>
+              <TreeNode person={playerNode} highlight />
               {siblings.map((person) => <TreeNode key={person.id} person={person} />)}
+              {cousins.map((person) => <TreeNode key={person.id} person={person} />)}
             </View>
+            {spousePerson ? (
+              <View style={styles.spouseBranch}>
+                <Text style={[styles.treeLine, { color: C.dim }]}>|--</Text>
+                <TreeNode person={spousePerson} />
+              </View>
+            ) : null}
             {childrenAndWards.length > 0 ? (
               <>
                 <Text style={[styles.treeLine, { color: C.dim }]}>|</Text>
@@ -1095,11 +1247,13 @@ export default function App() {
   }
 
   function TreeNode({ person, highlight = false }: { person: Person; highlight?: boolean }) {
+    const married = marriageText(person);
     return (
       <View style={[styles.treeNode, { backgroundColor: highlight ? C.accent : C.panel, borderColor: highlight ? C.accent : C.line }]}>
         <Text style={[styles.treeNodeName, { color: "#fff" }]}>{person.firstName} {person.familyName}</Text>
         <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.relation} - age {person.age}</Text>
         <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.birthStatus} - {person.bloodline}</Text>
+        {married ? <Text style={{ color: highlight ? "#fff" : C.warning }}>{married}</Text> : null}
       </View>
     );
   }
@@ -1107,7 +1261,10 @@ export default function App() {
   if (screen === "relationships" && activeStory) {
     return (
       <Shell>
-        <Text style={[styles.titleSmall, { color: C.text }]}>Relationships</Text>
+        <View style={styles.rowBetween}>
+          <Text style={[styles.titleSmall, { color: C.text }]}>Relationships</Text>
+          <Button small label="Back" onPress={() => setScreen("chronicle")} />
+        </View>
         {activeStory.relations.length === 0 ? <Text style={[styles.subtitle, { color: C.dim }]}>No relations yet. Visit places to meet people.</Text> : null}
         {activeStory.relations.map((relation) => (
           <Card key={relation.id}>
@@ -1115,7 +1272,8 @@ export default function App() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.heading, { color: C.text }]}>{relation.firstName} {relation.familyName}</Text>
                 <Text style={{ color: C.dim }}>{relation.relation} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
-                {relation.spouseId === activeStory.player.id ? <Text style={{ color: C.warning }}>Spouse</Text> : null}
+                {relation.spouseId ? <Text style={{ color: C.warning }}>{relation.spouseId === activeStory.player.id ? "Married to you" : `Married to ${nameById(relation.spouseId) ?? "someone"}`}</Text> : null}
+                {!relation.spouseId && (relation.relation === "Mother" || relation.relation === "Father") && activeStory.player.birthStatus === "Bastard" ? <Text style={{ color: C.warning }}>Not married to co-parent</Text> : null}
                 {relation.isWard ? <Text style={{ color: C.warning }}>Ward - not romanceable</Text> : null}
                 {!relation.alive ? <Text style={{ color: C.warning }}>Dead</Text> : null}
                 <Text style={{ color: C.dim }}>{relation.note}</Text>
@@ -1123,7 +1281,6 @@ export default function App() {
             </View>
             <Stat label="Trust" value={relation.trust} />
             <Stat label="Romance" value={relation.romance} />
-            <Stat label="Resentment" value={relation.resentment} />
             {relation.memory.length > 0 ? <Text style={{ color: C.dim }}>Memory: {relation.memory[relation.memory.length - 1]}</Text> : null}
             <View style={styles.wrapRow}>
               {availableRelationActions(activeStory, relation).map((action) => (
@@ -1296,11 +1453,15 @@ const styles = StyleSheet.create({
   bar: { height: 8, borderRadius: 8, overflow: "hidden", marginTop: 5 },
   barFill: { height: "100%", borderRadius: 8 },
   treeViewport: { borderWidth: 1, borderRadius: 8, minHeight: 430 },
-  treeCanvas: { width: 900, minHeight: 410, alignItems: "center", justifyContent: "center", padding: 20 },
+  treeCanvas: { width: 1220, minHeight: 410, alignItems: "center", justifyContent: "center", padding: 20 },
   treeRow: { flexDirection: "row", justifyContent: "center", gap: 16, marginVertical: 8 },
   treeLine: { fontSize: 30, textAlign: "center" },
   treeNode: { width: 220, borderWidth: 1, borderRadius: 8, padding: 12 },
   treeNodeName: { fontSize: 16, fontWeight: "800" },
+  treeSectionLabel: { fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 4 },
+  spouseBranch: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
+  itemRow: { borderTopWidth: 1, paddingTop: 10, gap: 8 },
+  itemName: { flexShrink: 1 },
   modalShade: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.62)", alignItems: "center", justifyContent: "center", padding: 20 },
   modalCard: { width: "100%", maxWidth: 420, borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 }
 });
