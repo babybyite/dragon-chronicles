@@ -8,13 +8,13 @@ This package is intentionally engine-agnostic. It can sit under React Native, Un
 
 ```text
 src/
-├── Character Creator      -> characters.ts
+├── Character Creator      -> characters.ts, presets.ts
 ├── Bloodlines             -> characters.ts, families.ts
 ├── Families               -> families.ts
-├── Portrait Generator     -> assets.ts, ai.ts
+├── Portrait Generator     -> assets.ts, ai.ts, chronicle.ts
 ├── AI Story Engine        -> ai.ts, events.ts
-├── Relationships          -> relationships.ts
-├── Marriage               -> relationships.ts
+├── Relationships          -> relationships.ts, chronicle.ts
+├── Marriage               -> relationships.ts, chronicle.ts
 ├── Kingdom Politics       -> politics.ts
 ├── Wars                   -> politics.ts
 ├── Events                 -> events.ts
@@ -23,6 +23,7 @@ src/
 ├── Inventory              -> inventory.ts
 ├── Crafting               -> inventory.ts
 ├── Economy                -> inventory.ts
+├── Year-by-Year Chronicle -> chronicle.ts
 ├── Save Files             -> saves.ts
 ├── Cloud Saves            -> saves.ts
 ├── AI Portraits           -> ai.ts, assets.ts
@@ -34,10 +35,12 @@ src/
 
 - Seeded procedural world creation.
 - Procedural bloodlines with mottos, sigils, prestige, dragon bond, inherited traits, and curses.
-- Character creation with stats, traits, secrets, rank, inventory, gold, and portrait prompts.
-- Family tree helpers for ancestors, descendants, and succession order.
+- Character creation with stats, traits, secrets, rank, inventory, gold, birth status, origin, vitals, and appearance.
+- Family tree helpers for ancestors, descendants, relationship labels, wards, and succession order.
 - Relationship simulation with affection, trust, fear, respect, resentment, rivalries, spouses, and history.
 - Marriage scoring and alliance creation.
+- Year-by-year chronicle mechanics: places, life actions, milestones, age-up, death, heirs, and finished-story summaries.
+- Dragon claiming with rider bonds and dragon records.
 - Kingdom politics with factions, laws, stability, dread, prosperity, council pressure, and wars.
 - BitLife-style events with choices and effects.
 - DnD-flavored procedural quests.
@@ -48,14 +51,18 @@ src/
 ## Quick Start
 
 ```ts
-import { advanceYear, createWorld, fallbackDialogue } from "dragon-chronicles-core";
+import { advanceYear, claimDragon, createRng, createWorld, fallbackDialogue, visitLocation } from "dragon-chronicles-core";
 
 let world = createWorld({
   seed: "my-first-dynasty",
   playerName: "Aelira",
-  kingdomName: "The Ember Crown"
+  kingdomName: "The Ember Crown",
+  playerBirthStatus: "noble",
+  startingAge: 24
 });
 
+world = visitLocation(world, world.playerCharacterId, "Throne Room");
+world = claimDragon(world, createRng(`${world.seed}:dragon`), world.playerCharacterId);
 world = advanceYear(world);
 
 const line = fallbackDialogue({
@@ -65,9 +72,14 @@ const line = fallbackDialogue({
   intent: "scheme"
 });
 
+console.log(world.yearLog.at(-1));
 console.log(world.eventLog.at(-1));
 console.log(line[0]?.text);
 ```
+
+## Prototype Source
+
+The current chronicle layer was shaped from an earlier React Native prototype at `C:/Users/MozsikAV/Downloads/App.js`. See `docs/PROTOTYPE_IMPORT.md` for what was imported, what was changed, and what we should improve next.
 
 ## Design Principles
 
