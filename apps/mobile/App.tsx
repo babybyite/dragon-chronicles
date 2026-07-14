@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   ImageBackground,
+  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -12,7 +13,7 @@ import {
 } from "react-native";
 
 type ThemeName = "dark" | "pastel";
-type Screen = "menu" | "builder1" | "builder2" | "chronicle" | "load" | "past" | "settings" | "family" | "relationships";
+type Screen = "menu" | "builder1" | "builder2" | "chronicle" | "load" | "past" | "settings" | "family" | "relationships" | "possessions";
 type BirthStatus = "Royal" | "Noble" | "Bastard" | "Commoner";
 type Sex = "Female" | "Male";
 
@@ -42,6 +43,9 @@ type Person = {
   relation: string;
   parentIds: string[];
   spouseId?: string;
+  isWard?: boolean;
+  visibleBastardSigns?: boolean;
+  memory?: string[];
   alive: boolean;
 };
 
@@ -49,15 +53,33 @@ type Relation = {
   id: string;
   firstName: string;
   familyName: string;
+  sex: Sex;
   relation: string;
   age: number;
   birthStatus: BirthStatus;
+  bloodline: string;
   origin: string;
   trust: number;
   romance: number;
   resentment: number;
   alive: boolean;
+  spouseId?: string;
+  isWard?: boolean;
+  familyPersonId?: string;
+  visibleBastardSigns?: boolean;
+  actionUses: Record<string, number>;
+  actionLimit: number;
+  memory: string[];
   note: string;
+};
+
+type PendingBirth = {
+  id: string;
+  parentRelationId?: string;
+  babyCount: number;
+  babySexes: Sex[];
+  defaultNames: string[];
+  message: string;
 };
 
 type Story = {
@@ -71,6 +93,13 @@ type Story = {
     happiness: number;
     strength: number;
     honor: number;
+    gold: number;
+    possessions: string[];
+    spouseId?: string;
+    visibleBastardSigns: boolean;
+    legitimacyDoubt: number;
+    fertility: number;
+    memory: string[];
     causeOfDeath?: string;
   };
   family: Person[];
@@ -79,6 +108,7 @@ type Story = {
   yearLog: { year: number; lines: string[] }[];
   placeUses: Record<string, number>;
   milestones: { id: string; title: string; year: number }[];
+  pendingBirth?: PendingBirth | null;
   finished: boolean;
   summary?: string;
 };
@@ -116,6 +146,7 @@ const menuBackgrounds = {
 };
 
 const firstNames = ["Aelira", "Mirelle", "Vaessa", "Rowan", "Lucian", "Dorian", "Veyr", "Sable", "Corenna", "Tavik"];
+const childNames = ["Elian", "Mara", "Neris", "Orren", "Lysa", "Theo", "Asha", "Rook", "Selene", "Bryn"];
 const familyNames = ["Duskblade", "Ashcroft", "Ravenshade", "Embermere", "Wintermere", "Crownfall"];
 const bloodlines = ["Child of Atlantis", "Wolf Cub", "Witch Blood", "Common Blood"];
 const origins = ["Northlands", "Southern Isles", "Eastern Courts", "Western Marches", "Steppe", "Deep Cities"];
@@ -144,6 +175,15 @@ const placesByStatus: Record<BirthStatus, string[]> = {
   Commoner: ["forest", "home", "city gates", "tavern", "slums", "sewers", "docks"]
 };
 
+const servantRelations = ["servant", "cook", "stable hand", "maid", "guard", "cupbearer", "scribe", "washer", "page"];
+const courtRelations = ["cousin", "courtier", "knight", "lady-in-waiting", "lordling", "royal cousin", "steward", "heir's companion", "political rival"];
+const possessionsByStatus: Record<BirthStatus, string[]> = {
+  Royal: ["signet ring", "state cloak", "jeweled dagger", "private chambers key", "two court outfits"],
+  Noble: ["house ring", "riding cloak", "court invitation", "fine boots"],
+  Bastard: ["worn family token", "travel cloak", "hidden letter", "serviceable dagger"],
+  Commoner: ["market purse", "needle kit", "sturdy boots", "blanket roll"]
+};
+
 const initialDraft: CharacterDraft = {
   firstName: "",
   familyName: "",
@@ -167,13 +207,21 @@ function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function rand(min: number, max: number): number {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+function roll(chance: number): boolean {
+  return Math.random() < chance;
+}
+
 function makePerson(input: Partial<Person> & { relation: string; familyName: string; age: number }): Person {
   return {
-    id: uid(),
+    id: input.id ?? uid(),
     firstName: input.firstName ?? pick(firstNames),
     familyName: input.familyName,
     sex: input.sex ?? pick<Sex>(["Female", "Male"]),
@@ -183,6 +231,9 @@ function makePerson(input: Partial<Person> & { relation: string; familyName: str
     relation: input.relation,
     parentIds: input.parentIds ?? [],
     spouseId: input.spouseId,
+    isWard: input.isWard,
+    visibleBastardSigns: input.visibleBastardSigns,
+    memory: input.memory ?? [],
     alive: input.alive ?? true
   };
 }
@@ -192,44 +243,219 @@ function relationFromPerson(person: Person): Relation {
     id: person.id,
     firstName: person.firstName,
     familyName: person.familyName,
+    sex: person.sex,
     relation: person.relation,
     age: person.age,
     birthStatus: person.birthStatus,
+    bloodline: person.bloodline,
     origin: pick(origins),
     trust: person.relation === "Mother" || person.relation === "Father" ? 62 : 45,
     romance: 0,
     resentment: 0,
+    spouseId: person.spouseId,
+    isWard: person.isWard,
+    familyPersonId: person.id,
+    visibleBastardSigns: person.visibleBastardSigns,
+    actionUses: {},
+    actionLimit: rand(3, 5),
+    memory: person.memory ?? [],
     alive: person.alive,
     note: "Known since the beginning of the chronicle."
   };
 }
 
 function buildStartingFamily(player: Story["player"]): Person[] {
+  const fatherStatus: BirthStatus =
+    player.birthStatus === "Royal" ? "Royal" : player.birthStatus === "Bastard" ? pick<BirthStatus>(["Royal", "Noble"]) : player.birthStatus === "Noble" ? pick<BirthStatus>(["Noble", "Royal"]) : "Commoner";
+  const motherStatus: BirthStatus =
+    player.birthStatus === "Royal" ? pick<BirthStatus>(["Royal", "Noble"]) : player.birthStatus === "Noble" ? "Noble" : player.birthStatus === "Bastard" ? pick<BirthStatus>(["Commoner", "Commoner", "Noble", "Royal"]) : "Commoner";
+  const nobleBastardMother = player.birthStatus === "Bastard" && (motherStatus === "Noble" || motherStatus === "Royal");
   const mother = makePerson({
     relation: "Mother",
-    familyName: player.familyName,
+    familyName: motherStatus === "Commoner" && player.birthStatus === "Bastard" ? pick(["Riverborn", "No-House", "Miller", "Dockhand"]) : player.familyName,
     sex: "Female",
     age: player.age + 24,
-    birthStatus: player.birthStatus === "Royal" ? "Royal" : "Noble",
-    bloodline: player.bloodline
+    birthStatus: motherStatus,
+    bloodline: pick([player.bloodline, "Common Blood"]),
+    visibleBastardSigns: nobleBastardMother,
+    memory: nobleBastardMother ? ["Her rank made the child's birth a dangerous court secret."] : []
   });
   const father = makePerson({
     relation: "Father",
     familyName: player.familyName,
     sex: "Male",
     age: player.age + 27,
-    birthStatus: player.birthStatus === "Royal" ? "Royal" : "Noble",
-    bloodline: pick([player.bloodline, "Common Blood"])
+    birthStatus: fatherStatus,
+    bloodline: pick([player.bloodline, "Common Blood", player.bloodline]),
+    memory: player.birthStatus === "Bastard" ? ["His blood gives the child a dangerous claim, whether he names it or not."] : []
   });
   const sibling = makePerson({
     relation: "Sibling",
     familyName: player.familyName,
     age: clamp(player.age + pick([-3, -1, 2, 4]), 0, 80),
-    birthStatus: player.birthStatus,
+    birthStatus: player.birthStatus === "Bastard" ? pick<BirthStatus>(["Noble", "Bastard"]) : player.birthStatus,
     bloodline: player.bloodline,
     parentIds: [mother.id, father.id]
   });
   return [mother, father, sibling];
+}
+
+function createKnownRelation(input: Partial<Relation> & { relation: string; age: number; birthStatus: BirthStatus }): Relation {
+  return {
+    id: input.id ?? uid(),
+    firstName: input.firstName ?? pick(firstNames),
+    familyName: input.familyName ?? pick(familyNames),
+    sex: input.sex ?? pick<Sex>(["Female", "Male"]),
+    relation: input.relation,
+    age: input.age,
+    birthStatus: input.birthStatus,
+    bloodline: input.bloodline ?? pick(["Common Blood", "Common Blood", "Common Blood", "Wolf Cub", "Witch Blood", "Child of Atlantis"]),
+    origin: input.origin ?? pick(origins),
+    trust: input.trust ?? rand(25, 58),
+    romance: input.romance ?? 0,
+    resentment: input.resentment ?? 0,
+    alive: input.alive ?? true,
+    spouseId: input.spouseId,
+    isWard: input.isWard,
+    familyPersonId: input.familyPersonId,
+    visibleBastardSigns: input.visibleBastardSigns,
+    actionUses: input.actionUses ?? {},
+    actionLimit: input.actionLimit ?? rand(3, 5),
+    memory: input.memory ?? [],
+    note: input.note ?? "Known since the beginning of the chronicle."
+  };
+}
+
+function buildStartingRelations(player: Story["player"], family: Person[]): Relation[] {
+  const familyRelations = family.map(relationFromPerson);
+  if (player.birthStatus === "Royal" || player.birthStatus === "Noble") {
+    const castleCount = rand(15, 25);
+    const servantCount = rand(10, 20);
+    const court = Array.from({ length: castleCount }, () =>
+      createKnownRelation({
+        relation: pick(courtRelations),
+        age: clamp(player.age + rand(-12, 34), 0, 85),
+        birthStatus: pick<BirthStatus>(player.birthStatus === "Royal" ? ["Royal", "Noble", "Noble", "Bastard"] : ["Noble", "Noble", "Royal", "Bastard"]),
+        familyName: pick(familyNames),
+        trust: rand(32, 64),
+        note: "Part of the castle's visible life: a name, a face, and a possible knife."
+      })
+    );
+    const servants = Array.from({ length: servantCount }, () =>
+      createKnownRelation({
+        relation: pick(servantRelations),
+        age: rand(10, 70),
+        birthStatus: pick<BirthStatus>(["Commoner", "Commoner", "Commoner", "Commoner", "Bastard", "Noble"]),
+        bloodline: pick(["Common Blood", "Common Blood", "Common Blood", "Common Blood", "Wolf Cub", "Witch Blood", "Child of Atlantis"]),
+        familyName: pick(["No-House", "Riverborn", "Dockhand", "Miller", "Greywash"]),
+        trust: rand(20, 48),
+        note: "A servant of the palace, easy to overlook and dangerous to underestimate."
+      })
+    );
+    return [...familyRelations, ...court, ...servants];
+  }
+
+  const known = [...familyRelations].sort(() => Math.random() - 0.5).slice(0, rand(2, 5));
+  while (known.length < 2) {
+    known.push(
+      createKnownRelation({
+        relation: pick(["neighbor", "old friend", "work mate", "street contact"]),
+        age: clamp(player.age + rand(-10, 18), 0, 75),
+        birthStatus: pick<BirthStatus>(["Commoner", "Commoner", "Bastard"])
+      })
+    );
+  }
+  return known;
+}
+
+function initialGold(status: BirthStatus): number {
+  if (status === "Royal") return rand(1000, 2500);
+  if (status === "Noble") return rand(350, 1200);
+  if (status === "Bastard") return rand(50, 350);
+  return rand(20, 150);
+}
+
+function isCloseFamily(relation: Relation): boolean {
+  return ["Mother", "Father", "Sibling", "Child", "Ward"].includes(relation.relation) || relation.isWard === true;
+}
+
+function isRomanceEligible(story: Story, relation: Relation): boolean {
+  return story.player.age >= 14 && relation.age >= 14 && relation.alive && !isCloseFamily(relation);
+}
+
+function availableRelationActions(story: Story, relation: Relation): string[] {
+  const actions = ["Talk", "Drink Together", "Fight", "Try to Learn Secret", "Form Alliance"];
+  if (story.player.birthStatus === "Bastard" && relation.birthStatus !== "Commoner") actions.push("Convince of Legitimacy");
+  if (isRomanceEligible(story, relation)) {
+    actions.push("Give Rose");
+    if (!story.player.spouseId && !relation.spouseId) actions.push("Propose Marriage");
+    if (story.player.sex === "Female" || relation.spouseId === story.player.id) actions.push("Lay With");
+  }
+  if (story.player.age >= 24 && relation.age <= 12 && !relation.isWard) actions.push("Take Ward");
+  if (relation.isWard) actions.push("Abandon Ward");
+  return actions;
+}
+
+function mayCreateChild(story: Story, relation: Relation): boolean {
+  if (story.player.age < 14 || relation.age < 14) return false;
+  if (story.player.sex === "Male" && relation.spouseId !== story.player.id) return false;
+  const motherAge = story.player.sex === "Female" ? story.player.age : relation.age;
+  if (motherAge > 48) return roll(0.01);
+  const bloodBonus = story.player.bloodline !== "Common Blood" || relation.bloodline !== "Common Blood" ? 0.06 : 0;
+  const marriageBonus = relation.spouseId === story.player.id ? 0.11 : 0;
+  const ageFactor = motherAge >= 18 && motherAge <= 34 ? 0.16 : motherAge < 18 ? 0.08 : 0.07;
+  return roll(ageFactor + bloodBonus + marriageBonus + story.player.fertility / 1000);
+}
+
+function createPendingBirth(story: Story, relation: Relation): PendingBirth {
+  const twinChance = 0.018 + (story.player.bloodline !== "Common Blood" || relation.bloodline !== "Common Blood" ? 0.025 : 0);
+  const babyCount = roll(twinChance) ? 2 : 1;
+  const babySexes = Array.from({ length: babyCount }, () => pick<Sex>(["Female", "Male"]));
+  const defaultNames = babySexes.map(() => pick(childNames));
+  const mother = story.player.sex === "Female" ? story.player.firstName : relation.firstName;
+  return {
+    id: uid(),
+    parentRelationId: relation.id,
+    babyCount,
+    babySexes,
+    defaultNames,
+    message: `${mother} has given birth to ${babyCount === 2 ? "twins" : "a child"}. Name ${babyCount === 2 ? "them" : "the baby"} before the court invents names of its own.`
+  };
+}
+
+function playerDeathCause(story: Story, nextAge: number): string | null {
+  if (nextAge >= 100) return "old age after an impossibly long life";
+  if (nextAge >= 70 && roll(Math.min(0.04 + (nextAge - 70) * 0.035, 0.85))) return pick(["old age", "winter fever", "a failing heart", "a quiet final sleep"]);
+  if (story.player.health <= 5) return pick(["wounds left untended", "a wasting illness", "fever after a dangerous year"]);
+  if (story.player.health < 20 && roll(0.18)) return pick(["illness", "blood fever", "an old wound reopening"]);
+  if (story.player.honor < 18 && story.player.birthStatus !== "Commoner" && roll(0.06)) return "court poison after too many enemies learned patience";
+  if ((story.placeUses.sewers ?? 0) > 0 && story.player.health < 45 && roll(0.04)) return "sewer fever";
+  return null;
+}
+
+function relationDeathCause(relation: Relation, nextAge: number): string | null {
+  if (nextAge >= 100) return "old age";
+  if (nextAge >= 70 && roll(Math.min(0.035 + (nextAge - 70) * 0.033, 0.82))) return pick(["old age", "winter fever", "a failing heart"]);
+  if (relation.resentment > 85 && roll(0.03)) return "a violent quarrel";
+  return null;
+}
+
+function backgroundRelationEvent(relation: Relation, playerStatus: BirthStatus): { line: string | null; trust?: number; romance?: number; resentment?: number } {
+  if (!roll(0.45)) return { line: null };
+  const courtFlavor = playerStatus === "Royal" || playerStatus === "Noble";
+  const line = pick([
+    `${relation.firstName} gathered a useful rumor and stored it like a knife.`,
+    `${relation.firstName} spent the year improving their station.`,
+    `${relation.firstName} made a private promise that may matter later.`,
+    courtFlavor ? `${relation.firstName} was seen whispering near the council doors.` : `${relation.firstName} found work enough to survive another season.`,
+    `${relation.firstName} remembered an old slight and smiled through it.`
+  ]);
+  return {
+    line,
+    trust: roll(0.5) ? 1 : 0,
+    romance: relation.romance > 20 && roll(0.35) ? 1 : 0,
+    resentment: roll(0.25) ? 1 : 0
+  };
 }
 
 export default function App() {
@@ -239,6 +465,7 @@ export default function App() {
   const [stories, setStories] = useState<Story[]>([]);
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [treeZoom, setTreeZoom] = useState(1);
+  const [babyNames, setBabyNames] = useState<string[]>([]);
   const C = themes[themeName];
   const activeStory = useMemo(() => stories.find((story) => story.id === activeStoryId) ?? null, [activeStoryId, stories]);
 
@@ -255,6 +482,8 @@ export default function App() {
   }
 
   function startStory() {
+    const visibleBastardSigns = draft.birthStatus === "Bastard" && roll(draft.bloodline === "Common Blood" ? 0.35 : 0.58);
+    const legitimacyDoubt = draft.birthStatus === "Bastard" ? rand(25, 70) + (visibleBastardSigns ? 18 : 0) : 0;
     const player = {
       ...draft,
       id: uid(),
@@ -265,24 +494,38 @@ export default function App() {
       health: 70,
       happiness: 55,
       strength: 55,
-      honor: 50
+      honor: 50,
+      gold: initialGold(draft.birthStatus),
+      possessions: possessionsByStatus[draft.birthStatus],
+      visibleBastardSigns,
+      legitimacyDoubt,
+      fertility: rand(38, 78) + (draft.bloodline === "Witch Blood" || draft.bloodline === "Child of Atlantis" ? 8 : 0),
+      memory: []
     };
     const family = buildStartingFamily(player);
+    const relations = buildStartingRelations(player, family);
+    const firstLines = [
+      `${player.firstName} ${player.familyName} began this year as ${articleFor(player.birthStatus)} ${player.birthStatus.toLowerCase()} of ${player.bloodline}, dressed in ${player.clothColor.toLowerCase()} ${player.clothing.toLowerCase()}.`,
+      player.birthStatus === "Bastard"
+        ? `The noble father was not written openly into every prayer, but the family tree knows: the claim begins in noble blood.${player.visibleBastardSigns ? " The face makes denial harder, and danger sharper." : " The face gives useful room for denial."}`
+        : `${player.birthStatus} parentage gives ${player.firstName} a place in the halls, and a target on the back.`
+    ];
     const story: Story = {
       id: uid(),
       title: `${player.familyName} Chronicle`,
       player,
       family,
-      relations: family.map(relationFromPerson),
+      relations,
       currentYear: player.age,
       yearLog: [
         {
           year: player.age,
-          lines: [`${player.firstName} ${player.familyName} began this year as ${articleFor(player.birthStatus)} ${player.birthStatus.toLowerCase()} of ${player.bloodline}, dressed in ${player.clothColor.toLowerCase()} ${player.clothing.toLowerCase()}.`]
+          lines: firstLines
         }
       ],
       placeUses: {},
       milestones: [],
+      pendingBirth: null,
       finished: false
     };
     setStories((current) => [story, ...current]);
@@ -334,9 +577,19 @@ export default function App() {
     if (!activeStory) return;
     const relation = activeStory.relations.find((candidate) => candidate.id === relationId);
     if (!relation) return;
+    const used = relation.actionUses[action] ?? 0;
+    if (used >= relation.actionLimit) {
+      addLine(`${relation.firstName} has no more patience for ${action.toLowerCase()} this year.`);
+      return;
+    }
 
     let line = `${activeStory.player.firstName} spent time with ${relation.firstName}.`;
     const delta = { trust: 0, romance: 0, resentment: 0, health: 0, happiness: 0, honor: 0 };
+    let spouseId: string | undefined = activeStory.player.spouseId;
+    let relationSpouseId: string | undefined = relation.spouseId;
+    let wardPerson: Person | null = null;
+    let removeWardPersonId: string | undefined;
+    let pendingBirth: PendingBirth | null = null;
 
     if (action === "Talk") {
       delta.trust = 8;
@@ -362,6 +615,56 @@ export default function App() {
       delta.trust = 10;
       delta.honor = 3;
       line = `${activeStory.player.firstName} and ${relation.firstName} bound themselves to common cause.`;
+    } else if (action === "Convince of Legitimacy") {
+      delta.trust = activeStory.player.visibleBastardSigns ? 7 : 11;
+      delta.honor = 4;
+      line = `${activeStory.player.firstName} pressed ${relation.firstName} to see the blood, not the insult. The claim sounded ${activeStory.player.visibleBastardSigns ? "dangerous because it was visible" : "carefully plausible"}.`;
+    } else if (action === "Propose Marriage") {
+      const acceptance = relation.trust + relation.romance + activeStory.player.honor - relation.resentment + rand(-20, 25);
+      if (acceptance >= 95 && !activeStory.player.spouseId && !relation.spouseId) {
+        spouseId = relation.id;
+        relationSpouseId = activeStory.player.id;
+        delta.trust = 12;
+        delta.romance = 18;
+        line = `${relation.firstName} accepted the proposal. The match now binds love, blood, and politics together.`;
+      } else {
+        delta.resentment = 5;
+        delta.romance = -4;
+        line = `${relation.firstName} refused the proposal for now. The court will remember the question almost as sharply as the answer.`;
+      }
+    } else if (action === "Lay With") {
+      delta.romance = relation.isWard ? -20 : 9;
+      delta.trust = relation.isWard ? -20 : 1;
+      line = relation.isWard
+        ? `${activeStory.player.firstName} stopped before crossing a sacred line. A ward is family by duty, not a lover.`
+        : `${activeStory.player.firstName} and ${relation.firstName} shared a night that may echo beyond the bedchamber.`;
+      if (!relation.isWard && mayCreateChild(activeStory, relation)) {
+        pendingBirth = createPendingBirth(activeStory, relation);
+        setBabyNames(pendingBirth.defaultNames);
+        line = `${line} By year's end, a child cry will join the chronicle.`;
+      }
+    } else if (action === "Take Ward") {
+      wardPerson = makePerson({
+        id: relation.id,
+        firstName: relation.firstName,
+        familyName: relation.familyName,
+        sex: relation.sex,
+        relation: "Ward",
+        age: relation.age,
+        birthStatus: relation.birthStatus,
+        bloodline: relation.bloodline,
+        parentIds: [activeStory.player.id],
+        isWard: true,
+        memory: [`Taken as ${activeStory.player.firstName}'s ward at age ${relation.age}.`]
+      });
+      delta.trust = 16;
+      delta.romance = -100;
+      line = `${activeStory.player.firstName} took ${relation.firstName} as a ward. The child now belongs to the family tree by duty.`;
+    } else if (action === "Abandon Ward") {
+      removeWardPersonId = relation.familyPersonId ?? relation.id;
+      delta.trust = -35;
+      delta.resentment = 25;
+      line = `${activeStory.player.firstName} abandoned ${relation.firstName} as a ward. Trust broke loudly, even if the hall stayed quiet.`;
     }
 
     patchActive((story) => ({
@@ -370,8 +673,15 @@ export default function App() {
         ...story.player,
         health: clamp(story.player.health + delta.health, 0, 100),
         happiness: clamp(story.player.happiness + delta.happiness, 0, 100),
-        honor: clamp(story.player.honor + delta.honor, 0, 100)
+        honor: clamp(story.player.honor + delta.honor, 0, 100),
+        spouseId,
+        legitimacyDoubt: action === "Convince of Legitimacy" ? clamp(story.player.legitimacyDoubt - (activeStory.player.visibleBastardSigns ? 4 : 7), 0, 100) : story.player.legitimacyDoubt,
+        memory: [...story.player.memory, line].slice(-40)
       },
+      family: [
+        ...story.family.filter((person) => person.id !== removeWardPersonId),
+        ...(wardPerson ? [wardPerson] : [])
+      ],
       relations: story.relations.map((candidate) =>
         candidate.id === relationId
           ? {
@@ -379,10 +689,16 @@ export default function App() {
               trust: clamp(candidate.trust + delta.trust, 0, 100),
               romance: clamp(candidate.romance + delta.romance, 0, 100),
               resentment: clamp(candidate.resentment + delta.resentment, 0, 100),
+              spouseId: relationSpouseId,
+              isWard: action === "Take Ward" ? true : action === "Abandon Ward" ? false : candidate.isWard,
+              familyPersonId: action === "Take Ward" ? relation.id : action === "Abandon Ward" ? undefined : candidate.familyPersonId,
+              actionUses: { ...candidate.actionUses, [action]: used + 1 },
+              memory: [...candidate.memory, line].slice(-20),
               note: line
             }
           : candidate
-      )
+      ),
+      pendingBirth: pendingBirth ?? story.pendingBirth
     }));
     addLine(line);
   }
@@ -391,22 +707,58 @@ export default function App() {
     patchActive((story) => {
       const nextYear = story.currentYear + 1;
       const age = story.player.age + 1;
-      const deathRoll = age >= 70 ? Math.random() < Math.min(0.08 + (age - 70) * 0.05, 0.95) : Math.random() < 0.03;
+      const playerCause = playerDeathCause(story, age);
+      const deathRoll = playerCause !== null;
       const player = {
         ...story.player,
         age,
         health: clamp(story.player.health - (age > 55 ? 2 : 0), 0, 100),
         alive: deathRoll ? false : story.player.alive,
-        causeOfDeath: deathRoll ? pick(["illness", "a fall", "court poison", "old age", "a sewer fever"]) : story.player.causeOfDeath
+        causeOfDeath: playerCause ?? story.player.causeOfDeath
       };
       const opening = `Year ${nextYear} opened with old burdens, fresh hungers, and the memory of all that came before.`;
-      const lines = player.alive ? [opening] : [opening, `${player.firstName} died by ${player.causeOfDeath}. The chronicle falls silent for now.`];
+      const relationUpdates = story.relations.map((relation) => {
+        if (!relation.alive) return { relation: { ...relation, actionUses: {} }, line: null as string | null };
+        const aged = relation.age + 1;
+        const deathCause = relationDeathCause(relation, aged);
+        if (deathCause) {
+          const line = `${relation.firstName} ${relation.familyName} died of ${deathCause} at age ${aged}.`;
+          return {
+            relation: { ...relation, age: aged, alive: false, actionUses: {}, memory: [...relation.memory, line].slice(-20), note: line },
+            line
+          };
+        }
+        const event = backgroundRelationEvent(relation, story.player.birthStatus);
+        return {
+          relation: {
+            ...relation,
+            age: aged,
+            trust: clamp(relation.trust + (event.trust ?? 0), 0, 100),
+            romance: clamp(relation.romance + (event.romance ?? 0), 0, 100),
+            resentment: clamp(relation.resentment + (event.resentment ?? 0), 0, 100),
+            actionUses: {},
+            memory: event.line ? [...relation.memory, event.line].slice(-20) : relation.memory,
+            note: event.line ?? relation.note
+          },
+          line: event.line && roll(0.34) ? event.line : null
+        };
+      });
+      const backgroundLines = relationUpdates.map((item) => item.line).filter((line): line is string => Boolean(line)).slice(0, 5);
+      const lines = player.alive ? [opening, ...backgroundLines] : [opening, ...backgroundLines, `${player.firstName} died of ${player.causeOfDeath}. The chronicle falls silent for now.`];
       return {
         ...story,
         currentYear: nextYear,
         player,
-        family: story.family.map((person) => ({ ...person, age: person.age + (person.alive ? 1 : 0) })),
-        relations: story.relations.map((relation) => ({ ...relation, age: relation.age + (relation.alive ? 1 : 0) })),
+        family: story.family.map((person) => {
+          const matchingRelation = relationUpdates.find((item) => item.relation.familyPersonId === person.id || item.relation.id === person.id)?.relation;
+          return {
+            ...person,
+            age: person.alive ? person.age + 1 : person.age,
+            alive: matchingRelation ? matchingRelation.alive : person.alive,
+            memory: matchingRelation ? matchingRelation.memory : person.memory
+          };
+        }),
+        relations: relationUpdates.map((item) => item.relation),
         placeUses: {},
         finished: !player.alive,
         summary: !player.alive ? `${player.firstName} ${player.familyName} died at age ${age} after ${story.yearLog.length} recorded years.` : story.summary,
@@ -420,6 +772,42 @@ export default function App() {
     if (activeStoryId === storyId) setActiveStoryId(null);
   }
 
+  function nameBabies() {
+    if (!activeStory?.pendingBirth) return;
+    const pending = activeStory.pendingBirth;
+    patchActive((story) => {
+      const otherParent = pending.parentRelationId ? story.relations.find((relation) => relation.id === pending.parentRelationId) : undefined;
+      const babies = Array.from({ length: pending.babyCount }, (_, index) =>
+        makePerson({
+          firstName: babyNames[index]?.trim() || pending.defaultNames[index] || pick(childNames),
+          familyName: story.player.familyName,
+          sex: pending.babySexes[index],
+          age: 0,
+          relation: "Child",
+          birthStatus: story.player.birthStatus === "Royal" || otherParent?.birthStatus === "Royal" ? "Royal" : story.player.birthStatus === "Noble" || otherParent?.birthStatus === "Noble" ? "Noble" : story.player.birthStatus === "Bastard" ? "Bastard" : "Commoner",
+          bloodline: pick([story.player.bloodline, otherParent?.bloodline ?? "Common Blood"]),
+          parentIds: [story.player.id, ...(otherParent ? [otherParent.id] : [])],
+          memory: [`Born in year ${story.currentYear}.`]
+        })
+      );
+      const line = `${babies.map((baby) => baby.firstName).join(pending.babyCount === 2 ? " and " : "")} joined the family tree as ${pending.babyCount === 2 ? "newborn twins" : "a newborn child"}.`;
+      const yearLog = [...story.yearLog];
+      const latest = yearLog[yearLog.length - 1];
+      yearLog[yearLog.length - 1] = { ...latest, lines: [...latest.lines, line] };
+      return {
+        ...story,
+        family: [...story.family, ...babies],
+        relations: [
+          ...babies.map((baby) => createKnownRelation({ ...baby, relation: "Child", trust: 90, note: "Newborn child of the player.", familyPersonId: baby.id })),
+          ...story.relations
+        ],
+        pendingBirth: null,
+        yearLog
+      };
+    });
+    setBabyNames([]);
+  }
+
   function Shell({ children, menuBackground = false }: { children: React.ReactNode; menuBackground?: boolean }) {
     const content = (
       <SafeAreaView style={[styles.safe, { backgroundColor: menuBackground ? "transparent" : C.bg }]}>
@@ -427,6 +815,26 @@ export default function App() {
         <ScrollView style={styles.scroll} contentContainerStyle={[styles.container, menuBackground && styles.menuContainer]}>
           {children}
         </ScrollView>
+        {activeStory?.pendingBirth ? (
+          <Modal visible transparent animationType="fade">
+            <View style={styles.modalShade}>
+              <View style={[styles.modalCard, { backgroundColor: C.panel, borderColor: C.line }]}>
+                <Text style={[styles.heading, { color: C.text }]}>A Child Is Born</Text>
+                <Text style={[styles.body, { color: C.text }]}>{activeStory.pendingBirth.message}</Text>
+                {activeStory.pendingBirth.defaultNames.map((name, index) => (
+                  <Field
+                    key={`${activeStory.pendingBirth?.id}-${index}`}
+                    label={activeStory.pendingBirth?.babySexes[index] ?? "Baby"}
+                    value={babyNames[index] ?? name}
+                    placeholder={name}
+                    onChangeText={(value) => setBabyNames((current) => current.map((existing, babyIndex) => (babyIndex === index ? value : existing)))}
+                  />
+                ))}
+                <Button label="Name Child" onPress={nameBabies} />
+              </View>
+            </View>
+          </Modal>
+        ) : null}
       </SafeAreaView>
     );
 
@@ -512,7 +920,6 @@ export default function App() {
   if (screen === "menu") {
     return (
       <Shell menuBackground>
-        <Text style={[styles.overline, styles.menuTextShadow, { color: themeName === "dark" ? C.silver : C.dim }]}>A CHRONICLE OF</Text>
         <Text style={[styles.title, styles.menuTextShadow, { color: C.text }]}>Dragon Chronicles</Text>
         <Text style={[styles.subtitle, styles.menuTextShadow, { color: themeName === "dark" ? "#e7e1dc" : C.text }]}>Forge a soul. Year by year, keep the bloodline alive.</Text>
         <Button label="New Game" onPress={() => setScreen("builder1")} />
@@ -586,6 +993,8 @@ export default function App() {
           <Text style={[styles.heading, { color: C.text }]}>{activeStory.player.firstName} {activeStory.player.familyName}</Text>
           <Text style={{ color: C.dim }}>{activeStory.player.birthStatus} - {activeStory.player.bloodline} - {activeStory.player.origin}</Text>
           <Text style={{ color: C.dim }}>{activeStory.player.clothColor} {activeStory.player.clothing} - {activeStory.player.faceTrait}</Text>
+          <Text style={{ color: C.dim }}>Gold: {activeStory.player.gold}</Text>
+          {activeStory.player.birthStatus === "Bastard" ? <Text style={{ color: C.warning }}>Legitimacy Doubt: {activeStory.player.legitimacyDoubt}{activeStory.player.visibleBastardSigns ? " - appearance invites suspicion" : ""}</Text> : null}
           <Stat label="Health" value={activeStory.player.health} />
           <Stat label="Happiness" value={activeStory.player.happiness} />
           <Stat label="Strength" value={activeStory.player.strength} />
@@ -594,6 +1003,7 @@ export default function App() {
         <View style={styles.row}>
           <Button small label="Family Tree" onPress={() => setScreen("family")} />
           <Button small label="Relationships" onPress={() => setScreen("relationships")} />
+          <Button small label="Possessions" onPress={() => setScreen("possessions")} />
           <Button small label="Age Up" onPress={ageUp} disabled={activeStory.finished} />
         </View>
         <Card>
@@ -601,11 +1011,11 @@ export default function App() {
           {latest?.lines.map((line, index) => <Text key={`${line}-${index}`} style={[styles.body, { color: C.text }]}>{line}</Text>)}
         </Card>
         <Card>
-          <Text style={[styles.label, { color: C.dim }]}>Places: 3 Visits Each Per Year</Text>
+          <Text style={[styles.label, { color: C.dim }]}>Places</Text>
           <View style={styles.wrapRow}>
             {places.map((place) => {
               const used = activeStory.placeUses[place] ?? 0;
-              return <Chip key={place} label={`${place} ${used}/3`} selected={false} disabled={used >= 3 || activeStory.finished} onPress={() => visit(place)} />;
+              return <Chip key={place} label={place} selected={false} disabled={used >= 3 || activeStory.finished} onPress={() => visit(place)} />;
             })}
           </View>
         </Card>
@@ -625,10 +1035,28 @@ export default function App() {
     );
   }
 
+  if (screen === "possessions" && activeStory) {
+    return (
+      <Shell>
+        <Text style={[styles.titleSmall, { color: C.text }]}>Gold And Possessions</Text>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>{activeStory.player.gold} Gold</Text>
+          <Text style={[styles.subtitle, { color: C.dim }]}>Status, marriage, inheritance, gifts, and danger will change this over time.</Text>
+        </Card>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Possessions</Text>
+          {activeStory.player.possessions.map((item) => <Text key={item} style={[styles.body, { color: C.text }]}>{item}</Text>)}
+        </Card>
+        <Button label="Back" onPress={() => setScreen("chronicle")} />
+      </Shell>
+    );
+  }
+
   if (screen === "family" && activeStory) {
     const player = activeStory.player;
     const parents = activeStory.family.filter((person) => person.relation === "Mother" || person.relation === "Father");
     const siblings = activeStory.family.filter((person) => person.relation === "Sibling");
+    const childrenAndWards = activeStory.family.filter((person) => person.relation === "Child" || person.relation === "Ward");
     return (
       <Shell>
         <Text style={[styles.titleSmall, { color: C.text }]}>Family Tree</Text>
@@ -651,6 +1079,14 @@ export default function App() {
             <View style={styles.treeRow}>
               {siblings.map((person) => <TreeNode key={person.id} person={person} />)}
             </View>
+            {childrenAndWards.length > 0 ? (
+              <>
+                <Text style={[styles.treeLine, { color: C.dim }]}>|</Text>
+                <View style={styles.treeRow}>
+                  {childrenAndWards.map((person) => <TreeNode key={person.id} person={person} />)}
+                </View>
+              </>
+            ) : null}
           </View>
         </ScrollView>
         <Button label="Back" onPress={() => setScreen("chronicle")} />
@@ -678,16 +1114,20 @@ export default function App() {
             <View style={styles.rowBetween}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.heading, { color: C.text }]}>{relation.firstName} {relation.familyName}</Text>
-                <Text style={{ color: C.dim }}>{relation.relation} - age {relation.age} - {relation.birthStatus}</Text>
+                <Text style={{ color: C.dim }}>{relation.relation} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
+                {relation.spouseId === activeStory.player.id ? <Text style={{ color: C.warning }}>Spouse</Text> : null}
+                {relation.isWard ? <Text style={{ color: C.warning }}>Ward - not romanceable</Text> : null}
+                {!relation.alive ? <Text style={{ color: C.warning }}>Dead</Text> : null}
                 <Text style={{ color: C.dim }}>{relation.note}</Text>
               </View>
             </View>
             <Stat label="Trust" value={relation.trust} />
             <Stat label="Romance" value={relation.romance} />
             <Stat label="Resentment" value={relation.resentment} />
+            {relation.memory.length > 0 ? <Text style={{ color: C.dim }}>Memory: {relation.memory[relation.memory.length - 1]}</Text> : null}
             <View style={styles.wrapRow}>
-              {["Talk", "Drink Together", "Fight", "Give Rose", "Try to Learn Secret", "Form Alliance"].map((action) => (
-                <Chip key={action} label={action} selected={false} disabled={activeStory.finished} onPress={() => interact(relation.id, action)} />
+              {availableRelationActions(activeStory, relation).map((action) => (
+                <Chip key={action} label={action} selected={false} disabled={activeStory.finished || !relation.alive || (relation.actionUses[action] ?? 0) >= relation.actionLimit} onPress={() => interact(relation.id, action)} />
               ))}
             </View>
           </Card>
@@ -754,12 +1194,11 @@ export default function App() {
 
   function createRelationFromPlace(story: Story, place: string): Relation {
     const noblePlace = ["palace halls", "palace gardens", "throne room", "counsil room", "ball room", "private chambers", "chambers"].includes(place);
-    return {
-      id: uid(),
+    return createKnownRelation({
       firstName: pick(firstNames),
       familyName: noblePlace ? pick(familyNames) : pick([...familyNames, "No-House", "Riverborn", "Dockhand"]),
       relation: relationKindForPlace(place, story.player.birthStatus),
-      age: clamp(story.player.age + pick([-8, -4, 0, 3, 7, 12]), 12, 80),
+      age: place === "home" || place === "palace halls" ? clamp(story.player.age + pick([-20, -12, -8, -4, 0, 3, 7, 12]), 0, 80) : clamp(story.player.age + pick([-8, -4, 0, 3, 7, 12]), 12, 80),
       birthStatus: noblePlace ? pick<BirthStatus>(["Royal", "Noble", "Bastard"]) : pick<BirthStatus>(["Noble", "Bastard", "Commoner"]),
       origin: pick(origins),
       trust: 35 + Math.floor(Math.random() * 25),
@@ -767,7 +1206,7 @@ export default function App() {
       resentment: 0,
       alive: true,
       note: `Met in the ${place} during year ${story.currentYear}.`
-    };
+    });
   }
 }
 
@@ -798,11 +1237,19 @@ function describePlaceVisit(story: Story, place: string, useNumber: number, rela
   const status = p.birthStatus.toLowerCase();
   const blood = p.bloodline;
   const outfit = `${p.clothColor.toLowerCase()} ${p.clothing.toLowerCase()}`;
+  const pressure = p.birthStatus === "Bastard" && p.visibleBastardSigns
+    ? "every familiar feature making silence expensive"
+    : p.birthStatus === "Royal"
+      ? "guards, expectation, and inheritance moving with every step"
+      : p.birthStatus === "Commoner"
+        ? "coin counted twice and every noble glance measured carefully"
+        : "house pride wrapped around every polite word";
   const details = [
     `${p.firstName} entered the ${place} as ${articleFor(p.birthStatus)} ${status}, the ${outfit} making every glance linger a moment longer.`,
     `${p.faceTrait} and ${blood} marked ${p.firstName} before a word was spoken in the ${place}.`,
     `On visit ${useNumber} to the ${place}, ${p.firstName}'s ${status} name carried ${status === "bastard" ? "old insult and stubborn opportunity" : status === "royal" ? "command, danger, and expectation" : "weight enough to open doors and sharpen knives"}.`,
-    `${p.firstName} moved through the ${place} with ${p.honor > 60 ? "a reputation still polished" : "a reputation people tested in whispers"}.`
+    `${p.firstName} moved through the ${place} with ${p.honor > 60 ? "a reputation still polished" : "a reputation people tested in whispers"}.`,
+    `${p.firstName} crossed the ${place} with ${pressure}.`
   ];
   const response = pick(details);
   if (!relation) return response;
@@ -853,5 +1300,7 @@ const styles = StyleSheet.create({
   treeRow: { flexDirection: "row", justifyContent: "center", gap: 16, marginVertical: 8 },
   treeLine: { fontSize: 30, textAlign: "center" },
   treeNode: { width: 220, borderWidth: 1, borderRadius: 8, padding: 12 },
-  treeNodeName: { fontSize: 16, fontWeight: "800" }
+  treeNodeName: { fontSize: 16, fontWeight: "800" },
+  modalShade: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.62)", alignItems: "center", justifyContent: "center", padding: 20 },
+  modalCard: { width: "100%", maxWidth: 420, borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 }
 });
