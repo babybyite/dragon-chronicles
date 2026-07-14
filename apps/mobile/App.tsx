@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
+  ImageBackground,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -72,6 +73,11 @@ const themes = {
     silver: "#a8aab3",
     good: "#9aad92"
   }
+};
+
+const menuBackgrounds = {
+  dark: require("./assets/backgrounds/main-menu-dark.png"),
+  pastel: require("./assets/backgrounds/main-menu-pastel.png")
 };
 
 const firstNames = ["Aelira", "Mirelle", "Vaessa", "Rowan", "Lucian", "Dorian", "Veyr", "Sable"];
@@ -239,14 +245,29 @@ export default function App() {
     if (activeStoryId === storyId) setActiveStoryId(null);
   }
 
-  function Shell({ children }: { children: React.ReactNode }) {
-    return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
+  function Shell({ children, menuBackground = false }: { children: React.ReactNode; menuBackground?: boolean }) {
+    const content = (
+      <SafeAreaView style={[styles.safe, { backgroundColor: menuBackground ? "transparent" : C.bg }]}>
         <StatusBar barStyle={themeName === "dark" ? "light-content" : "dark-content"} />
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+        <ScrollView style={styles.scroll} contentContainerStyle={[styles.container, menuBackground && styles.menuContainer]}>
           {children}
         </ScrollView>
       </SafeAreaView>
+    );
+
+    if (!menuBackground) return content;
+
+    return (
+      <ImageBackground source={menuBackgrounds[themeName]} resizeMode="cover" style={styles.backgroundImage}>
+        <View
+          style={[
+            styles.backgroundTint,
+            { backgroundColor: themeName === "dark" ? "rgba(4, 4, 7, 0.38)" : "rgba(255, 250, 242, 0.18)" }
+          ]}
+        >
+          {content}
+        </View>
+      </ImageBackground>
     );
   }
 
@@ -315,10 +336,10 @@ export default function App() {
 
   if (screen === "menu") {
     return (
-      <Shell>
-        <Text style={[styles.overline, { color: C.dim }]}>A CHRONICLE OF</Text>
-        <Text style={[styles.title, { color: C.text }]}>Dragon Chronicles</Text>
-        <Text style={[styles.subtitle, { color: C.dim }]}>Forge a soul. Rule year by year. Keep the bloodline alive.</Text>
+      <Shell menuBackground>
+        <Text style={[styles.overline, styles.menuTextShadow, { color: themeName === "dark" ? C.silver : C.dim }]}>A CHRONICLE OF</Text>
+        <Text style={[styles.title, styles.menuTextShadow, { color: C.text }]}>Dragon Chronicles</Text>
+        <Text style={[styles.subtitle, styles.menuTextShadow, { color: themeName === "dark" ? "#e7e1dc" : C.text }]}>Forge a soul. Rule year by year. Keep the bloodline alive.</Text>
         <Button label="New Game" onPress={() => setScreen("builder1")} />
         <Button label="Load Game" onPress={() => setScreen("load")} />
         <Button label="Past Games" onPress={() => setScreen("past")} />
@@ -480,12 +501,20 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  backgroundImage: { flex: 1 },
+  backgroundTint: { flex: 1 },
   scroll: { flex: 1 },
   container: { padding: 20, gap: 14 },
+  menuContainer: { flexGrow: 1, justifyContent: "flex-end", paddingBottom: 34 },
   overline: { fontSize: 15, letterSpacing: 4, marginTop: 12, textTransform: "uppercase" },
   title: { fontSize: 48, lineHeight: 54, fontWeight: "300" },
   titleSmall: { fontSize: 34, lineHeight: 40, fontWeight: "300" },
   subtitle: { fontSize: 17, lineHeight: 24 },
+  menuTextShadow: {
+    textShadowColor: "rgba(0, 0, 0, 0.42)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8
+  },
   card: { borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 },
   field: { gap: 6 },
   label: { fontSize: 13, letterSpacing: 2, textTransform: "uppercase" },
