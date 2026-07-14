@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Dragon Chronicles",
+    "slug": "dragon-chronicles",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "dragonchronicles",
+    "platforms": ["ios", "android"],
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
+    }
+  }
+}
