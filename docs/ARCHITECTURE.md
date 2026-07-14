@@ -1,6 +1,6 @@
 # Architecture
 
-Dragon Chronicles is split into a deterministic simulation core, a chronicle life-sim layer, and optional AI/media providers.
+Dragon Chronicles is split into a deterministic simulation core, a chronicle life-sim layer, a React Native + Expo mobile app, and optional AI/media providers. The stack decision is documented in `docs/MOBILE_STACK.md`.
 
 ## Core Loop
 
@@ -9,7 +9,7 @@ Dragon Chronicles is split into a deterministic simulation core, a chronicle lif
 3. Apply a player action through a system function such as `visitLocation`, `performLifeAction`, `claimDragon`, or an event choice.
 4. Advance time with `advanceYear` or `advanceChronicleYear`.
 5. If the current player dies, continue through an heir or finish the chronicle with a life summary.
-6. Persist with `createSaveFile`, `serializeSave`, or a `CloudSaveAdapter`.
+6. Persist locally first, then optionally sync through a `CloudSaveAdapter`.
 
 ## Main Systems
 
@@ -31,6 +31,12 @@ Dragon Chronicles is split into a deterministic simulation core, a chronicle lif
 | AI | Provider interfaces and prompts | `src/ai.ts` |
 | Assets | Premade and AI media references | `src/assets.ts` |
 | World | New game creation and time advancement | `src/world.ts` |
+
+## Mobile App Direction
+
+The mobile app should be React Native + Expo. The UI layer should handle navigation, screens, local storage, bundled portrait assets, optional cloud sync, and the cloud AI client. The core library remains responsible for deterministic rules and save-safe data.
+
+The first app version should prefer pre-generated portraits for speed and consistency. AI-generated portraits, music, and narration can be layered in later through asset keys and cached references.
 
 ## Prototype Lineage
 
@@ -55,6 +61,8 @@ AI should be introduced in layers:
 3. Narrator: summarize major events in a consistent tone.
 4. Game master: propose new events/quests using the current world state, but validate all effects through deterministic game rules.
 5. Memory: summarize character history and relationship history into compact context records.
+
+The game master prompt should track world state, NPC memories, inventory, relationships, ongoing mysteries, and recent chronicle history, but it should return structured proposals rather than arbitrary save patches.
 
 ## Mobile Roadmap
 
