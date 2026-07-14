@@ -2,7 +2,7 @@
 
 Dragon Chronicles Core is a TypeScript simulation library for an original mobile dynasty RPG: dragon-court politics, tabletop-style adventuring, life-sim choices, long family histories, and AI-assisted story/media generation.
 
-This package is intentionally engine-agnostic. It can sit under React Native, Unity via a JS bridge, a web prototype, or a server-backed mobile client.
+This package is intentionally engine-agnostic at the rules layer. The planned mobile app should be React Native + Expo with pre-generated portraits, cloud AI dialogue/story generation, local-first saves, and optional cloud sync. See `docs/MOBILE_STACK.md` for the stack decision.
 
 ## Library Map
 
