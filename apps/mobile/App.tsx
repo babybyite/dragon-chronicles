@@ -192,8 +192,8 @@ const placesByStatus: Record<BirthStatus, string[]> = {
   Commoner: ["forest", "home", "city gates", "tavern", "slums", "sewers", "docks"]
 };
 
-const servantRelations = ["servant", "cook", "stable hand", "maid", "guard", "cupbearer", "scribe", "washer", "page"];
-const courtRelations = ["cousin", "courtier", "knight", "lady-in-waiting", "lordling", "royal cousin", "steward", "heir's companion", "political rival"];
+const servantRelations = ["Servant", "Cook", "Stable Hand", "Maid", "Guard", "Cupbearer", "Scribe", "Washer", "Page"];
+const courtRelations = ["Cousin", "Courtier", "Knight", "Lady-In-Waiting", "Lordling", "Royal Cousin", "Steward", "Heir's Companion", "Political Rival"];
 const possessionsByStatus: Record<BirthStatus, string[]> = {
   Royal: ["signet ring", "state cloak", "jeweled dagger", "private chambers key", "court slippers", "silver comb", "sealed writ"],
   Noble: ["house ring", "riding cloak", "court invitation", "fine boots", "embroidered gloves", "small dagger", "ledger of favors"],
@@ -238,6 +238,13 @@ function roll(chance: number): boolean {
 
 function fullName(person: { firstName: string; familyName: string }): string {
   return `${person.firstName} ${person.familyName}`;
+}
+
+function titleCase(value: string): string {
+  return value
+    .split(" ")
+    .map((word) => word.split("-").map((part) => (part ? `${part[0].toUpperCase()}${part.slice(1)}` : part)).join("-"))
+    .join(" ");
 }
 
 function uniqueNameFor(familyName: string, usedNames: Set<string>, preferred?: string): string {
@@ -344,11 +351,25 @@ function relationFromPerson(person: Person): Relation {
 }
 
 function buildStartingFamily(player: Story["player"]): Person[] {
+  const targetCount =
+    player.birthStatus === "Royal"
+      ? rand(3, 10)
+      : player.birthStatus === "Noble"
+        ? rand(2, 9)
+        : player.birthStatus === "Bastard"
+          ? rand(1, 7)
+          : rand(0, 6);
   const fatherStatus: BirthStatus =
     player.birthStatus === "Royal" ? "Royal" : player.birthStatus === "Bastard" ? pick<BirthStatus>(["Royal", "Noble"]) : player.birthStatus === "Noble" ? pick<BirthStatus>(["Noble", "Royal"]) : "Commoner";
   const motherStatus: BirthStatus =
     player.birthStatus === "Royal" ? pick<BirthStatus>(["Royal", "Noble"]) : player.birthStatus === "Noble" ? "Noble" : player.birthStatus === "Bastard" ? pick<BirthStatus>(["Commoner", "Commoner", "Noble", "Royal"]) : "Commoner";
   const nobleBastardMother = player.birthStatus === "Bastard" && (motherStatus === "Noble" || motherStatus === "Royal");
+  const maybeDead = (person: Person, extraChance = 0): Person => {
+    const ageChance = person.age >= 82 ? 0.72 : person.age >= 70 ? 0.42 : person.age >= 55 ? 0.14 : person.age >= 18 ? 0.04 : 0.02;
+    if (!roll(clamp(ageChance + extraChance, 0, 0.9))) return person;
+    const line = `${person.firstName} ${person.familyName} died before the chronicle began.`;
+    return { ...person, alive: false, memory: [...(person.memory ?? []), line].slice(-20) };
+  };
   const paternalGrandfather = makePerson({
     relation: "Grandfather",
     familyName: player.familyName,
@@ -418,9 +439,20 @@ function buildStartingFamily(player: Story["player"]): Person[] {
     bloodline: pick([player.bloodline, "Common Blood"]),
     parentIds: [auntOrUncle.id]
   });
-  const coreFamily = [mother, father, sibling];
-  const optionalFamily = [paternalGrandfather, paternalGrandmother, auntOrUncle, cousin].filter(() => roll(0.72));
-  if (player.birthStatus === "Bastard" && roll(0.62)) {
+  const coreFamily: Person[] = [];
+  const motherChance = player.birthStatus === "Royal" ? 0.88 : player.birthStatus === "Noble" ? 0.78 : player.birthStatus === "Bastard" ? 0.62 : 0.55;
+  const fatherChance = player.birthStatus === "Royal" ? 0.9 : player.birthStatus === "Noble" ? 0.78 : player.birthStatus === "Bastard" ? 0.76 : 0.48;
+  const siblingChance = player.birthStatus === "Royal" ? 0.72 : player.birthStatus === "Noble" ? 0.62 : player.birthStatus === "Bastard" ? 0.38 : 0.32;
+  if (targetCount > 0 && roll(motherChance)) coreFamily.push(maybeDead(mother));
+  if (targetCount > coreFamily.length && roll(fatherChance)) coreFamily.push(maybeDead(father));
+  if (player.birthStatus === "Bastard" && !coreFamily.some((person) => person.relation === "Father") && targetCount > coreFamily.length && roll(0.72)) {
+    coreFamily.push(maybeDead(father, 0.03));
+  }
+  if (targetCount > coreFamily.length && roll(siblingChance)) coreFamily.push(maybeDead(sibling, 0.02));
+  const optionalFamily = [paternalGrandfather, paternalGrandmother, auntOrUncle, cousin]
+    .filter(() => roll(player.birthStatus === "Royal" || player.birthStatus === "Noble" ? 0.66 : 0.42))
+    .map((person) => maybeDead(person, person.relation.includes("Grand") ? 0.18 : 0.03));
+  if (player.birthStatus === "Bastard" && roll(0.62) && coreFamily.length < targetCount) {
     const marriedParent = pick([father, mother]);
     const spouse = makePerson({
       relation: marriedParent.relation === "Father" ? "Father's Spouse" : "Mother's Spouse",
@@ -430,16 +462,47 @@ function buildStartingFamily(player: Story["player"]): Person[] {
       birthStatus: marriedParent.birthStatus,
       bloodline: pick([marriedParent.bloodline, "Common Blood"])
     });
-    marriedParent.spouseId = spouse.id;
     spouse.spouseId = marriedParent.id;
-    optionalFamily.push(spouse);
+    const knownParentIndex = coreFamily.findIndex((person) => person.id === marriedParent.id);
+    if (knownParentIndex >= 0) {
+      coreFamily[knownParentIndex] = { ...coreFamily[knownParentIndex], spouseId: spouse.id };
+      optionalFamily.push(maybeDead(spouse, 0.02));
+    }
   }
-  return [...coreFamily, ...optionalFamily].slice(0, 10);
+  return [...coreFamily, ...optionalFamily].sort(() => Math.random() - 0.5).slice(0, targetCount);
 }
 
 function buildRoyalFamily(player: Story["player"], family: Person[], usedNames: Set<string>): { family: Person[]; royalFamily: Person[] } {
   if (player.birthStatus === "Royal") {
-    const updatedFamily = family.map((person) => {
+    const hasFather = family.some((person) => person.relation === "Father");
+    const hasMother = family.some((person) => person.relation === "Mother");
+    const createdParents: Person[] = [];
+    if (!hasFather) {
+      createdParents.push(makePerson({
+        firstName: uniqueNameFor(player.familyName, usedNames, pick(firstNames)),
+        familyName: player.familyName,
+        relation: "Father",
+        sex: "Male",
+        age: player.age + rand(24, 42),
+        birthStatus: "Royal",
+        bloodline: pick([player.bloodline, "Common Blood"]),
+        royalTitle: "Ruling King"
+      }));
+    }
+    if (!hasMother) {
+      createdParents.push(makePerson({
+        firstName: uniqueNameFor(player.familyName, usedNames, pick(firstNames)),
+        familyName: player.familyName,
+        relation: "Mother",
+        sex: "Female",
+        age: player.age + rand(22, 40),
+        birthStatus: "Royal",
+        bloodline: pick([player.bloodline, "Common Blood"]),
+        royalTitle: "Ruling Queen"
+      }));
+    }
+    const withParents = [...family, ...createdParents];
+    const updatedFamily = withParents.map((person) => {
       if (person.relation === "Father") return { ...person, birthStatus: "Royal" as BirthStatus, royalTitle: "Ruling King" as const };
       if (person.relation === "Mother") return { ...person, birthStatus: "Royal" as BirthStatus, royalTitle: "Ruling Queen" as const };
       if (person.relation === "Sibling") return { ...person, birthStatus: "Royal" as BirthStatus, successionRank: 2 };
@@ -458,6 +521,41 @@ function buildRoyalFamily(player: Story["player"], family: Person[], usedNames: 
       successionRank: 1
     });
     return { family: updatedFamily, royalFamily: [playerAsRoyal, ...updatedFamily.filter((person) => person.birthStatus === "Royal")] };
+  }
+
+  const knownRoyal = family.find((person) => person.birthStatus === "Royal");
+  if (knownRoyal) {
+    const royalHouse = knownRoyal.familyName;
+    const familyRoyals = family.filter((person) => person.birthStatus === "Royal").map((person, index) => ({
+      ...person,
+      familyName: royalHouse,
+      successionRank: person.successionRank ?? (person.royalTitle ? undefined : index + 1)
+    }));
+    const hasKing = familyRoyals.some((person) => person.royalTitle === "Ruling King");
+    const hasQueen = familyRoyals.some((person) => person.royalTitle === "Ruling Queen");
+    const king = hasKing ? null : makePerson({
+      firstName: uniqueNameFor(royalHouse, usedNames, pick(firstNames)),
+      familyName: royalHouse,
+      relation: "King",
+      sex: "Male",
+      age: rand(36, 74),
+      birthStatus: "Royal",
+      bloodline: pick([knownRoyal.bloodline, "Common Blood", "Witch Blood"]),
+      royalTitle: "Ruling King"
+    });
+    const queen = hasQueen ? null : makePerson({
+      firstName: uniqueNameFor(royalHouse, usedNames, pick(firstNames)),
+      familyName: royalHouse,
+      relation: "Queen",
+      sex: "Female",
+      age: rand(28, 72),
+      birthStatus: "Royal",
+      bloodline: pick([knownRoyal.bloodline, "Common Blood", "Child of Atlantis"]),
+      royalTitle: "Ruling Queen",
+      spouseId: king?.id
+    });
+    if (king && queen) king.spouseId = queen.id;
+    return { family, royalFamily: [king, queen, ...familyRoyals].filter((person): person is Person => Boolean(person)) };
   }
 
   const royalHouse = "Crownfall";
@@ -679,29 +777,14 @@ function playerDeathCause(story: Story, nextAge: number): string | null {
   return null;
 }
 
-function relationDeathCause(relation: Relation, nextAge: number): string | null {
+function oldAgeDeathCause(nextAge: number): string | null {
   if (nextAge >= 100) return "old age";
   if (nextAge >= 70 && roll(Math.min(0.035 + (nextAge - 70) * 0.033, 0.82))) return pick(["old age", "winter fever", "a failing heart"]);
-  if (relation.resentment > 85 && roll(0.03)) return "a violent quarrel";
   return null;
 }
 
-function backgroundRelationEvent(relation: Relation, playerStatus: BirthStatus): { line: string | null; trust?: number; romance?: number; resentment?: number } {
-  if (!roll(0.45)) return { line: null };
-  const courtFlavor = playerStatus === "Royal" || playerStatus === "Noble";
-  const line = pick([
-    `${relation.firstName} gathered a useful rumor and stored it like a knife.`,
-    `${relation.firstName} spent the year improving their station.`,
-    `${relation.firstName} made a private promise that may matter later.`,
-    courtFlavor ? `${relation.firstName} was seen whispering near the council doors.` : `${relation.firstName} found work enough to survive another season.`,
-    `${relation.firstName} remembered an old slight and smiled through it.`
-  ]);
-  return {
-    line,
-    trust: roll(0.5) ? 1 : 0,
-    romance: relation.romance > 20 && roll(0.35) ? 1 : 0,
-    resentment: roll(0.25) ? 1 : 0
-  };
+function relationDeathCause(_relation: Relation, nextAge: number): string | null {
+  return oldAgeDeathCause(nextAge);
 }
 
 export default function App() {
@@ -870,15 +953,13 @@ export default function App() {
     addLine(line);
   }
 
-  function changePossession(item: string, action: "Sell" | "Abandon" | "Delete") {
+  function changePossession(item: string, action: "Sell" | "Abandon") {
     if (!activeStory) return;
     const value = action === "Sell" ? activeStory.player.possessionValues[item] ?? possessionWorth(item, activeStory.player.birthStatus) : 0;
     const line =
       action === "Sell"
         ? `${activeStory.player.firstName} sold ${item} for ${value} gold.`
-        : action === "Abandon"
-          ? `${activeStory.player.firstName} abandoned ${item}; some things are lighter when left behind.`
-          : `${activeStory.player.firstName} removed ${item} from the record.`;
+        : `${activeStory.player.firstName} abandoned ${item}; some things are lighter when left behind.`;
     patchActive((story) => ({
       ...story,
       player: {
@@ -1087,7 +1168,6 @@ export default function App() {
         alive: deathRoll ? false : story.player.alive,
         causeOfDeath: playerCause ?? story.player.causeOfDeath
       };
-      const opening = `Year ${nextYear} opened with old burdens, fresh hungers, and the memory of all that came before.`;
       const relationUpdates = story.relations.map((relation) => {
         if (!relation.alive) return { relation: { ...relation, actionUses: {} }, line: null as string | null };
         const aged = relation.age + 1;
@@ -1096,26 +1176,20 @@ export default function App() {
           const line = `${relation.firstName} ${relation.familyName} died of ${deathCause} at age ${aged}.`;
           return {
             relation: { ...relation, age: aged, alive: false, actionUses: {}, memory: [...relation.memory, line].slice(-20), note: line },
-            line
+            line: null
           };
         }
-        const event = backgroundRelationEvent(relation, story.player.birthStatus);
         return {
           relation: {
             ...relation,
             age: aged,
-            trust: clamp(relation.trust + (event.trust ?? 0), 0, 100),
-            romance: clamp(relation.romance + (event.romance ?? 0), 0, 100),
-            resentment: clamp(relation.resentment + (event.resentment ?? 0), 0, 100),
-            actionUses: {},
-            memory: event.line ? [...relation.memory, event.line].slice(-20) : relation.memory,
-            note: event.line ?? relation.note
+            actionUses: {}
           },
-          line: event.line && roll(0.34) ? event.line : null
+          line: null
         };
       });
       const backgroundLines = relationUpdates.map((item) => item.line).filter((line): line is string => Boolean(line)).slice(0, 5);
-      const lines = player.alive ? [opening, ...backgroundLines] : [opening, ...backgroundLines, `${player.firstName} died of ${player.causeOfDeath}. The chronicle falls silent for now.`];
+      const lines = player.alive ? backgroundLines : [...backgroundLines, `${player.firstName} died of ${player.causeOfDeath}. The chronicle falls silent for now.`];
       const familyUpdates = story.family.map((person) => {
         const matchingRelation = relationUpdates.find((item) => item.relation.familyPersonId === person.id || item.relation.id === person.id)?.relation;
         return {
@@ -1134,7 +1208,15 @@ export default function App() {
           if (person.id === story.player.id) return { ...person, age: player.age, alive: player.alive };
           const matchingFamily = familyUpdates.find((familyPerson) => familyPerson.id === person.id);
           if (matchingFamily) return { ...person, age: matchingFamily.age, alive: matchingFamily.alive };
-          return { ...person, age: person.alive ? person.age + 1 : person.age };
+          const nextAge = person.alive ? person.age + 1 : person.age;
+          const deathCause = person.alive ? oldAgeDeathCause(nextAge) : null;
+          const line = deathCause ? `${person.firstName} ${person.familyName} died of ${deathCause} at age ${nextAge}.` : null;
+          return {
+            ...person,
+            age: nextAge,
+            alive: deathCause ? false : person.alive,
+            memory: line ? [...(person.memory ?? []), line].slice(-20) : person.memory
+          };
         }),
         relations: relationUpdates.map((item) => item.relation),
         placeUses: {},
@@ -1419,7 +1501,7 @@ export default function App() {
           <View style={styles.wrapRow}>
             {places.map((place) => {
               const used = activeStory.placeUses[place] ?? 0;
-              return <Chip key={place} label={place} selected={false} disabled={used >= 3 || activeStory.finished} onPress={() => visit(place)} />;
+              return <Chip key={place} label={titleCase(place)} selected={false} disabled={used >= 3 || activeStory.finished} onPress={() => visit(place)} />;
             })}
           </View>
         </Card>
@@ -1452,11 +1534,10 @@ export default function App() {
           {activeStory.player.possessions.length === 0 ? <Text style={[styles.body, { color: C.text }]}>Nothing carried.</Text> : null}
           {activeStory.player.possessions.map((item) => (
             <View key={item} style={[styles.itemRow, { borderColor: C.line }]}>
-              <Text style={[styles.body, styles.itemName, { color: C.text }]}>{item} - worth {activeStory.player.possessionValues[item] ?? 0} gold</Text>
+              <Text style={[styles.body, styles.itemName, { color: C.text }]}>{titleCase(item)} - worth {activeStory.player.possessionValues[item] ?? 0} gold</Text>
               <View style={styles.wrapRow}>
                 <Button small label="Sell" onPress={() => changePossession(item, "Sell")} />
                 <Button small label="Abandon" onPress={() => changePossession(item, "Abandon")} />
-                <Button small label="Delete" onPress={() => changePossession(item, "Delete")} />
               </View>
             </View>
           ))}
@@ -1594,7 +1675,7 @@ export default function App() {
     return (
       <View style={[styles.treeNode, { backgroundColor: highlight ? C.accent : C.panel, borderColor: highlight ? C.accent : C.line }]}>
         <Text style={[styles.treeNodeName, { color: "#fff" }]}>{person.firstName} {person.familyName}</Text>
-        <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.relation} - {person.sex} - age {person.age}</Text>
+        <Text style={{ color: highlight ? "#fff" : C.dim }}>{titleCase(person.relation)} - {person.sex} - age {person.age}</Text>
         <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.birthStatus} - {person.bloodline}</Text>
         {royalLabel ? <Text style={{ color: C.gold, fontWeight: "800" }}>{royalLabel}</Text> : null}
         {married ? <Text style={{ color: highlight ? "#fff" : C.warning }}>{married}</Text> : null}
@@ -1615,7 +1696,7 @@ export default function App() {
             <View style={styles.rowBetween}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.heading, { color: C.text }]}>{relation.firstName} {relation.familyName}</Text>
-                <Text style={{ color: C.dim }}>{relation.relation} - {relation.sex} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
+                <Text style={{ color: C.dim }}>{titleCase(relation.relation)} - {relation.sex} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
                 {successionLabel(relation) ? <Text style={{ color: C.gold, fontWeight: "800" }}>{successionLabel(relation)}</Text> : null}
                 {relation.spouseId ? <Text style={{ color: C.warning }}>{relation.spouseId === activeStory.player.id ? `Married to ${fullName(activeStory.player)} (you)` : `Married to ${nameById(relation.spouseId) ?? "someone"}`}</Text> : null}
                 {!relation.spouseId && relation.age >= 14 ? <Text style={{ color: C.warning }}>Not married</Text> : null}
@@ -1773,7 +1854,7 @@ function describePlaceVisit(story: Story, place: string, useNumber: number, rela
   ];
   const response = pick(details);
   if (!relation) return response;
-  return `${response} There, ${relation.firstName} ${relation.familyName}, a ${relation.relation.toLowerCase()}, entered the chronicle.`;
+  return `${response} There, ${relation.firstName} ${relation.familyName}, a ${titleCase(relation.relation)}, entered the chronicle.`;
 }
 
 const styles = StyleSheet.create({
@@ -1825,8 +1906,8 @@ const styles = StyleSheet.create({
   treeNodeName: { fontSize: 16, fontWeight: "800" },
   treeSectionLabel: { fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 4 },
   spouseBranch: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
-  itemRow: { borderTopWidth: 1, paddingTop: 10, gap: 8 },
-  itemName: { flexShrink: 1 },
+  itemRow: { borderTopWidth: 1, paddingTop: 10, gap: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" },
+  itemName: { flexShrink: 1, fontWeight: "800", minWidth: 180 },
   modalShade: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.62)", alignItems: "center", justifyContent: "center", padding: 20 },
   modalCard: { width: "100%", maxWidth: 420, borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 }
 });
