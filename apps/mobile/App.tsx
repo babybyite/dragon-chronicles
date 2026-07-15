@@ -1446,8 +1446,10 @@ export default function App() {
           <View style={styles.wrapRow}>{[0, 12, 16, 24].map((startAge) => <Chip key={startAge} label={String(startAge)} selected={draft.startAge === startAge} onPress={() => patchDraft({ startAge })} />)}</View>
           <Text style={[styles.label, { color: C.dim }]}>Origin</Text>
           <View style={styles.wrapRow}>{origins.map((origin) => <Chip key={origin} label={origin} selected={draft.origin === origin} onPress={() => patchDraft({ origin })} />)}</View>
-          <Text style={[styles.label, { color: C.dim }]}>Hair</Text>
+          <Text style={[styles.label, { color: C.dim }]}>Hair Style</Text>
           <View style={styles.wrapRow}>{hairStyles.map((hairStyle) => <Chip key={hairStyle} label={hairStyle} selected={draft.hairStyle === hairStyle} onPress={() => patchDraft({ hairStyle })} />)}</View>
+          <View style={[styles.fieldDivider, { borderColor: C.line }]} />
+          <Text style={[styles.label, { color: C.dim }]}>Hair Colour</Text>
           <View style={styles.wrapRow}>{hairColors.map((hairColor) => <Chip key={hairColor} label={hairColor} selected={draft.hairColor === hairColor} onPress={() => patchDraft({ hairColor })} />)}</View>
           <Text style={[styles.label, { color: C.dim }]}>Clothing For {draft.birthStatus}</Text>
           <View style={styles.wrapRow}>{availableClothes.map((clothing) => <Chip key={clothing} label={clothing} selected={draft.clothing === clothing} onPress={() => patchDraft({ clothing })} />)}</View>
@@ -1875,6 +1877,7 @@ const styles = StyleSheet.create({
   },
   card: { borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 },
   field: { gap: 6 },
+  fieldDivider: { borderTopWidth: 1, marginTop: 4, paddingTop: 4 },
   label: { fontSize: 13, letterSpacing: 2, textTransform: "uppercase" },
   input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16 },
   button: { minHeight: 48, borderRadius: 8, paddingHorizontal: 16, alignItems: "center", justifyContent: "center", marginRight: 8, marginTop: 6 },
