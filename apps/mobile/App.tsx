@@ -247,6 +247,13 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
+function bastardSuspicionFeature(player: Pick<CharacterDraft, "hairColor" | "faceTrait" | "bloodline" | "origin">): string {
+  if (["Ginger", "Dark Red", "Ash White", "Platinum Blonde", "Black"].includes(player.hairColor)) return `${player.hairColor.toLowerCase()} hair`;
+  if (["Mismatched Eyes", "Glowing Eyes", "Half-Blind"].includes(player.faceTrait)) return `${player.faceTrait.toLowerCase()}`;
+  if (player.bloodline !== "Common Blood") return `${player.bloodline.toLowerCase()} signs`;
+  return `${player.origin.toLowerCase()} origin features`;
+}
+
 function uniqueNameFor(familyName: string, usedNames: Set<string>, preferred?: string): string {
   const candidates = [preferred, ...firstNames, ...childNames, ...extraNames].filter((name): name is string => Boolean(name));
   const found = candidates.find((name) => !usedNames.has(`${name} ${familyName}`.toLowerCase()));
@@ -854,7 +861,7 @@ export default function App() {
     const firstLines = [
       `${player.firstName} ${player.familyName} began this year as ${articleFor(player.birthStatus)} ${player.birthStatus.toLowerCase()} of ${player.bloodline}, dressed in ${player.clothColor.toLowerCase()} ${player.clothing.toLowerCase()}.`,
       player.birthStatus === "Bastard"
-        ? `The noble father was not written openly into every prayer, but the family tree knows: the claim begins in noble blood.${player.visibleBastardSigns ? " The face makes denial harder, and danger sharper." : " The face gives useful room for denial."}`
+        ? `The noble father was not written openly into every prayer, but the family tree knows: the claim begins in noble blood.${player.visibleBastardSigns ? ` The ${bastardSuspicionFeature(player)} makes denial harder, and danger sharper.` : " The face gives useful room for denial."}`
         : `${player.birthStatus} parentage gives ${player.firstName} a place in the halls, and a target on the back.`
     ];
     const story: Story = {
@@ -1478,7 +1485,7 @@ export default function App() {
           <Text style={{ color: C.dim }}>{activeStory.player.birthStatus} - {activeStory.player.bloodline} - {activeStory.player.sex} - {activeStory.player.origin}</Text>
           <Text style={{ color: C.dim }}>{activeStory.player.clothColor} {activeStory.player.clothing} - {activeStory.player.faceTrait}</Text>
           <Text style={{ color: C.dim }}>Gold: {activeStory.player.gold}</Text>
-          {activeStory.player.birthStatus === "Bastard" ? <Text style={{ color: C.warning }}>Legitimacy Doubt: {activeStory.player.legitimacyDoubt}{activeStory.player.visibleBastardSigns ? " - appearance invites suspicion" : ""}</Text> : null}
+          {activeStory.player.birthStatus === "Bastard" ? <Text style={{ color: C.warning }}>Legitimacy Doubt: {activeStory.player.legitimacyDoubt}{activeStory.player.visibleBastardSigns ? ` - ${bastardSuspicionFeature(activeStory.player)} invites suspicion` : ""}</Text> : null}
           {activeStory.player.birthStatus === "Bastard" ? <Text style={{ color: C.dim }}>Support: {activeStory.player.legitimacySupport.noble}/{activeStory.player.legitimacySupport.requiredNoble} nobles or {activeStory.player.legitimacySupport.royal}/1 royals</Text> : null}
           <Stat label="Health" value={activeStory.player.health} />
           <Stat label="Happiness" value={activeStory.player.happiness} />
