@@ -16,6 +16,7 @@ type ThemeName = "dark" | "pastel";
 type Screen = "menu" | "builder1" | "builder2" | "chronicle" | "load" | "past" | "settings" | "family" | "relationships" | "possessions" | "paper";
 type BirthStatus = "Royal" | "Noble" | "Bastard" | "Commoner";
 type Sex = "Female" | "Male";
+type RelationCategory = "family" | "palace" | "city";
 
 type CharacterDraft = {
   firstName: string;
@@ -62,6 +63,7 @@ type Relation = {
   birthStatus: BirthStatus;
   bloodline: string;
   origin: string;
+  category?: RelationCategory;
   trust: number;
   romance: number;
   resentment: number;
@@ -354,6 +356,7 @@ function relationFromPerson(person: Person): Relation {
     birthStatus: person.birthStatus,
     bloodline: person.bloodline,
     origin: pick(origins),
+    category: "family",
     trust: person.relation === "Mother" || person.relation === "Father" ? 62 : 45,
     romance: 0,
     resentment: 0,
@@ -637,6 +640,7 @@ function createKnownRelation(input: Partial<Relation> & { relation: string; age:
     birthStatus: input.birthStatus,
     bloodline: input.bloodline ?? pick(["Common Blood", "Common Blood", "Common Blood", "Wolf Cub", "Witch Blood", "Child of Atlantis"]),
     origin: input.origin ?? pick(origins),
+    category: input.category,
     trust: input.trust ?? rand(25, 58),
     romance: input.romance ?? 0,
     resentment: input.resentment ?? 0,
@@ -668,6 +672,7 @@ function buildStartingRelations(player: Story["player"], family: Person[]): Rela
         age: clamp(player.age + rand(-12, 34), 0, 85),
         birthStatus: pick<BirthStatus>(player.birthStatus === "Royal" ? ["Royal", "Noble", "Noble", "Bastard"] : ["Noble", "Noble", "Royal", "Bastard"]),
         familyName: pick(familyNames),
+        category: "palace",
         trust: rand(32, 64),
         note: "Part of the castle's visible life: a name, a face, and a possible knife."
       })
@@ -679,6 +684,7 @@ function buildStartingRelations(player: Story["player"], family: Person[]): Rela
         birthStatus: pick<BirthStatus>(["Commoner", "Commoner", "Commoner", "Commoner", "Bastard", "Noble"]),
         bloodline: pick(["Common Blood", "Common Blood", "Common Blood", "Common Blood", "Wolf Cub", "Witch Blood", "Child of Atlantis"]),
         familyName: pick(["No-House", "Riverborn", "Dockhand", "Miller", "Greywash"]),
+        category: "palace",
         trust: rand(20, 48),
         note: "A servant of the palace, easy to overlook and dangerous to underestimate."
       })
@@ -692,7 +698,8 @@ function buildStartingRelations(player: Story["player"], family: Person[]): Rela
       createKnownRelation({
         relation: pick(["neighbor", "old friend", "work mate", "street contact"]),
         age: clamp(player.age + rand(-10, 18), 0, 75),
-        birthStatus: pick<BirthStatus>(["Commoner", "Commoner", "Bastard"])
+        birthStatus: pick<BirthStatus>(["Commoner", "Commoner", "Bastard"]),
+        category: "city"
       })
     );
   }
@@ -729,6 +736,15 @@ function isCloseFamily(relation: Relation): boolean {
   return ["Mother", "Father", "Sibling", "Half Sibling", "Child", "Ward"].includes(relation.relation) || relation.isWard === true;
 }
 
+function relationCategory(story: Story, relation: Relation): RelationCategory {
+  const familyIds = new Set(story.family.map((person) => person.id));
+  if (relation.category === "family" || familyIds.has(relation.familyPersonId ?? relation.id)) return "family";
+  if (relation.category) return relation.category;
+  const palaceRelations = new Set([...courtRelations, ...servantRelations, "Court Contact", "Noble Acquaintance", "Suitor"]);
+  if (palaceRelations.has(titleCase(relation.relation)) || relation.birthStatus === "Royal" || relation.birthStatus === "Noble") return "palace";
+  return "city";
+}
+
 function isRomanceEligible(story: Story, relation: Relation): boolean {
   return story.player.age >= 14 && relation.age >= 14 && relation.alive && !isCloseFamily(relation);
 }
@@ -758,6 +774,7 @@ function availableRelationActions(story: Story, relation: Relation): string[] {
   }
   if (story.player.age >= 24 && relation.age <= 12 && !relation.isWard) actions.push("Take Ward");
   if (relation.isWard) actions.push("Abandon Ward");
+  if (story.player.age > 12 && !relation.isWard) actions.push("Attempt to Kill");
   return actions;
 }
 
@@ -818,6 +835,8 @@ export default function App() {
   const [treeZoom, setTreeZoom] = useState(1);
   const [babyNames, setBabyNames] = useState<string[]>([]);
   const [influenceTargets, setInfluenceTargets] = useState<Record<string, string>>({});
+  const [focusedRelationId, setFocusedRelationId] = useState<string | null>(null);
+  const [draggingRelationId, setDraggingRelationId] = useState<string | null>(null);
   const C = themes[themeName];
   const activeStory = useMemo(() => stories.find((story) => story.id === activeStoryId) ?? null, [activeStoryId, stories]);
 
@@ -935,6 +954,52 @@ export default function App() {
     });
   }
 
+  function focusRelationFromTree(personId: string) {
+    if (!activeStory?.relations.some((relation) => relation.id === personId || relation.familyPersonId === personId)) return;
+    setFocusedRelationId(personId);
+    setScreen("relationships");
+  }
+
+  function relationCardColors(relation: Relation) {
+    const backgroundColor = relation.sex === "Male" ? "rgba(74, 144, 226, 0.16)" : "rgba(216, 99, 137, 0.16)";
+    const borderColor = relation.birthStatus === "Royal" ? C.gold : relation.birthStatus === "Noble" ? C.silver : C.line;
+    return { backgroundColor, borderColor, borderWidth: relation.birthStatus === "Royal" || relation.birthStatus === "Noble" ? 2 : 1 };
+  }
+
+  function moveRelationWithinCategory(relationId: string, direction: -1 | 1) {
+    patchActive((story) => {
+      const relation = story.relations.find((candidate) => candidate.id === relationId);
+      if (!relation) return story;
+      const category = relationCategory(story, relation);
+      const categoryRelations = story.relations.filter((candidate) => relationCategory(story, candidate) === category);
+      const categoryIndex = categoryRelations.findIndex((candidate) => candidate.id === relationId);
+      const neighbor = categoryRelations[categoryIndex + direction];
+      if (!neighbor) return story;
+      const relations = [...story.relations];
+      const fromIndex = relations.findIndex((candidate) => candidate.id === relationId);
+      const toIndex = relations.findIndex((candidate) => candidate.id === neighbor.id);
+      [relations[fromIndex], relations[toIndex]] = [relations[toIndex], relations[fromIndex]];
+      return { ...story, relations };
+    });
+  }
+
+  function dropRelationOn(targetId: string) {
+    if (!draggingRelationId || draggingRelationId === targetId) {
+      setDraggingRelationId(null);
+      return;
+    }
+    patchActive((story) => {
+      const dragged = story.relations.find((relation) => relation.id === draggingRelationId);
+      const target = story.relations.find((relation) => relation.id === targetId);
+      if (!dragged || !target || relationCategory(story, dragged) !== relationCategory(story, target)) return story;
+      const withoutDragged = story.relations.filter((relation) => relation.id !== draggingRelationId);
+      const targetIndex = withoutDragged.findIndex((relation) => relation.id === targetId);
+      const relations = [...withoutDragged.slice(0, targetIndex), dragged, ...withoutDragged.slice(targetIndex)];
+      return { ...story, relations };
+    });
+    setDraggingRelationId(null);
+  }
+
   function visit(place: string) {
     if (!activeStory || activeStory.finished) return;
     const used = activeStory.placeUses[place] ?? 0;
@@ -1050,6 +1115,7 @@ export default function App() {
     let wardPerson: Person | null = null;
     let removeWardPersonId: string | undefined;
     let pendingBirth: PendingBirth | null = null;
+    let killedRelationId: string | undefined;
 
     if (action === "Talk") {
       delta.trust = 8;
@@ -1071,6 +1137,20 @@ export default function App() {
     } else if (action === "Try to Learn Secret") {
       delta.trust = -2;
       line = `${activeStory.player.firstName} watched ${relation.firstName}'s silences carefully and drew near to a secret.`;
+    } else if (action === "Attempt to Kill") {
+      const killScore = activeStory.player.strength + (100 - relation.trust) + relation.resentment + rand(-55, 35);
+      const success = killScore >= 105;
+      delta.honor = success ? -18 : -10;
+      delta.happiness = success ? -6 : -3;
+      delta.trust = success ? 0 : -28;
+      delta.resentment = success ? 0 : 22;
+      delta.health = success ? (roll(0.35) ? -5 : 0) : -8;
+      if (success) {
+        killedRelationId = relation.id;
+        line = `${activeStory.player.firstName} attempted to kill ${relation.firstName} ${relation.familyName}, and the attempt succeeded. Blood now sits inside the chronicle.`;
+      } else {
+        line = `${activeStory.player.firstName} attempted to kill ${relation.firstName} ${relation.familyName}, but the attempt failed. Suspicion and danger moved closer.`;
+      }
     } else if (action === "Form Alliance") {
       delta.trust = 10;
       delta.honor = 3;
@@ -1161,7 +1241,9 @@ export default function App() {
         memory: [...story.player.memory, line].slice(-40)
       },
       family: [
-        ...story.family.filter((person) => person.id !== removeWardPersonId),
+        ...story.family
+          .filter((person) => person.id !== removeWardPersonId)
+          .map((person) => (killedRelationId && (person.id === killedRelationId || person.id === relation.familyPersonId) ? { ...person, alive: false, memory: [...(person.memory ?? []), line].slice(-20) } : person)),
         ...(wardPerson ? [wardPerson] : [])
       ],
       relations: story.relations.map((candidate) =>
@@ -1171,6 +1253,7 @@ export default function App() {
               trust: clamp(candidate.trust + delta.trust, 0, 100),
               romance: clamp(candidate.romance + delta.romance, 0, 100),
               resentment: clamp(candidate.resentment + delta.resentment, 0, 100),
+              alive: killedRelationId === candidate.id ? false : candidate.alive,
               spouseId: relationSpouseId,
               isWard: action === "Take Ward" ? true : action === "Abandon Ward" ? false : candidate.isWard,
               allianceFormed: action === "Form Alliance" ? true : candidate.allianceFormed,
@@ -1178,7 +1261,7 @@ export default function App() {
               familyPersonId: action === "Take Ward" ? relation.id : action === "Abandon Ward" ? undefined : candidate.familyPersonId,
               actionUses: { ...candidate.actionUses, [action]: used + 1 },
               memory: [...candidate.memory, line].slice(-20),
-              note: line
+              note: killedRelationId === candidate.id ? `${candidate.firstName} died after an attempted killing.` : line
             }
           : candidate
       ),
@@ -1705,68 +1788,102 @@ export default function App() {
   function TreeNode({ person, highlight = false }: { person: Person; highlight?: boolean }) {
     const married = marriageText(person);
     const royalLabel = successionLabel(person);
+    const canOpen = activeStory?.relations.some((relation) => relation.id === person.id || relation.familyPersonId === person.id) ?? false;
     return (
-      <View style={[styles.treeNode, { backgroundColor: highlight ? C.accent : C.panel, borderColor: highlight ? C.accent : C.line }]}>
+      <Pressable onPress={canOpen ? () => focusRelationFromTree(person.id) : undefined} style={[styles.treeNode, { backgroundColor: highlight ? C.accent : C.panel, borderColor: highlight ? C.accent : C.line, opacity: canOpen || highlight ? 1 : 0.82 }]}>
         <Text style={[styles.treeNodeName, { color: "#fff" }]}>{person.firstName} {person.familyName}</Text>
         <Text style={{ color: highlight ? "#fff" : C.dim }}>{titleCase(person.relation)} - {person.sex} - age {person.age}</Text>
         <Text style={{ color: highlight ? "#fff" : C.dim }}>{person.birthStatus} - {person.bloodline}</Text>
         {royalLabel ? <Text style={{ color: C.gold, fontWeight: "800" }}>{royalLabel}</Text> : null}
         {married ? <Text style={{ color: highlight ? "#fff" : C.warning }}>{married}</Text> : null}
-      </View>
+      </Pressable>
     );
   }
 
   if (screen === "relationships" && activeStory) {
+    const focusedRelation = focusedRelationId
+      ? activeStory.relations.find((relation) => relation.id === focusedRelationId || relation.familyPersonId === focusedRelationId)
+      : null;
+    const relationSections = focusedRelation
+      ? [{ key: relationCategory(activeStory, focusedRelation), title: "Character Sheet", relations: [focusedRelation] }]
+      : ([
+          { key: "family", title: "Family", relations: activeStory.relations.filter((relation) => relationCategory(activeStory, relation) === "family") },
+          { key: "palace", title: "Palace", relations: activeStory.relations.filter((relation) => relationCategory(activeStory, relation) === "palace") },
+          { key: "city", title: "City", relations: activeStory.relations.filter((relation) => relationCategory(activeStory, relation) === "city") }
+        ] as { key: RelationCategory; title: string; relations: Relation[] }[]);
+    const renderRelationCard = (relation: Relation, categoryRelations: Relation[]) => {
+      const cardColors = relationCardColors(relation);
+      const isDragging = draggingRelationId === relation.id;
+      const categoryIndex = categoryRelations.findIndex((candidate) => candidate.id === relation.id);
+      return (
+        <Pressable
+          key={relation.id}
+          onLongPress={() => setDraggingRelationId(relation.id)}
+          onPress={draggingRelationId && draggingRelationId !== relation.id ? () => dropRelationOn(relation.id) : undefined}
+          style={[styles.card, styles.relationCard, isDragging && styles.relationCardDragging, cardColors]}
+        >
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.heading, { color: C.text }]}>{relation.firstName} {relation.familyName}</Text>
+              <Text style={{ color: C.dim }}>{titleCase(relation.relation)} - {relation.sex} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
+              {successionLabel(relation) ? <Text style={{ color: C.gold, fontWeight: "800" }}>{successionLabel(relation)}</Text> : null}
+              {relation.spouseId ? <Text style={{ color: C.warning }}>{relation.spouseId === activeStory.player.id ? `Married to ${fullName(activeStory.player)} (you)` : `Married to ${nameById(relation.spouseId) ?? "someone"}`}</Text> : null}
+              {!relation.spouseId && relation.age >= 14 ? <Text style={{ color: C.warning }}>Not married</Text> : null}
+              {relation.isWard ? <Text style={{ color: C.warning }}>Ward - not romanceable</Text> : null}
+              {!relation.alive ? <Text style={{ color: C.warning }}>Dead</Text> : null}
+              <Text style={{ color: C.dim }}>{relation.note}</Text>
+            </View>
+          </View>
+          <Stat label="Trust" value={relation.trust} />
+          <Stat label="Romance" value={relation.romance} />
+          {relation.memory.length > 0 ? <Text style={{ color: C.dim }}>Memory: {relation.memory[relation.memory.length - 1]}</Text> : null}
+          <View style={styles.wrapRow}>
+            <Button small label={isDragging ? "Dragging" : "Drag"} onPress={() => setDraggingRelationId(isDragging ? null : relation.id)} />
+            <Button small label="Up" onPress={() => moveRelationWithinCategory(relation.id, -1)} disabled={categoryIndex <= 0} />
+            <Button small label="Down" onPress={() => moveRelationWithinCategory(relation.id, 1)} disabled={categoryIndex >= categoryRelations.length - 1} />
+          </View>
+          {relation.allianceFormed ? (
+            <View>
+              <Text style={[styles.label, { color: C.dim }]}>Influence Target</Text>
+              <View style={styles.wrapRow}>
+                {activeStory.relations
+                  .filter((target) => target.id !== relation.id && target.alive)
+                  .slice(0, 8)
+                  .map((target) => (
+                    <Chip
+                      key={target.id}
+                      label={fullName(target)}
+                      selected={influenceTargets[relation.id] === target.id}
+                      onPress={() => setInfluenceTargets((current) => ({ ...current, [relation.id]: target.id }))}
+                    />
+                  ))}
+              </View>
+            </View>
+          ) : null}
+          <View style={styles.wrapRow}>
+            {availableRelationActions(activeStory, relation).map((action) => (
+              <Chip key={action} label={action} selected={false} disabled={activeStory.finished || !relation.alive || (relation.actionUses[action] ?? 0) >= relation.actionLimit} onPress={() => interact(relation.id, action)} />
+            ))}
+          </View>
+        </Pressable>
+      );
+    };
     return (
       <Shell>
         <View style={styles.rowBetween}>
-          <Text style={[styles.titleSmall, { color: C.text }]}>Relationships</Text>
-          <Button small label="Back" onPress={() => setScreen("chronicle")} />
+          <Text style={[styles.titleSmall, { color: C.text }]}>{focusedRelation ? "Character Sheet" : "Relationships"}</Text>
+          <Button small label="Back" onPress={() => { setFocusedRelationId(null); setScreen("chronicle"); }} />
         </View>
+        {focusedRelation ? <Button label="All Relationships" onPress={() => setFocusedRelationId(null)} /> : null}
         {activeStory.relations.length === 0 ? <Text style={[styles.subtitle, { color: C.dim }]}>No relations yet. Visit places to meet people.</Text> : null}
-        {activeStory.relations.map((relation) => (
-          <Card key={relation.id}>
-            <View style={styles.rowBetween}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.heading, { color: C.text }]}>{relation.firstName} {relation.familyName}</Text>
-                <Text style={{ color: C.dim }}>{titleCase(relation.relation)} - {relation.sex} - age {relation.age} - {relation.birthStatus} - {relation.bloodline}</Text>
-                {successionLabel(relation) ? <Text style={{ color: C.gold, fontWeight: "800" }}>{successionLabel(relation)}</Text> : null}
-                {relation.spouseId ? <Text style={{ color: C.warning }}>{relation.spouseId === activeStory.player.id ? `Married to ${fullName(activeStory.player)} (you)` : `Married to ${nameById(relation.spouseId) ?? "someone"}`}</Text> : null}
-                {!relation.spouseId && relation.age >= 14 ? <Text style={{ color: C.warning }}>Not married</Text> : null}
-                {relation.isWard ? <Text style={{ color: C.warning }}>Ward - not romanceable</Text> : null}
-                {!relation.alive ? <Text style={{ color: C.warning }}>Dead</Text> : null}
-                <Text style={{ color: C.dim }}>{relation.note}</Text>
-              </View>
-            </View>
-            <Stat label="Trust" value={relation.trust} />
-            <Stat label="Romance" value={relation.romance} />
-            {relation.memory.length > 0 ? <Text style={{ color: C.dim }}>Memory: {relation.memory[relation.memory.length - 1]}</Text> : null}
-            {relation.allianceFormed ? (
-              <View>
-                <Text style={[styles.label, { color: C.dim }]}>Influence Target</Text>
-                <View style={styles.wrapRow}>
-                  {activeStory.relations
-                    .filter((target) => target.id !== relation.id && target.alive)
-                    .slice(0, 8)
-                    .map((target) => (
-                      <Chip
-                        key={target.id}
-                        label={fullName(target)}
-                        selected={influenceTargets[relation.id] === target.id}
-                        onPress={() => setInfluenceTargets((current) => ({ ...current, [relation.id]: target.id }))}
-                      />
-                    ))}
-                </View>
-              </View>
-            ) : null}
-            <View style={styles.wrapRow}>
-              {availableRelationActions(activeStory, relation).map((action) => (
-                <Chip key={action} label={action} selected={false} disabled={activeStory.finished || !relation.alive || (relation.actionUses[action] ?? 0) >= relation.actionLimit} onPress={() => interact(relation.id, action)} />
-              ))}
-            </View>
-          </Card>
+        {relationSections.map((section) => (
+          <View key={section.title} style={styles.relationshipSection}>
+            <Text style={[styles.heading, { color: C.text }]}>{section.title}</Text>
+            {section.relations.length === 0 ? <Text style={[styles.subtitle, { color: C.dim }]}>No one known here yet.</Text> : null}
+            {section.relations.map((relation) => renderRelationCard(relation, section.relations))}
+          </View>
         ))}
-        <Button label="Back" onPress={() => setScreen("chronicle")} />
+        <Button label="Back" onPress={() => { setFocusedRelationId(null); setScreen("chronicle"); }} />
       </Shell>
     );
   }
@@ -1834,6 +1951,7 @@ export default function App() {
       relation: relationKindForPlace(place, story.player.birthStatus),
       age: place === "home" || place === "palace halls" ? clamp(story.player.age + pick([-20, -12, -8, -4, 0, 3, 7, 12]), 0, 80) : clamp(story.player.age + pick([-8, -4, 0, 3, 7, 12]), 12, 80),
       birthStatus: noblePlace ? pick<BirthStatus>(["Royal", "Noble", "Bastard"]) : pick<BirthStatus>(["Noble", "Bastard", "Commoner"]),
+      category: noblePlace ? "palace" : "city",
       origin: pick(origins),
       trust: 35 + Math.floor(Math.random() * 25),
       romance: 0,
@@ -1907,6 +2025,9 @@ const styles = StyleSheet.create({
     textShadowRadius: 8
   },
   card: { borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 },
+  relationCard: { gap: 10 },
+  relationCardDragging: { opacity: 0.72 },
+  relationshipSection: { gap: 10 },
   field: { gap: 6 },
   label: { fontSize: 13, letterSpacing: 2, textTransform: "uppercase" },
   input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16 },
