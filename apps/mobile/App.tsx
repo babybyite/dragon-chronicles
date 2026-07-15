@@ -167,22 +167,27 @@ const extraNames = ["Ilyra", "Cassian", "Maelor", "Nyra", "Edric", "Rhaen", "Tam
 const familyNames = ["Duskblade", "Ashcroft", "Ravenshade", "Embermere", "Wintermere", "Crownfall"];
 const bloodlines = ["Child of Atlantis", "Wolf Cub", "Witch Blood", "Common Blood"];
 const origins = ["Northlands", "Southern Isles", "Eastern Courts", "Western Marches", "Steppe", "Deep Cities"];
-const hairStyles = ["Short", "Long Straight", "Wavy", "Curly", "Braided", "Pixie", "Shaved", "Messy Bun"];
-const hairColors = ["Black", "Light Brown", "Dark Brown", "Blonde", "Platinum Blonde", "Ash White", "Ginger", "Dark Red"];
+const hairStyles = ["Short", "Long Straight", "Wavy", "Curly", "Braided", "Shaved", "Messy Bun"];
+const hairColors = ["Black", "Brown", "Blonde", "Platinum Blonde", "Ash White", "Ginger", "Dark Red"];
 const faceTraits = ["Freckles", "Scarred", "Mismatched Eyes", "Fire-Burned", "Vitiligo", "Half-Blind", "Sharp-Boned", "Glowing Eyes"];
 
+const royalChainClothing = ["Jeweled Court Gown", "Royal Armor", "Crown Silk Robe", "Embroidered State Suit", "Ceremonial Cloak"];
+const commonChainClothing = ["Simple Dress", "Work Tunic", "Market Apron", "Hooded Robe", "Patched Leathers"];
+const royalChainColors = ["Crimson", "Silver", "Ivory", "Royal Violet", "Deep Black", "Ocean Pearl"];
+const commonChainColors = ["Faded Brown", "Moss Green", "Washed Blue", "Ash Grey", "Light Cream", "Clay Red"];
+
 const clothingByStatus: Record<BirthStatus, string[]> = {
-  Royal: ["Jeweled Court Gown", "Royal Armor", "Crown Silk Robe", "Embroidered State Suit", "Ceremonial Cloak"],
-  Noble: ["Decorated Gown", "Cloak with Hood", "Armor", "Decorated Suit", "Decorated Tunic"],
-  Bastard: ["Simple Dress", "Hooded Robe", "Patched Tunic", "Travel Coat", "Worn Leathers"],
-  Commoner: ["Simple Dress", "Work Tunic", "Market Apron", "Hooded Robe", "Patched Leathers"]
+  Royal: royalChainClothing,
+  Noble: royalChainClothing,
+  Bastard: commonChainClothing,
+  Commoner: commonChainClothing
 };
 
 const clothColorsByStatus: Record<BirthStatus, string[]> = {
-  Royal: ["Crimson", "Silver", "Ivory", "Royal Violet", "Deep Black", "Ocean Pearl"],
-  Noble: ["Scarlet", "Azure", "Violet", "Golden", "Silver", "Rose", "Steel Black", "Ivory"],
-  Bastard: ["Bloody Red", "Pitch Black", "Faded Brown", "Ash Grey", "Light Cream", "Clean Pastel"],
-  Commoner: ["Faded Brown", "Moss Green", "Washed Blue", "Ash Grey", "Light Cream", "Clay Red"]
+  Royal: royalChainColors,
+  Noble: royalChainColors,
+  Bastard: commonChainColors,
+  Commoner: commonChainColors
 };
 
 const placesByStatus: Record<BirthStatus, string[]> = {
@@ -240,6 +245,17 @@ function fullName(person: { firstName: string; familyName: string }): string {
   return `${person.firstName} ${person.familyName}`;
 }
 
+function clothingOptionsFor(status: BirthStatus, sex: Sex): string[] {
+  const options = clothingByStatus[status];
+  if (status !== "Royal" && status !== "Noble") return options;
+  if (sex === "Male") return options.filter((option) => option !== "Jeweled Court Gown");
+  return options.filter((option) => option !== "Royal Armor");
+}
+
+function clothColorOptionsFor(status: BirthStatus): string[] {
+  return clothColorsByStatus[status];
+}
+
 function titleCase(value: string): string {
   return value
     .split(" ")
@@ -247,10 +263,9 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
-function bastardSuspicionFeature(player: Pick<CharacterDraft, "hairColor" | "faceTrait" | "bloodline" | "origin">): string {
+function bastardSuspicionFeature(player: Pick<CharacterDraft, "hairColor" | "faceTrait" | "origin">): string {
   if (["Ginger", "Dark Red", "Ash White", "Platinum Blonde", "Black"].includes(player.hairColor)) return `${player.hairColor.toLowerCase()} hair`;
   if (["Mismatched Eyes", "Glowing Eyes", "Half-Blind"].includes(player.faceTrait)) return `${player.faceTrait.toLowerCase()}`;
-  if (player.bloodline !== "Common Blood") return `${player.bloodline.toLowerCase()} signs`;
   return `${player.origin.toLowerCase()} origin features`;
 }
 
@@ -811,15 +826,25 @@ export default function App() {
   }
 
   function chooseBirthStatus(birthStatus: BirthStatus) {
+    const availableClothes = clothingOptionsFor(birthStatus, draft.sex);
+    const availableColors = clothColorOptionsFor(birthStatus);
     patchDraft({
       birthStatus,
-      clothing: clothingByStatus[birthStatus][0],
-      clothColor: clothColorsByStatus[birthStatus][0]
+      clothing: availableClothes.includes(draft.clothing) ? draft.clothing : availableClothes[0],
+      clothColor: availableColors.includes(draft.clothColor) ? draft.clothColor : availableColors[0]
+    });
+  }
+
+  function chooseSex(sex: Sex) {
+    const availableClothes = clothingOptionsFor(draft.birthStatus, sex);
+    patchDraft({
+      sex,
+      clothing: availableClothes.includes(draft.clothing) ? draft.clothing : availableClothes[0]
     });
   }
 
   function startStory() {
-    const visibleBastardSigns = draft.birthStatus === "Bastard" && roll(draft.bloodline === "Common Blood" ? 0.35 : 0.58);
+    const visibleBastardSigns = draft.birthStatus === "Bastard" && roll(0.42);
     const legitimacyDoubt = draft.birthStatus === "Bastard" ? rand(25, 70) + (visibleBastardSigns ? 18 : 0) : 0;
     const usedNames = new Set<string>();
     const playerFamilyName = draft.familyName.trim() || pick(familyNames);
@@ -1365,7 +1390,7 @@ export default function App() {
     return (
       <View style={[styles.portrait, { backgroundColor: C.panel2, borderColor: C.line }]}>
         <Text style={[styles.portraitStage, { color: C.silver }]}>{p.age < 16 ? "young portrait" : p.age < 45 ? "adult portrait" : "elder portrait"}</Text>
-        <View style={[styles.face, { backgroundColor: p.bloodline === "Child of Atlantis" ? "#467c8f" : p.bloodline === "Witch Blood" ? "#9d8ac8" : p.bloodline === "Wolf Cub" ? "#71806c" : C.good }]}>
+        <View style={[styles.face, { backgroundColor: C.good }]}>
           <Text style={styles.faceText}>{p.firstName.slice(0, 1)}</Text>
         </View>
         <Text style={[styles.portraitName, { color: C.text }]}>{p.firstName}</Text>
@@ -1429,7 +1454,7 @@ export default function App() {
           <Field label="First Name" value={draft.firstName} onChangeText={(firstName) => patchDraft({ firstName })} placeholder="Aelira" />
           <Field label="Family Name" value={draft.familyName} onChangeText={(familyName) => patchDraft({ familyName })} placeholder="Duskblade" />
           <Text style={[styles.label, { color: C.dim }]}>Sex</Text>
-          <View style={styles.wrapRow}>{(["Female", "Male"] as const).map((sex) => <Chip key={sex} label={sex} selected={draft.sex === sex} onPress={() => patchDraft({ sex })} />)}</View>
+          <View style={styles.wrapRow}>{(["Female", "Male"] as const).map((sex) => <Chip key={sex} label={sex} selected={draft.sex === sex} onPress={() => chooseSex(sex)} />)}</View>
           <Text style={[styles.label, { color: C.dim }]}>Birth Status</Text>
           <View style={styles.wrapRow}>{(["Royal", "Noble", "Bastard", "Commoner"] as const).map((birthStatus) => <Chip key={birthStatus} label={birthStatus} selected={draft.birthStatus === birthStatus} onPress={() => chooseBirthStatus(birthStatus)} />)}</View>
           <Text style={[styles.label, { color: C.dim }]}>Bloodline</Text>
@@ -1442,8 +1467,8 @@ export default function App() {
   }
 
   if (screen === "builder2") {
-    const availableClothes = clothingByStatus[draft.birthStatus];
-    const availableColors = clothColorsByStatus[draft.birthStatus];
+    const availableClothes = clothingOptionsFor(draft.birthStatus, draft.sex);
+    const availableColors = clothColorOptionsFor(draft.birthStatus);
     return (
       <Shell>
         <Text style={[styles.titleSmall, { color: C.text }]}>Character Builder</Text>
