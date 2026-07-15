@@ -126,6 +126,7 @@ type Story = {
   outerPolitics: string[];
   innerPolitics: string[];
   finished: boolean;
+  awaitingSuccession?: boolean;
   summary?: string;
 };
 
@@ -745,6 +746,10 @@ function relationCategory(story: Story, relation: Relation): RelationCategory {
   return "city";
 }
 
+function successionCandidates(story: Story): Person[] {
+  return story.family.filter((person) => (person.relation === "Child" || person.relation === "Ward") && person.alive);
+}
+
 function isRomanceEligible(story: Story, relation: Relation): boolean {
   return story.player.age >= 14 && relation.age >= 14 && relation.alive && !isCloseFamily(relation);
 }
@@ -1001,7 +1006,7 @@ export default function App() {
   }
 
   function visit(place: string) {
-    if (!activeStory || activeStory.finished) return;
+    if (!activeStory || activeStory.finished || !activeStory.player.alive || activeStory.awaitingSuccession) return;
     const used = activeStory.placeUses[place] ?? 0;
     if (used >= 3) {
       addLine(`${activeStory.player.firstName} has already tested ${place} three times this year; even rumors need time to grow back.`);
@@ -1027,7 +1032,7 @@ export default function App() {
   }
 
   function labour() {
-    if (!activeStory || activeStory.finished || !["Bastard", "Commoner"].includes(activeStory.player.birthStatus)) return;
+    if (!activeStory || activeStory.finished || !activeStory.player.alive || activeStory.awaitingSuccession || !["Bastard", "Commoner"].includes(activeStory.player.birthStatus)) return;
     const used = activeStory.placeUses.labour ?? 0;
     if (used >= activeStory.player.labourLimit) {
       addLine(`${activeStory.player.firstName} has no strength left for more paid labour this year.`);
@@ -1071,7 +1076,7 @@ export default function App() {
   }
 
   function petitionForLegitimacy() {
-    if (!activeStory || !petitionReady(activeStory)) return;
+    if (!activeStory || !activeStory.player.alive || activeStory.awaitingSuccession || !petitionReady(activeStory)) return;
     const nobleParent = activeStory.family.find((person) => (person.relation === "Father" || person.relation === "Mother") && (person.birthStatus === "Royal" || person.birthStatus === "Noble"));
     const targetStatus: BirthStatus = nobleParent?.birthStatus === "Royal" ? "Royal" : "Noble";
     const supportScore = activeStory.player.legitimacySupport.royal * 45 + activeStory.player.legitimacySupport.noble * 15 + activeStory.player.honor + rand(-20, 25);
@@ -1099,7 +1104,7 @@ export default function App() {
   }
 
   function interact(relationId: string, action: string) {
-    if (!activeStory) return;
+    if (!activeStory || !activeStory.player.alive || activeStory.awaitingSuccession) return;
     const relation = activeStory.relations.find((candidate) => candidate.id === relationId);
     if (!relation) return;
     const used = relation.actionUses[action] ?? 0;
@@ -1304,7 +1309,7 @@ export default function App() {
         };
       });
       const backgroundLines = relationUpdates.map((item) => item.line).filter((line): line is string => Boolean(line)).slice(0, 5);
-      const lines = player.alive ? backgroundLines : [...backgroundLines, `${player.firstName} died of ${player.causeOfDeath}. The chronicle falls silent for now.`];
+      const lines = player.alive ? backgroundLines : [...backgroundLines, `${player.firstName} died of ${player.causeOfDeath}.`];
       const familyUpdates = story.family.map((person) => {
         const matchingRelation = relationUpdates.find((item) => item.relation.familyPersonId === person.id || item.relation.id === person.id)?.relation;
         return {
@@ -1335,11 +1340,97 @@ export default function App() {
         }),
         relations: relationUpdates.map((item) => item.relation),
         placeUses: {},
-        finished: !player.alive,
-        summary: !player.alive ? `${player.firstName} ${player.familyName} died at age ${age} after ${story.yearLog.length} recorded years.` : story.summary,
+        finished: !player.alive && successionCandidates({ ...story, player, family: familyUpdates }).length === 0,
+        awaitingSuccession: !player.alive && successionCandidates({ ...story, player, family: familyUpdates }).length > 0,
+        summary: !player.alive && successionCandidates({ ...story, player, family: familyUpdates }).length === 0 ? `${player.firstName} ${player.familyName} died at age ${age} after ${story.yearLog.length} recorded years.` : story.summary,
         yearLog: [...story.yearLog, { year: nextYear, lines }]
       };
     });
+  }
+
+  function continueAsSuccessor(successorId: string) {
+    if (!activeStory) return;
+    patchActive((story) => {
+      const successor = successionCandidates(story).find((person) => person.id === successorId);
+      if (!successor) return story;
+      const matchingRelation = story.relations.find((relation) => relation.id === successor.id || relation.familyPersonId === successor.id);
+      const oldPlayer = story.player;
+      const formerPlayerPerson = makePerson({
+        id: oldPlayer.id,
+        firstName: oldPlayer.firstName,
+        familyName: oldPlayer.familyName,
+        sex: oldPlayer.sex,
+        relation: successor.isWard ? "Guardian" : oldPlayer.sex === "Female" ? "Mother" : "Father",
+        age: oldPlayer.age,
+        birthStatus: oldPlayer.birthStatus,
+        bloodline: oldPlayer.bloodline,
+        parentIds: [],
+        spouseId: oldPlayer.spouseId,
+        alive: false,
+        memory: [...oldPlayer.memory, `Died of ${oldPlayer.causeOfDeath ?? "unknown causes"} in year ${story.currentYear}.`].slice(-20)
+      });
+      const inheritedPossessions = [...oldPlayer.possessions];
+      const successorPlayer: Story["player"] = {
+        id: successor.id,
+        firstName: successor.firstName,
+        familyName: successor.familyName,
+        sex: successor.sex,
+        birthStatus: successor.birthStatus,
+        bloodline: successor.bloodline,
+        startAge: successor.age,
+        origin: matchingRelation?.origin ?? pick(origins),
+        hairStyle: pick(hairStyles),
+        hairColor: pick(hairColors),
+        faceTrait: pick(faceTraits),
+        clothing: clothingOptionsFor(successor.birthStatus, successor.sex)[0],
+        clothColor: clothColorOptionsFor(successor.birthStatus)[0],
+        age: successor.age,
+        alive: true,
+        health: clamp(72 - Math.max(0, successor.age - 40), 35, 100),
+        happiness: 48,
+        strength: clamp(35 + Math.floor(successor.age / 2), 15, 85),
+        honor: story.player.honor,
+        gold: story.player.gold,
+        possessions: inheritedPossessions,
+        possessionValues: { ...story.player.possessionValues },
+        spouseId: matchingRelation?.spouseId,
+        visibleBastardSigns: successor.visibleBastardSigns ?? false,
+        legitimacyDoubt: successor.birthStatus === "Bastard" ? rand(20, 60) : 0,
+        fertility: rand(38, 78) + (successor.bloodline === "Witch Blood" || successor.bloodline === "Child of Atlantis" ? 8 : 0),
+        labourLimit: rand(3, 5),
+        legitimacySupport: { noble: 0, royal: 0, requiredNoble: rand(3, 5), petitioned: false },
+        memory: [`Continued the chronicle after ${oldPlayer.firstName} ${oldPlayer.familyName}'s death.`]
+      };
+      const line = `${successor.firstName} ${successor.familyName} took up the chronicle after ${oldPlayer.firstName}'s death.`;
+      const yearLog = [...story.yearLog];
+      const latest = yearLog[yearLog.length - 1];
+      if (latest) yearLog[yearLog.length - 1] = { ...latest, lines: [...latest.lines, line] };
+      return {
+        ...story,
+        player: successorPlayer,
+        family: [
+          formerPlayerPerson,
+          ...story.family
+            .filter((person) => person.id !== successor.id && person.id !== oldPlayer.id)
+            .map((person) => person.parentIds.includes(oldPlayer.id) ? { ...person, relation: person.relation === "Child" ? "Sibling" : person.relation } : person)
+        ],
+        royalFamily: story.royalFamily.map((person) => {
+          if (person.id === oldPlayer.id) return { ...person, alive: false, age: oldPlayer.age };
+          if (person.id === successor.id) return { ...person, relation: "You", age: successor.age, alive: true };
+          return person;
+        }),
+        relations: [
+          relationFromPerson(formerPlayerPerson),
+          ...story.relations.filter((relation) => relation.id !== successor.id && relation.familyPersonId !== successor.id)
+        ],
+        awaitingSuccession: false,
+        finished: false,
+        summary: undefined,
+        yearLog
+      };
+    });
+    setFocusedRelationId(null);
+    setScreen("chronicle");
   }
 
   function removeStory(storyId: string) {
@@ -1581,6 +1672,8 @@ export default function App() {
   if (screen === "chronicle" && activeStory) {
     const places = placesByStatus[activeStory.player.birthStatus];
     const latest = activeStory.yearLog[activeStory.yearLog.length - 1];
+    const successionOptions = successionCandidates(activeStory);
+    const canAct = activeStory.player.alive && !activeStory.finished && !activeStory.awaitingSuccession;
     return (
       <Shell>
         <View style={styles.rowBetween}>
@@ -1604,20 +1697,32 @@ export default function App() {
           <Button small label="Relationships" onPress={() => setScreen("relationships")} />
           <Button small label="Possessions" onPress={() => setScreen("possessions")} />
           <Button small label="Daily Paper" onPress={() => setScreen("paper")} />
-          {["Bastard", "Commoner"].includes(activeStory.player.birthStatus) ? <Button small label="Labour" onPress={labour} disabled={activeStory.finished || (activeStory.placeUses.labour ?? 0) >= activeStory.player.labourLimit} /> : null}
-          {petitionReady(activeStory) ? <Button small label="Petition Legitimacy" onPress={petitionForLegitimacy} disabled={activeStory.finished} /> : null}
-          <Button small label="Age Up" onPress={ageUp} disabled={activeStory.finished} />
+          {["Bastard", "Commoner"].includes(activeStory.player.birthStatus) ? <Button small label="Labour" onPress={labour} disabled={!canAct || (activeStory.placeUses.labour ?? 0) >= activeStory.player.labourLimit} /> : null}
+          {petitionReady(activeStory) ? <Button small label="Petition Legitimacy" onPress={petitionForLegitimacy} disabled={!canAct} /> : null}
+          <Button small label="Age Up" onPress={ageUp} disabled={!canAct} />
         </View>
         <Card>
           <Text style={[styles.heading, { color: C.text }]}>Year {latest?.year}</Text>
           {latest?.lines.map((line, index) => <Text key={`${line}-${index}`} style={[styles.body, { color: C.text }]}>{line}</Text>)}
         </Card>
+        {activeStory.awaitingSuccession ? (
+          <Card>
+            <Text style={[styles.heading, { color: C.text }]}>Choose Who Continues</Text>
+            <Text style={[styles.body, { color: C.text }]}>The player character has died, but the chronicle can continue through a living child or ward.</Text>
+            {successionOptions.map((person) => (
+              <View key={person.id} style={[styles.itemRow, { borderColor: C.line }]}>
+                <Text style={[styles.body, styles.itemName, { color: C.text }]}>{person.firstName} {person.familyName} - {person.relation}, {person.sex}, age {person.age}</Text>
+                <Button small label="Continue" onPress={() => continueAsSuccessor(person.id)} />
+              </View>
+            ))}
+          </Card>
+        ) : null}
         <Card>
           <Text style={[styles.label, { color: C.dim }]}>Places</Text>
           <View style={styles.wrapRow}>
             {places.map((place) => {
               const used = activeStory.placeUses[place] ?? 0;
-              return <Chip key={place} label={titleCase(place)} selected={false} disabled={used >= 3 || activeStory.finished} onPress={() => visit(place)} />;
+              return <Chip key={place} label={titleCase(place)} selected={false} disabled={used >= 3 || !canAct} onPress={() => visit(place)} />;
             })}
           </View>
         </Card>
