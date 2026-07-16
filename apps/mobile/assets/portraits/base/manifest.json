@@ -1,0 +1,2423 @@
+{
+  "sourceFiles": [
+    "female_origins_variation_01.png",
+    "female_origins_variation_02.png",
+    "female_origins_variation_03.png",
+    "female_origins_variation_04.png",
+    "male_origins_variation_01.png",
+    "male_origins_variation_02.png",
+    "male_origins_variation_03.png",
+    "male_origins_variation_04.png"
+  ],
+  "count": 240,
+  "tileSize": 512,
+  "grid": {
+    "x0": 273,
+    "x1": 1344,
+    "y0": 118,
+    "y1": 965
+  },
+  "folderPattern": "assets/portraits/base/{originKey}/{genderKey}/variation_{variation}/age_{age}_{ageStage}.png",
+  "portraits": [
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/female/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Deep Cities",
+      "originKey": "deep_cities",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/deep_cities/male/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/female/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Eastern Courts",
+      "originKey": "eastern_courts",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/eastern_courts/male/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/northlands/female/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Northlands",
+      "originKey": "northlands",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/northlands/male/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/steppe/female/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Steppe",
+      "originKey": "steppe",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/steppe/male/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Female",
+      "genderKey": "female",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/western_marches/female/variation_04/age_50_elder.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_01/age_0_baby.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_01/age_12_child.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_01/age_16_young_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_01/age_24_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_01/age_30_mature.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 1,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_01/age_50_elder.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_02/age_0_baby.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_02/age_12_child.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_02/age_16_young_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_02/age_24_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_02/age_30_mature.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 2,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_02/age_50_elder.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_03/age_0_baby.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_03/age_12_child.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_03/age_16_young_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_03/age_24_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_03/age_30_mature.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 3,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_03/age_50_elder.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 0,
+      "ageStage": "baby",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_04/age_0_baby.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 12,
+      "ageStage": "child",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_04/age_12_child.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 16,
+      "ageStage": "young_adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_04/age_16_young_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 24,
+      "ageStage": "adult",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_04/age_24_adult.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 30,
+      "ageStage": "mature",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_04/age_30_mature.png"
+    },
+    {
+      "origin": "Western Marches",
+      "originKey": "western_marches",
+      "gender": "Male",
+      "genderKey": "male",
+      "variation": 4,
+      "age": 50,
+      "ageStage": "elder",
+      "file": "apps/mobile/assets/portraits/base/western_marches/male/variation_04/age_50_elder.png"
+    }
+  ]
+}
