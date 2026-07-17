@@ -1,0 +1,33 @@
+{
+  "style": "high-quality fantasy watercolor portrait, hand-painted paper texture, soft painterly edges, semi-realistic, characteristic and imperfect face, neutral expression, chest-up centered composition, consistent camera angle and lighting, no crown, no text, no frame",
+  "canvas": {
+    "width": 1024,
+    "height": 1024,
+    "format": "webp"
+  },
+  "ages": [0, 12, 16, 24, 30, 50],
+  "origins": {
+    "northern": "facial structure inspired broadly by Scandinavian and Northern European populations",
+    "eastern-courts": "facial structure inspired broadly by East Asian populations",
+    "western-marches": "facial structure inspired broadly by Native North American populations",
+    "steppe": "facial structure inspired broadly by sub-Saharan African populations with dark skin",
+    "deep-cities": "pale European facial structure with cool, underground-city pallor"
+  },
+  "sexes": ["female", "male"],
+  "visualBloodlines": ["generic", "atlantis"],
+  "identitiesPerGroup": 5,
+  "atlantis": {
+    "description": "subtle magical glow only; optional bright blue, light purple, or grey eyes; optional hairstyle-compatible white hair strand; never add a crown",
+    "eyeOverrides": ["bright-blue", "light-purple", "grey"],
+    "whiteStrandExcludedHairColors": ["platinum-blonde", "ash-white"]
+  },
+  "ageRules": {
+    "0": "baby wrapped in a neutral highborn or lowborn swaddle; no defined hairstyle, clothing style, crown, beard, scar, burn, or blind-eye layer",
+    "12": "recognizable child version of the same identity",
+    "16": "adolescent version of the same identity",
+    "24": "young-adult version of the same identity",
+    "30": "mature adult version of the same identity",
+    "50": "older version of the same identity with believable ageing"
+  },
+  "outputRoot": "apps/mobile/assets/portraits/generated"
+}
