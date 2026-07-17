@@ -11,5 +11,6 @@ export * from "./inventory.js";
 export * from "./chronicle.js";
 export * from "./ai.js";
 export * from "./assets.js";
+export * from "./portraits.js";
 export * from "./saves.js";
 export * from "./world.js";
