@@ -409,110 +409,296 @@ type PortraitSubject = {
   alive?: boolean;
 };
 
-const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
-  {
-    id: "eleanor-vale",
-    firstName: "Eleanor",
+type MysteryDetectiveProfilePreset = Omit<MysteryDetectiveProfile, "sex" | "portraitLineage" | "visualRace">;
+
+const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePreset> = {
+  "player-custom01-row-01": {
+    id: "lin-vale",
+    firstName: "Lin",
     familyName: "Vale",
-    sex: "Female",
     origin: "Western Marches",
     hairStyle: "Wavy",
     hairColor: "Brown",
     faceTrait: "Sharp-Boned",
-    portraitLineage: "player-custom01-row-03",
-    visualRace: "black",
     quirks: [
       { id: "dog", label: "Keeps a retired search dog", check: "Search", modifier: 3 },
-      { id: "voices", label: "Never forgets a voice", check: "History", modifier: 2 },
+      { id: "voices", label: "Never forgets a voice", check: "History", modifier: 3 },
       { id: "stairs", label: "Old stair injury aches in a chase", check: "Athletics", modifier: -3 }
     ]
   },
-  {
+  "player-custom01-row-02": {
     id: "adrian-locke",
     firstName: "Adrian",
     familyName: "Locke",
-    sex: "Male",
     origin: "Northlands",
     hairStyle: "Short",
     hairColor: "Black",
     faceTrait: "Scarred",
-    portraitLineage: "player-custom01-row-02",
-    visualRace: "olive",
     quirks: [
-      { id: "clock", label: "Repairs pocket watches by habit", check: "Sleight of Hand", modifier: 2 },
+      { id: "clock", label: "Repairs pocket watches by habit", check: "Sleight of Hand", modifier: 3 },
       { id: "soldier", label: "Served as a field orderly", check: "Medicine", modifier: 3 },
       { id: "temper", label: "Answers insults too quickly", check: "Persuasion", modifier: -3 }
     ]
   },
-  {
-    id: "camille-duval",
-    firstName: "Camille",
-    familyName: "Duval",
-    sex: "Female",
-    origin: "Eastern Courts",
-    hairStyle: "Long Straight",
+  "player-custom01-row-04": {
+    id: "ren-ito",
+    firstName: "Ren",
+    familyName: "Ito",
+    origin: "Northern Ports",
+    hairStyle: "Shaved",
     hairColor: "Black",
-    faceTrait: "Mismatched Eyes",
-    portraitLineage: "player-player05-row-03",
-    visualRace: "eastern",
+    faceTrait: "Scarred",
     quirks: [
-      { id: "cards", label: "Reads people over card games", check: "Deception", modifier: 3 },
-      { id: "perfume", label: "Knows expensive perfumes on sight", check: "Search", modifier: 2 },
-      { id: "storm", label: "Sleeps badly during storms", check: "Composure", modifier: -3 }
+      { id: "lockpick", label: "Collects forgotten room keys", check: "Sleight of Hand", modifier: 3 },
+      { id: "duelist", label: "Practices with a cane blade", check: "Athletics", modifier: 3 },
+      { id: "smirk", label: "Smiles at exactly the wrong time", check: "Composure", modifier: -3 }
     ]
   },
-  {
-    id: "kenji-mori",
-    firstName: "Kenji",
-    familyName: "Mori",
-    sex: "Male",
-    origin: "Steppe",
+  "player-custom02-row-01": {
+    id: "amara-voss",
+    firstName: "Amara",
+    familyName: "Voss",
+    origin: "Deep Cities",
+    hairStyle: "Long Straight",
+    hairColor: "Blonde",
+    faceTrait: "Mismatched Eyes",
+    quirks: [
+      { id: "perfume", label: "Knows expensive perfumes on sight", check: "Search", modifier: 3 },
+      { id: "salon", label: "Was raised around salon gossip", check: "Persuasion", modifier: 3 },
+      { id: "heights", label: "Loses nerve near high balconies", check: "Composure", modifier: -3 }
+    ]
+  },
+  "player-custom02-row-02": {
+    id: "hana-saito",
+    firstName: "Hana",
+    familyName: "Saito",
+    origin: "Island Courts",
     hairStyle: "Messy Bun",
     hairColor: "Black",
     faceTrait: "Freckles",
-    portraitLineage: "player-custom02-row-04",
-    visualRace: "eastern",
     quirks: [
-      { id: "garden", label: "Grew up tending kitchen gardens", check: "Medicine", modifier: 2 },
+      { id: "garden", label: "Grew up tending kitchen gardens", check: "Medicine", modifier: 3 },
       { id: "quiet", label: "Moves quietly when others argue", check: "Stealth", modifier: 3 },
       { id: "blood", label: "Gets faint at the sight of fresh blood", check: "Composure", modifier: -3 }
     ]
   },
-  {
+  "player-custom02-row-03": {
+    id: "felix-ashford",
+    firstName: "Felix",
+    familyName: "Ashford",
+    origin: "Western Marches",
+    hairStyle: "Wavy",
+    hairColor: "Blonde",
+    faceTrait: "Sharp-Boned",
+    quirks: [
+      { id: "ledger", label: "Balances household ledgers for fun", check: "History", modifier: 3 },
+      { id: "mirror", label: "Practiced false smiles in mirrors", check: "Deception", modifier: 3 },
+      { id: "needle", label: "Cannot look at medical needles", check: "Medicine", modifier: -3 }
+    ]
+  },
+  "player-custom03-row-01": {
+    id: "beatrice-gray",
+    firstName: "Beatrice",
+    familyName: "Gray",
+    origin: "Northlands",
+    hairStyle: "Long Straight",
+    hairColor: "Platinum Blonde",
+    faceTrait: "Half-Blind",
+    quirks: [
+      { id: "archive", label: "Knows old trial records by heart", check: "History", modifier: 3 },
+      { id: "bedside", label: "Volunteered in a fever ward", check: "Medicine", modifier: 3 },
+      { id: "cold", label: "Hands shake in cold rooms", check: "Sleight of Hand", modifier: -3 }
+    ]
+  },
+  "player-custom03-row-02": {
+    id: "nikhil-rao",
+    firstName: "Nikhil",
+    familyName: "Rao",
+    origin: "Southern Provinces",
+    hairStyle: "Curly",
+    hairColor: "Black",
+    faceTrait: "Sharp-Boned",
+    quirks: [
+      { id: "theatre", label: "Can mimic polite manners perfectly", check: "Rizz", modifier: 3 },
+      { id: "ink", label: "Spots forged ink at a glance", check: "Search", modifier: 3 },
+      { id: "candor", label: "Finds direct lies distasteful", check: "Deception", modifier: -3 }
+    ]
+  },
+  "player-custom03-row-03": {
+    id: "zadie-marlow",
+    firstName: "Zadie",
+    familyName: "Marlow",
+    origin: "Harbor Quarter",
+    hairStyle: "Braided",
+    hairColor: "Dark Red",
+    faceTrait: "Fire-Burned",
+    quirks: [
+      { id: "cards", label: "Reads people over card games", check: "Deception", modifier: 3 },
+      { id: "dockside", label: "Knows how smugglers hide cargo", check: "Search", modifier: 3 },
+      { id: "rank", label: "Bridles under aristocratic orders", check: "Charisma", modifier: -3 }
+    ]
+  },
+  "player-custom03-row-04": {
+    id: "milo-keene",
+    firstName: "Milo",
+    familyName: "Keene",
+    origin: "Deep Cities",
+    hairStyle: "Messy Bun",
+    hairColor: "Brown",
+    faceTrait: "Freckles",
+    quirks: [
+      { id: "maps", label: "Sketches floor plans from memory", check: "Search", modifier: 3 },
+      { id: "student", label: "Still remembers university scandals", check: "History", modifier: 3 },
+      { id: "flirt", label: "Turns awkward when flirted with", check: "Rizz", modifier: -3 }
+    ]
+  },
+  "player-custom04-row-01": {
+    id: "arun-mehta",
+    firstName: "Arun",
+    familyName: "Mehta",
+    origin: "Southern Provinces",
+    hairStyle: "Short",
+    hairColor: "Black",
+    faceTrait: "Scarred",
+    quirks: [
+      { id: "boxing", label: "Boxed at university", check: "Athletics", modifier: 3 },
+      { id: "hospital", label: "Recognizes battlefield injuries", check: "Medicine", modifier: 3 },
+      { id: "pride", label: "Takes insults personally", check: "Persuasion", modifier: -3 }
+    ]
+  },
+  "player-custom04-row-02": {
+    id: "lydia-fenwick",
+    firstName: "Lydia",
+    familyName: "Fenwick",
+    origin: "Western Marches",
+    hairStyle: "Curly",
+    hairColor: "Ginger",
+    faceTrait: "Freckles",
+    quirks: [
+      { id: "aunt", label: "Has an aunt in every respectable scandal", check: "Persuasion", modifier: 3 },
+      { id: "waltz", label: "Can cross a ballroom unnoticed", check: "Stealth", modifier: 3 },
+      { id: "vase", label: "Knocks over delicate things", check: "Sleight of Hand", modifier: -3 }
+    ]
+  },
+  "player-custom04-row-03": {
+    id: "priya-sen",
+    firstName: "Priya",
+    familyName: "Sen",
+    origin: "Southern Provinces",
+    hairStyle: "Messy Bun",
+    hairColor: "Black",
+    faceTrait: "Sharp-Boned",
+    quirks: [
+      { id: "pulse", label: "Can read a pulse without a clock", check: "Medicine", modifier: 3 },
+      { id: "poise", label: "Keeps courtly poise under pressure", check: "Composure", modifier: 3 },
+      { id: "mud", label: "Hates ruining formal shoes", check: "Athletics", modifier: -3 }
+    ]
+  },
+  "player-custom04-row-04": {
+    id: "soren-park",
+    firstName: "Soren",
+    familyName: "Park",
+    origin: "Eastern Coast",
+    hairStyle: "Shaved",
+    hairColor: "Black",
+    faceTrait: "Vitiligo",
+    quirks: [
+      { id: "smoke", label: "Can place pipe tobacco by scent", check: "Search", modifier: 3 },
+      { id: "mask", label: "Never lets panic reach the face", check: "Composure", modifier: 3 },
+      { id: "romance", label: "Misses obvious romantic hints", check: "Rizz", modifier: -3 }
+    ]
+  },
+  "player-player05-row-01": {
     id: "rosalie-thorne",
     firstName: "Rosalie",
     familyName: "Thorne",
-    sex: "Female",
     origin: "Deep Cities",
     hairStyle: "Braided",
     hairColor: "Blonde",
     faceTrait: "Half-Blind",
-    portraitLineage: "player-player05-row-01",
-    visualRace: "fair",
     quirks: [
       { id: "ledgers", label: "Balances household ledgers for fun", check: "History", modifier: 3 },
-      { id: "aunt", label: "Has an aunt in every respectable scandal", check: "Persuasion", modifier: 2 },
+      { id: "aunt", label: "Has an aunt in every respectable scandal", check: "Persuasion", modifier: 3 },
       { id: "depth", label: "Hates cramped service passages", check: "Stealth", modifier: -3 }
     ]
   },
-  {
+  "player-player05-row-02": {
+    id: "julian-north",
+    firstName: "Julian",
+    familyName: "North",
+    origin: "Northlands",
+    hairStyle: "Short",
+    hairColor: "Brown",
+    faceTrait: "Sharp-Boned",
+    quirks: [
+      { id: "horse", label: "Was raised around hunting parties", check: "Athletics", modifier: 3 },
+      { id: "toast", label: "Can charm a hostile dinner table", check: "Charisma", modifier: 3 },
+      { id: "library-dust", label: "Coughs in dusty archives", check: "Search", modifier: -3 }
+    ]
+  },
+  "player-player05-row-03": {
+    id: "mira-nair",
+    firstName: "Mira",
+    familyName: "Nair",
+    origin: "Southern Provinces",
+    hairStyle: "Long Straight",
+    hairColor: "Black",
+    faceTrait: "Mismatched Eyes",
+    quirks: [
+      { id: "cards", label: "Reads people over card games", check: "Deception", modifier: 3 },
+      { id: "perfume", label: "Knows expensive perfumes on sight", check: "Search", modifier: 3 },
+      { id: "storm", label: "Sleeps badly during storms", check: "Composure", modifier: -3 }
+    ]
+  },
+  "player-player05-row-04": {
     id: "lucian-crow",
     firstName: "Lucian",
     familyName: "Crow",
-    sex: "Male",
     origin: "Western Marches",
     hairStyle: "Curly",
     hairColor: "Dark Red",
     faceTrait: "Sharp-Boned",
-    portraitLineage: "player-player05-row-04",
-    visualRace: "black",
     quirks: [
       { id: "boxing", label: "Boxed at university", check: "Athletics", modifier: 3 },
-      { id: "theatre", label: "Can mimic polite manners perfectly", check: "Rizz", modifier: 2 },
+      { id: "theatre", label: "Can mimic polite manners perfectly", check: "Rizz", modifier: 3 },
       { id: "dust", label: "Coughs in dusty archives", check: "Search", modifier: -3 }
     ]
   }
-];
+};
+
+function fallbackMysteryDetectiveProfile(asset: RavenwoodGuestPortraitAsset, index: number): MysteryDetectiveProfilePreset {
+  const fallbackFirstNames = asset.sex === "Female"
+    ? ["Elise", "Maribel", "Nadia", "Tamsin"]
+    : ["Edwin", "Rowan", "Cassian", "Tristan"];
+  const fallbackFamilyNames = ["Vale", "Locke", "Gray", "Marlow"];
+  return {
+    id: `detective-${asset.lineage}`,
+    firstName: fallbackFirstNames[index % fallbackFirstNames.length],
+    familyName: fallbackFamilyNames[index % fallbackFamilyNames.length],
+    origin: "Western Marches",
+    hairStyle: "Wavy",
+    hairColor: asset.sex === "Female" ? "Brown" : "Black",
+    faceTrait: "Sharp-Boned",
+    quirks: [
+      { id: `search-${asset.lineage}`, label: "Notices what servants move twice", check: "Search", modifier: 3 },
+      { id: `history-${asset.lineage}`, label: "Collects old court scandals", check: "History", modifier: 3 },
+      { id: `composure-${asset.lineage}`, label: "Goes quiet when accused directly", check: "Composure", modifier: -3 }
+    ]
+  };
+}
+
+const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = ravenwoodPlayerPortraitAssets
+  .filter((asset) => asset.age === 24)
+  .sort((a, b) => a.lineage.localeCompare(b.lineage))
+  .map((asset, index) => {
+    const preset = ravenwoodDetectiveProfilePresets[asset.lineage] ?? fallbackMysteryDetectiveProfile(asset, index);
+    return {
+      ...preset,
+      sex: asset.sex,
+      portraitLineage: asset.lineage,
+      visualRace: asset.visualRace
+    };
+  });
 
 const firstNames = ["Aelira", "Mirelle", "Vaessa", "Rowan", "Lucian", "Dorian", "Veyr", "Sable", "Corenna", "Tavik"];
 const childNames = ["Elian", "Mara", "Neris", "Orren", "Lysa", "Theo", "Asha", "Rook", "Selene", "Bryn"];
