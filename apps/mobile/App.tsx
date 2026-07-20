@@ -328,7 +328,7 @@ type MysteryVisualRace = "fair" | "olive" | "black" | "eastern";
 type RavenwoodGuestPortraitAsset = {
   key: string;
   source: ImageSourcePropType;
-  sourceKind: "guest" | "staff";
+  sourceKind: "guest" | "staff" | "player";
   sex: Sex;
   visualRace: MysteryVisualRace;
   lineage: string;
@@ -382,6 +382,15 @@ const ravenwoodStaffPortraitSheetSources: ImageSourcePropType[] = [
   require("./assets/ravenwood/staff_portraits/sheets/staff11.png")
 ];
 
+const ravenwoodPlayerPortraitSheetSources: ImageSourcePropType[] = [
+  require("./assets/ravenwood/player_portraits/sheets/player01.png"),
+  require("./assets/ravenwood/player_portraits/sheets/player02.png"),
+  require("./assets/ravenwood/player_portraits/sheets/player03.png"),
+  require("./assets/ravenwood/player_portraits/sheets/player04.png"),
+  require("./assets/ravenwood/player_portraits/sheets/player05.png"),
+  require("./assets/ravenwood/player_portraits/sheets/player06.png")
+];
+
 const ravenwoodPortraitSexRows: Sex[][] = [
   ["Female", "Female", "Male", "Male"],
   ["Female", "Female", "Male", "Female"],
@@ -428,6 +437,15 @@ const ravenwoodStaffPortraitSexRows: Sex[][] = [
   ["Male", "Female", "Male", "Male"]
 ];
 
+const ravenwoodPlayerPortraitSexRows: Sex[][] = [
+  ["Female", "Male", "Female", "Female"],
+  ["Female", "Male", "Female", "Male"],
+  ["Female", "Male", "Female", "Male"],
+  ["Female", "Male", "Female", "Male"],
+  ["Female", "Male", "Female", "Male"],
+  ["Female", "Male", "Female", "Male"]
+];
+
 const ravenwoodPortraitRaceRows: MysteryVisualRace[][] = [
   ["olive", "black", "eastern", "fair"],
   ["fair", "fair", "fair", "fair"],
@@ -472,6 +490,15 @@ const ravenwoodStaffPortraitRaceRows: MysteryVisualRace[][] = [
   ["olive", "black", "olive", "eastern"],
   ["fair", "black", "eastern", "fair"],
   ["olive", "black", "fair", "eastern"]
+];
+
+const ravenwoodPlayerPortraitRaceRows: MysteryVisualRace[][] = [
+  ["olive", "fair", "olive", "fair"],
+  ["fair", "black", "eastern", "olive"],
+  ["fair", "black", "olive", "olive"],
+  ["olive", "olive", "eastern", "olive"],
+  ["fair", "fair", "eastern", "black"],
+  ["olive", "fair", "eastern", "olive"]
 ];
 
 const RAVENWOOD_GUEST_SELECTABLE_SHEET_START_INDEX = 10;
@@ -522,7 +549,27 @@ const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = ravenwoodSta
   )
 );
 
-const ravenwoodPortraitByKey = Object.fromEntries([...ravenwoodGuestPortraitAssets, ...ravenwoodStaffPortraitAssets].map((asset) => [asset.key, asset]));
+const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = ravenwoodPlayerPortraitSheetSources.flatMap((source, sheetIndex) =>
+  ravenwoodPlayerPortraitSexRows[sheetIndex].flatMap((rowSex, rowIndex) =>
+    ravenwoodPortraitAges.map((age, columnIndex) => ({
+      key: `rw-player-s${sheetIndex + 1}-r${rowIndex + 1}-a${age}`,
+      source,
+      sourceKind: "player",
+      sex: rowSex,
+      visualRace: ravenwoodPlayerPortraitRaceRows[sheetIndex][rowIndex],
+      lineage: `player-sheet-${sheetIndex + 1}-row-${rowIndex + 1}`,
+      age,
+      crop: {
+        x: columnIndex * RAVENWOOD_CELL_WIDTH,
+        y: rowIndex * RAVENWOOD_CELL_HEIGHT + RAVENWOOD_CROP_TOP_OFFSET,
+        width: RAVENWOOD_CELL_WIDTH,
+        height: RAVENWOOD_CELL_HEIGHT - RAVENWOOD_CROP_TOP_OFFSET
+      }
+    }))
+  )
+);
+
+const ravenwoodPortraitByKey = Object.fromEntries([...ravenwoodGuestPortraitAssets, ...ravenwoodStaffPortraitAssets, ...ravenwoodPlayerPortraitAssets].map((asset) => [asset.key, asset]));
 
 type PortraitSubject = {
   id?: string;
@@ -649,8 +696,8 @@ function stableHash(value: string): number {
 
 function fallbackRavenwoodPlayerPortrait(subject: Pick<PortraitSubject, "firstName" | "familyName" | "sex" | "visualRace">): RavenwoodGuestPortraitAsset | null {
   const targetAge = ravenwoodPortraitAge(30);
-  const matchingRace = ravenwoodGuestPortraitAssets.filter((asset) => asset.sex === subject.sex && asset.age === targetAge && (!subject.visualRace || asset.visualRace === subject.visualRace));
-  const matchingSex = ravenwoodGuestPortraitAssets.filter((asset) => asset.sex === subject.sex && asset.age === targetAge);
+  const matchingRace = ravenwoodPlayerPortraitAssets.filter((asset) => asset.sex === subject.sex && asset.age === targetAge && (!subject.visualRace || asset.visualRace === subject.visualRace));
+  const matchingSex = ravenwoodPlayerPortraitAssets.filter((asset) => asset.sex === subject.sex && asset.age === targetAge);
   const pool = matchingRace.length > 0 ? matchingRace : matchingSex;
   if (pool.length === 0) return null;
   return pool[stableHash(`${subject.firstName}:${subject.familyName}:${subject.sex}`) % pool.length];
@@ -1916,6 +1963,17 @@ function chooseRavenwoodStaffPortrait(input: { sex: Sex; age: number; usedPortra
   return portrait;
 }
 
+function chooseRavenwoodPlayerPortrait(input: { sex: Sex; age: number; usedPortraitKeys: Set<string>; visualRace?: MysteryVisualRace }): RavenwoodGuestPortraitAsset | null {
+  const targetAge = ravenwoodPortraitAge(input.age);
+  const base = ravenwoodPlayerPortraitAssets.filter((asset) => asset.sex === input.sex && asset.age === targetAge && !input.usedPortraitKeys.has(asset.key));
+  const raceMatches = input.visualRace ? base.filter((asset) => asset.visualRace === input.visualRace) : [];
+  const candidates = raceMatches.length > 0 ? raceMatches : base;
+  const fallback = candidates.length > 0 ? candidates : ravenwoodPlayerPortraitAssets.filter((asset) => asset.sex === input.sex && !input.usedPortraitKeys.has(asset.key));
+  const portrait = fallback.length > 0 ? pick(fallback) : null;
+  if (portrait) input.usedPortraitKeys.add(portrait.key);
+  return portrait;
+}
+
 function addMysteryFamilyNote(npc: MysteryNpc, note: string) {
   npc.familyRelationNote = npc.familyRelationNote ? `${npc.familyRelationNote}; ${note}` : note;
 }
@@ -2220,7 +2278,7 @@ function createMysteryGameFromDraft(draft: CharacterDraft): MysteryGame {
   const playerFamilyName = ravenwoodFamilyName(draft.familyName.trim());
   const blockedFamilyNames = new Set<string>([playerFamilyName.toLowerCase()]);
   const playerFirstName = uniqueRavenwoodFirstName(draft.sex, playerFamilyName, usedNames, usedFirstNames, draft.firstName.trim());
-  const playerPortrait = chooseRavenwoodGuestPortrait({ sex: draft.sex, age: 30, usedPortraitKeys });
+  const playerPortrait = chooseRavenwoodPlayerPortrait({ sex: draft.sex, age: 30, usedPortraitKeys });
   const rooms = buildMysteryRooms();
   const guestRooms = rooms.filter((room) => room.id.startsWith("guest-room"));
   const playerRoom = pick(guestRooms);
