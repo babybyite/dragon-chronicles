@@ -337,7 +337,7 @@ const locationBackgrounds: Record<string, ImageSourcePropType> = {
   sewers: require("./assets/locations/sewers.png")
 };
 
-const ravenwoodRoomBackgrounds: Record<string, ImageSourcePropType> = {
+const ravenwoodDarkRoomBackgrounds: Record<string, ImageSourcePropType> = {
   "grand-hall": require("./assets/ravenwood/room_backgrounds/great_hall.jpg"),
   "drawing-room": require("./assets/ravenwood/room_backgrounds/drawing_room.jpg"),
   "dining-room": require("./assets/ravenwood/room_backgrounds/dining_room.jpg"),
@@ -355,12 +355,31 @@ const ravenwoodRoomBackgrounds: Record<string, ImageSourcePropType> = {
   "west-gallery": require("./assets/ravenwood/room_backgrounds/great_hall.jpg")
 };
 
-function ravenwoodRoomBackgroundFor(mystery: Pick<MysteryGame, "rooms" | "currentRoomId">): ImageSourcePropType {
+const ravenwoodLightRoomBackgrounds: Record<string, ImageSourcePropType> = {
+  "grand-hall": require("./assets/ravenwood/room_backgrounds/great_hall_light.jpg"),
+  "drawing-room": require("./assets/ravenwood/room_backgrounds/drawing_room_light.jpg"),
+  "dining-room": require("./assets/ravenwood/room_backgrounds/dining_room_light.jpg"),
+  library: require("./assets/ravenwood/room_backgrounds/library_light.jpg"),
+  conservatory: require("./assets/ravenwood/room_backgrounds/conservatory_light.jpg"),
+  "billiards-room": require("./assets/ravenwood/room_backgrounds/billiards_room_light.jpg"),
+  "smoking-room": require("./assets/ravenwood/room_backgrounds/smoking_room_light.jpg"),
+  "garden-terrace": require("./assets/ravenwood/room_backgrounds/garden_terrace_light.jpg"),
+  kitchen: require("./assets/ravenwood/room_backgrounds/kitchen_light.jpg"),
+  "staff-corridor": require("./assets/ravenwood/room_backgrounds/staff_corridor_light.jpg"),
+  "servants-hall": require("./assets/ravenwood/room_backgrounds/staff_corridor_light.jpg"),
+  pantry: require("./assets/ravenwood/room_backgrounds/kitchen_light.jpg"),
+  laundry: require("./assets/ravenwood/room_backgrounds/staff_corridor_light.jpg"),
+  "back-stairs": require("./assets/ravenwood/room_backgrounds/staff_corridor_light.jpg"),
+  "west-gallery": require("./assets/ravenwood/room_backgrounds/great_hall_light.jpg")
+};
+
+function ravenwoodRoomBackgroundFor(mystery: Pick<MysteryGame, "rooms" | "currentRoomId">, themeName: ThemeName): ImageSourcePropType {
+  const backgrounds = themeName === "dark" ? ravenwoodDarkRoomBackgrounds : ravenwoodLightRoomBackgrounds;
   const currentRoom = mystery.rooms.find((room) => room.id === mystery.currentRoomId);
-  if (ravenwoodRoomBackgrounds[mystery.currentRoomId]) return ravenwoodRoomBackgrounds[mystery.currentRoomId];
-  if (currentRoom?.kind === "service") return ravenwoodRoomBackgrounds.kitchen;
-  if (currentRoom?.kind === "staff") return ravenwoodRoomBackgrounds["staff-corridor"];
-  return ravenwoodRoomBackgrounds["grand-hall"];
+  if (backgrounds[mystery.currentRoomId]) return backgrounds[mystery.currentRoomId];
+  if (currentRoom?.kind === "service") return backgrounds.kitchen;
+  if (currentRoom?.kind === "staff") return backgrounds["staff-corridor"];
+  return backgrounds["grand-hall"];
 }
 
 const FAMILY_TREE_CANVAS_WIDTH = 1640;
@@ -4405,7 +4424,7 @@ export default function App() {
   function MysteryStoryWindow({ mystery }: { mystery: MysteryGame }) {
     const visibleMessages = mystery.messages.slice(-5);
     const currentRoom = mysteryRoomName(mystery, mystery.currentRoomId);
-    const roomBackground = themeName === "dark" ? ravenwoodRoomBackgroundFor(mystery) : undefined;
+    const roomBackground = ravenwoodRoomBackgroundFor(mystery, themeName);
     const sceneHeaderStyle = [styles.mysterySceneHeader, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "#141217" : "#efe8dc", borderColor: "rgba(240, 196, 92, 0.28)" }];
     const storyPanelStyle = [styles.storyTextPanel, styles.mysteryTextPanelWide, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.82)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }];
     const inputPanelStyle = [styles.storyInputPanel, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.78)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }];
