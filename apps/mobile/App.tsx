@@ -328,6 +328,7 @@ type MysteryVisualRace = "fair" | "olive" | "black" | "eastern";
 type RavenwoodGuestPortraitAsset = {
   key: string;
   source: ImageSourcePropType;
+  sourceKind: "guest" | "staff";
   sex: Sex;
   visualRace: MysteryVisualRace;
   lineage: string;
@@ -483,6 +484,7 @@ const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = ravenwoodPor
     ravenwoodPortraitAges.map((age, columnIndex) => ({
       key: `rw-s${sheetIndex + 1}-r${rowIndex + 1}-a${age}`,
       source,
+      sourceKind: "guest",
       sex: rowSex,
       visualRace: ravenwoodPortraitRaceRows[sheetIndex][rowIndex],
       lineage: `sheet-${sheetIndex + 1}-row-${rowIndex + 1}`,
@@ -504,6 +506,7 @@ const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = ravenwoodSta
       return {
         key: `rw-staff-s${sheetIndex + 1}-r${rowIndex + 1}-a${age}`,
         source,
+        sourceKind: "staff",
         sex: rowSex,
         visualRace: ravenwoodStaffPortraitRaceRows[sheetIndex][rowIndex],
         lineage: `staff-sheet-${sheetIndex + 1}-row-${rowIndex + 1}`,
@@ -1345,7 +1348,7 @@ const mysteryGuestCareerProfiles: { minAge: number; occupation: string; educatio
 const staffStations = ["kitchen", "staff-corridor", "servants-hall", "laundry", "pantry", "garden-terrace", "back-stairs"];
 const ravenwoodMaleNames = ["Theodore", "Asher", "Cedric", "Soraaro", "Adrian", "Alaric", "Ambrose", "Arthur", "Bastian", "Benedict", "Blaise", "Caspian", "Dorian", "Edgar", "Edmund", "Elias", "Felix", "Florian", "Gabriel", "Gideon", "Hugo", "Jasper", "Julian", "Laurent", "Leander", "Leon", "Lucian", "Magnus", "Marcel", "Marius", "Oliver", "Percival", "Raphael", "Remy", "Rowan", "Sebastian", "Silas", "Soren", "Tristan", "Victor", "Vincent", "Xavier", "Elio", "Mael", "Noel", "Rafael", "Thierry", "Alejandro", "Alonso", "Cruz", "Diego", "Esteban", "Javier", "Leandro", "Lorenzo", "Mateo", "Santiago", "Dimitri", "Ilya", "Nikolai", "Stefan", "Akira", "Daichi", "Haru", "Hiro", "Itsuki", "Kaoru", "Kenji", "Ren", "Riku", "Sora", "Taejin", "Jun", "Minho", "Seojun", "Yichen", "Jian", "Lian", "Ming", "Renji", "Toma", "Alden", "Arden", "August", "Claude", "Corvin", "Elian", "Emil", "Evander", "Hadrian", "Hector", "Isidore", "Matthias", "Nicolas", "Octavian", "Orion", "Roman", "Sylvain", "Valentin", "Aurel", "Cassiel", "Lucien", "Nicolás", "Aleksi", "Emilian", "Kasimir", "Lev", "Mikhail", "Emiliaric", "Laurenvin", "Sorenan", "Jasperric", "Hiroien", "Soraair", "Ilyaas", "Alaricien", "Rafaelien", "Yichenvren", "Kenjiar", "Junen", "Valesian", "Asheran", "Emilia", "Javierian", "Matthiasas", "Alaricrel", "Felixric", "Thierren", "Itsukiric", "Oliveris", "Silasis", "Mariusor", "Aurelar", "Rikuric", "Mikhaiiel", "Gabrievar", "Sylvairiel", "Isideo", "Sebastiaian", "Marcelvon"];
 const ravenwoodFemaleNames = ["Adeline", "Aurelia", "Beatrice", "Belladonna", "Briar", "Camille", "Cassandra", "Celeste", "Celine", "Clara", "Cordelia", "Dahlia", "Delphine", "Eleanor", "Elise", "Elodie", "Emmeline", "Estelle", "Evangeline", "Flora", "Genevieve", "Giselle", "Helena", "Isadora", "Ivy", "Josephine", "Juliette", "Lenore", "Lilian", "Lorelei", "Lucille", "Madeleine", "Margot", "Marielle", "Mireille", "Nadine", "Noelle", "Odette", "Ophelia", "Rosalie", "Sabine", "Selene", "Seraphine", "Sylvie", "Theodora", "Valentina", "Vesper", "Victoria", "Vivienne", "Willow", "Amara", "Anaïs", "Aveline", "Cressida", "Elara", "Fleur", "Isabeau", "Lavinia", "Melisande", "Ondine", "Alba", "Amalia", "Catalina", "Elena", "Esmeralda", "Inés", "Isabella", "Lucia", "Marisol", "Paloma", "Anastasia", "Danica", "Irina", "Katya", "Milena", "Nadia", "Oksana", "Svetlana", "Tatiana", "Zoya", "Aiko", "Akari", "Emi", "Hana", "Haruka", "Kaede", "Mei", "Miyu", "Reina", "Yuna", "Chaewon", "Haeun", "Jisoo", "Nari", "Sora", "Xia", "Yue", "Lian", "Meilin", "Rin", "Inésyne", "Jisooa", "Sabineina", "Josephinora", "Reinaalia", "Isada", "Willowyne", "Irinaia", "Valentinis", "Isadorira", "Katyais", "Seraphi", "Aikois", "Marieuna", "Seleneuna", "Palomarea", "Elenaenne", "Helenaa", "Inéselle", "Naria", "Chaewira", "Xiaea", "Sabineora", "Evangelineora", "Meiis", "Rinea", "Hanaette", "Kaedeenne", "Harukaina", "Danicaia", "Emiora", "Giselleline", "Briaris", "Akariyne", "Anaïsina", "Emieria", "Irinavenne", "Loreleiia", "Reinaina", "Aikoira"];
-const ravenwoodSurnames = ["Ash", "Black", "Briar", "Crow", "Dusk", "Elder", "Ember", "Ever", "Fair", "Fallow", "Fern", "Frost", "Glen", "Grey", "Hallow", "Hawke", "Hazel", "Hollow", "Iron", "Ivory", "Lark", "Marlowe", "Mist", "Moon", "Night", "Oak", "Raven", "Rose", "Rowan", "Sable", "Shadow", "Silver", "Snow", "Star", "Stone", "Storm", "Thorn", "Vale", "Vane", "Winter", "Wren", "Wilde", "Wood", "Bell", "Blake", "Byron", "Carrow", "Dacre", "Darcy", "Devereux", "Fairfax", "Graves", "Hale", "Harrow", "Hart", "Huxley", "Locke", "March", "Morrow", "Poe", "Quill", "Reeve", "Sinclair", "Sterling", "Thorne", "Voss", "Whitlock", "Wycliffe", "Arden", "Beaumont", "Bellefleur", "Clairmont", "Delacroix", "Desmarais", "Duval", "Fontaine", "Laurent", "Lenoir", "Moreau", "Rochefort", "Valmont", "Villiers", "Alarcón", "Delgado", "Montoya", "Navarro", "Salazar", "Serrano", "Valdés", "Vega", "Volkov", "Morozov", "Orlov", "Petrov", "Romanov", "Sokolov", "Vasiliev", "Dragomir", "Kovacs", "Novak", "Horvath", "Farkas", "Nagy", "Takeda", "Kuroda", "Mori", "Akiyama", "Hayashi", "Ishikawa", "Han", "Seo", "Kang", "Jin", "Lin", "Shen", "Wei", "Zhao", "Crowbyron", "La Zhaofield", "Von Crowhurst", "La Salazarvane", "La Duvalclair", "Della Mistmere", "La Thornewick", "St. Lockebridge", "Del Fernember", "Du Thornridge", "Bellbridge", "St. Zhaowood", "Von Irondell", "St. Fallowclair", "Delgadoquill", "Villiersstone", "Du Wycliffehart", "Le Wood", "Von Seostorm", "La Nagymere", "Hayashihayashi", "Du Seomont", "Blakefield", "Le Fontainemoor", "De Fernwell", "Larkmist", "Le Halerose", "De Jinsokolov", "Le Snowfield", "Shadowwinter", "Van Fairfaxthorne", "Moreaualarcón", "La Stonestar", "Della Morozovstone", "Von Vasilievwood", "Ravenwinter", "Van Elderhurst", "Vasilievshade", "Du Ravenshade", "Du Darcy", "Evercliff", "Von Duvalmont", "Le Jinhurst", "Van Kovacs", "Del Starsterling", "De Hallow", "De Thornerose", "La Ravenarden", "De Ardenbrook", "Della Fallowwood", "La Fallowclair", "La Fontainecourt", "La Beaumontbridge", "Silverwinter", "Glenhart", "St. Hazelzhao", "De Huxleyrose", "St. Clairmontromanov", "Devereuxhurst", "Roseshade", "Del Vasilievgrave", "Van Romanovwick", "Du Fairthorne"];
+const ravenwoodSurnames = ["Ash", "Black", "Briar", "Crow", "Dusk", "Elder", "Ember", "Ever", "Fair", "Fallow", "Fern", "Frost", "Glen", "Grey", "Hallow", "Hawke", "Hazel", "Hollow", "Iron", "Ivory", "Lark", "Marlowe", "Mist", "Moon", "Night", "Oak", "Raven", "Rose", "Rowan", "Sable", "Shadow", "Silver", "Snow", "Star", "Stone", "Storm", "Thorn", "Vale", "Vane", "Winter", "Wren", "Wilde", "Wood", "Bell", "Blake", "Byron", "Carrow", "Dacre", "Darcy", "Devereux", "Fairfax", "Graves", "Hale", "Harrow", "Hart", "Huxley", "Locke", "March", "Morrow", "Poe", "Quill", "Reeve", "Sinclair", "Sterling", "Thorne", "Voss", "Whitlock", "Wycliffe", "Arden", "Beaumont", "Bellefleur", "Clairmont", "Delacroix", "Desmarais", "Duval", "Fontaine", "Laurent", "Lenoir", "Moreau", "Rochefort", "Valmont", "Villiers", "Alarcón", "Delgado", "Montoya", "Navarro", "Salazar", "Serrano", "Valdés", "Vega", "Volkov", "Morozov", "Orlov", "Petrov", "Romanov", "Sokolov", "Vasiliev", "Dragomir", "Takeda", "Kuroda", "Mori", "Akiyama", "Hayashi", "Ishikawa", "Han", "Seo", "Kang", "Jin", "Lin", "Shen", "Wei", "Zhao", "Crowbyron", "La Zhaofield", "Von Crowhurst", "La Salazarvane", "La Duvalclair", "Della Mistmere", "La Thornewick", "St. Lockebridge", "Del Fernember", "Du Thornridge", "Bellbridge", "St. Zhaowood", "Von Irondell", "St. Fallowclair", "Delgadoquill", "Villiersstone", "Du Wycliffehart", "Le Wood", "Von Seostorm", "Hayashihayashi", "Du Seomont", "Blakefield", "Le Fontainemoor", "De Fernwell", "Larkmist", "Le Halerose", "De Jinsokolov", "Le Snowfield", "Shadowwinter", "Van Fairfaxthorne", "Moreaualarcón", "La Stonestar", "Della Morozovstone", "Von Vasilievwood", "Ravenwinter", "Van Elderhurst", "Vasilievshade", "Du Ravenshade", "Du Darcy", "Evercliff", "Von Duvalmont", "Le Jinhurst", "Del Starsterling", "De Hallow", "De Thornerose", "La Ravenarden", "De Ardenbrook", "Della Fallowwood", "La Fallowclair", "La Fontainecourt", "La Beaumontbridge", "Silverwinter", "Glenhart", "St. Hazelzhao", "De Huxleyrose", "St. Clairmontromanov", "Devereuxhurst", "Roseshade", "Del Vasilievgrave", "Van Romanovwick", "Du Fairthorne"];
 
 function fillMysteryTemplate(template: string, killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryNpc[], witness?: MysteryNpc): string {
   const linkedPool = npcs.filter((npc) => npc.id !== killer.id && npc.id !== victim.id);
@@ -1815,7 +1818,7 @@ function mysteryChildGuardianRelation(childSex: Sex, childAge: number, guardian:
   if (roll(0.55)) {
     return { childRelation: `${niblingRole} of`, guardianRelation: `${auntUncleRole} of`, reasonRole: auntUncleRole };
   }
-  return { childRelation: "younger cousin of", guardianRelation: "older cousin of", reasonRole: "cousin" };
+  return { childRelation: `${niblingRole} of`, guardianRelation: `${auntUncleRole} of`, reasonRole: auntUncleRole };
 }
 
 function mysteryEducationFor(age: number, role: MysteryNpc["role"]): string {
@@ -2036,7 +2039,7 @@ function buildMysterySanityLedger(mystery: Pick<MysteryGame, "id" | "title" | "p
   const roomName = (roomId: string) => mystery.rooms.find((room) => room.id === roomId)?.name ?? roomId;
   const lines = [
     `Ledger created for ${mystery.title} (${mystery.id}).`,
-    `Player: ${fullName(mystery.player)}; ${mystery.player.sex}; starts alone in ${roomName(mystery.playerRoomId)}; current room ${roomName(mystery.currentRoomId)}.`,
+    `Player: ${fullName(mystery.player)}; ${mystery.player.sex}; assigned room ${roomName(mystery.playerRoomId)}; current room ${roomName(mystery.currentRoomId)}.`,
     `Clock: Day ${mystery.day}, ${mystery.daytime}. Inventory: ${mystery.inventory.join(", ")}.`,
     `Rooms: ${mystery.rooms.length} total; ${mystery.rooms.filter((room) => room.accessible).length} accessible at start.`,
     `NPCs: ${mystery.npcs.length} total; ${mystery.npcs.filter((npc) => npc.role === "Guest").length} guests; ${mystery.npcs.filter((npc) => npc.role === "Staff").length} staff.`,
@@ -2067,7 +2070,7 @@ function buildMysteryRooms(): MysteryRoom[] {
     { bedSetup: "two single beds", capacity: 2 }
   ];
   const publicRooms: MysteryRoom[] = [
-    { id: "grand-hall", name: "Grand Hall", floor: 1, kind: "public", accessible: true, occupantIds: [] },
+    { id: "grand-hall", name: "Great Hall", floor: 1, kind: "public", accessible: true, occupantIds: [] },
     { id: "drawing-room", name: "Drawing Room", floor: 1, kind: "public", accessible: true, occupantIds: [] },
     { id: "dining-room", name: "Dining Room", floor: 1, kind: "public", accessible: true, occupantIds: [] },
     { id: "library", name: "Library", floor: 1, kind: "public", accessible: true, occupantIds: [] },
@@ -2095,6 +2098,76 @@ function buildMysteryRooms(): MysteryRoom[] {
   return [...publicRooms, ...guestRooms];
 }
 
+function assignMysteryGuestRooms(rooms: MysteryRoom[], npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], playerRoomId: string) {
+  const guestRooms = rooms.filter((room) => room.kind === "guest");
+  const playerRoom = rooms.find((room) => room.id === playerRoomId);
+  for (const room of guestRooms) {
+    room.occupantIds = room.id === playerRoomId ? ["player"] : [];
+  }
+  if (playerRoom) {
+    playerRoom.accessible = true;
+    playerRoom.capacity = 1;
+    playerRoom.bedSetup = "single bed";
+  }
+
+  const availableRooms = guestRooms.filter((room) => room.id !== playerRoomId);
+  let nextRoomIndex = 0;
+  const unassigned = new Set(npcs.filter((npc) => npc.role === "Guest").map((npc) => npc.id));
+  const guestById = new Map(npcs.filter((npc) => npc.role === "Guest").map((npc) => [npc.id, npc]));
+  const roomForGroup = () => availableRooms[nextRoomIndex++] ?? availableRooms[availableRooms.length - 1];
+  const placeGroup = (group: MysteryNpc[], bedSetup: string) => {
+    const room = roomForGroup();
+    if (!room || group.length === 0) return;
+    room.occupantIds = [];
+    room.capacity = Math.max(group.length, bedSetup === "double bed" ? 2 : 1);
+    room.bedSetup = bedSetup;
+    for (const npc of group) {
+      npc.roomId = room.id;
+      if (!room.occupantIds.includes(npc.id)) room.occupantIds.push(npc.id);
+      unassigned.delete(npc.id);
+    }
+  };
+
+  const marriageGroups: MysteryNpc[][] = [];
+  for (const relationship of relationships.filter((candidate) => candidate.kind === "Marriage")) {
+    const left = guestById.get(relationship.fromId);
+    const right = guestById.get(relationship.toId);
+    if (left && right && left.age >= 18 && right.age >= 18 && unassigned.has(left.id) && unassigned.has(right.id)) {
+      marriageGroups.push([left, right]);
+    }
+  }
+
+  const childrenByGuardian = new Map<string, MysteryNpc[]>();
+  for (const child of npcs.filter((npc) => npc.role === "Guest" && npc.age < 18)) {
+    const familyLinks = relationships.filter((relationship) =>
+      relationship.kind === "Family" && (relationship.fromId === child.id || relationship.toId === child.id)
+    );
+    const guardian = familyLinks
+      .map((relationship) => guestById.get(relationship.fromId === child.id ? relationship.toId : relationship.fromId))
+      .find((candidate): candidate is MysteryNpc => Boolean(candidate && candidate.age >= 18))
+      ?? npcs.find((candidate) => candidate.role === "Guest" && candidate.age >= 18 && candidate.familyName === child.familyName);
+    if (!guardian) continue;
+    childrenByGuardian.set(guardian.id, [...(childrenByGuardian.get(guardian.id) ?? []), child]);
+  }
+
+  for (const group of marriageGroups) {
+    const children = group.flatMap((adult) => childrenByGuardian.get(adult.id) ?? []).filter((child) => unassigned.has(child.id));
+    placeGroup([...group, ...children], children.length > 0 ? "double bed and child bed" : "double bed");
+  }
+
+  for (const [guardianId, children] of childrenByGuardian) {
+    const guardian = guestById.get(guardianId);
+    const remainingChildren = children.filter((child) => unassigned.has(child.id));
+    if (guardian && unassigned.has(guardian.id) && remainingChildren.length > 0) {
+      placeGroup([guardian, ...remainingChildren], remainingChildren.length > 1 ? "single bed and child beds" : "single bed and child bed");
+    }
+  }
+
+  for (const npc of npcs.filter((candidate) => candidate.role === "Guest" && unassigned.has(candidate.id))) {
+    placeGroup([npc], "single bed");
+  }
+}
+
 function makeMysteryNpc(
   input: Partial<MysteryNpc> & { role: "Guest" | "Staff"; age: number; roomId: string; stationRoomId: string },
   usedNames: Set<string>,
@@ -2103,6 +2176,7 @@ function makeMysteryNpc(
 ): MysteryNpc {
   const sex = input.sex ?? pick<Sex>(["Female", "Male"]);
   const familyName = input.familyName ?? ravenwoodFamilyName(undefined, blockedFamilyNames);
+  if (!input.familyName) blockedFamilyNames.add(familyName.toLowerCase());
   const normalizedAge = clamp(input.age, input.role === "Staff" ? RAVENWOOD_MIN_STAFF_AGE : RAVENWOOD_MIN_NPC_AGE, RAVENWOOD_MAX_NPC_AGE);
   const isChild = normalizedAge < 14;
   const profile = mysteryProfileFor(normalizedAge, input.role);
@@ -2312,7 +2386,15 @@ function createMysteryGameFromDraft(draft: CharacterDraft): MysteryGame {
     rooms.find((room) => room.id === stationRoomId)?.occupantIds.push(npc.id);
   }
   buildMysteryNpcRelationshipPool(npcs, npcRelationships);
-  playerRoom.occupantIds = ["player"];
+  assignMysteryGuestRooms(rooms, npcs, npcRelationships, playerRoom.id);
+  const openingServant = npcs.find((npc) => npc.role === "Staff" && ["Butler", "Housekeeper", "Waiter", "Head waiter"].includes(npc.occupation)) ?? npcs.find((npc) => npc.role === "Staff");
+  if (openingServant) {
+    const oldStation = rooms.find((room) => room.id === openingServant.stationRoomId);
+    if (oldStation) oldStation.occupantIds = oldStation.occupantIds.filter((id) => id !== openingServant.id);
+    openingServant.stationRoomId = "grand-hall";
+    const greatHall = rooms.find((room) => room.id === "grand-hall");
+    if (greatHall && !greatHall.occupantIds.includes(openingServant.id)) greatHall.occupantIds.push(openingServant.id);
+  }
   const murderCount = rand(1, 3);
   const murders: MysteryMurder[] = [];
   const deadNpcIds = new Set<string>();
@@ -2378,7 +2460,7 @@ function createMysteryGameFromDraft(draft: CharacterDraft): MysteryGame {
     playerRoomId: playerRoom.id,
     messages: [
       { id: uid(), speaker: "System", text: "Ravenwood prototype: investigate freely. Text advances time; some risky choices display a roll." },
-      { id: uid(), speaker: "GM", text: `${playerFirstName} ${playerFamilyName} receives a brass key for ${playerRoom.name} in the Grand Hall. The host explains that ${lockdownReason}; no one is leaving Ravenwood Manor for the foreseeable future.` }
+      { id: uid(), speaker: "GM", text: `${playerFirstName} ${playerFamilyName} receives a brass key for ${playerRoom.name} in the Great Hall. ${openingServant ? `${openingServant.firstName} ${openingServant.familyName}, a ${openingServant.occupation.toLowerCase()}, waits nearby to answer the first questions. ` : ""}The host explains that ${lockdownReason}; no one is leaving Ravenwood Manor for the foreseeable future.` }
     ],
     journal: [],
     journalNotes: "",
@@ -2805,8 +2887,18 @@ export default function App() {
         .map((npc) => npc.id)
     );
     const people = [];
-    if (roomId === mystery.playerRoomId || roomId === mystery.currentRoomId) {
-      people.push({ id: mystery.player.id, firstName: mystery.player.firstName, familyName: mystery.player.familyName, sex: mystery.player.sex, age: 30, alive: true });
+    if (roomId === mystery.currentRoomId) {
+      people.push({
+        id: mystery.player.id,
+        firstName: mystery.player.firstName,
+        familyName: mystery.player.familyName,
+        sex: mystery.player.sex,
+        age: 30,
+        ravenwoodPortraitKey: mystery.player.ravenwoodPortraitKey,
+        portraitLineage: mystery.player.portraitLineage,
+        visualRace: mystery.player.visualRace,
+        alive: true
+      });
     }
     people.push(...mystery.npcs.filter((npc) => {
       if (mealTime && mealAttendees.has(npc.id)) return roomId === "dining-room";
@@ -3889,6 +3981,7 @@ export default function App() {
     const frameWidth = isHero ? 114 : isLarge ? 72 : isResident ? 72 : isMap ? 40 : 36;
     const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 122 : isMap ? 68 : 62;
     if (ravenwoodPortrait) {
+      const isStaffPortrait = ravenwoodPortrait.sourceKind === "staff";
       const cropPaddingX = 0;
       const cropPaddingTop = 0;
       const cropPaddingBottom = 0;
@@ -3902,7 +3995,37 @@ export default function App() {
         width: Math.max(1, cropWidth),
         height: Math.max(1, cropHeight)
       };
-      const scale = Math.max(frameWidth / crop.width, frameHeight / crop.height) * (isResident ? 1.03 : isMap ? 1.02 : 1.02);
+      const scaleBoost = isStaffPortrait
+        ? isHero
+          ? 1.08
+          : isResident
+            ? 1.08
+            : isMap
+              ? 1.06
+              : 1.07
+        : isHero
+          ? 1.07
+          : isResident
+            ? 1.06
+            : isMap
+              ? 1.04
+              : 1.05;
+      const placementY = isStaffPortrait
+        ? isHero
+          ? 10
+          : isResident
+            ? 6
+            : isMap
+              ? 3
+              : 5
+        : isHero
+          ? 3
+          : isResident
+            ? 2
+            : isMap
+              ? 1
+              : 1;
+      const scale = Math.max(frameWidth / crop.width, frameHeight / crop.height) * scaleBoost;
       return (
         <View style={[frameStyle, { borderColor: highlight ? C.accent : C.line, backgroundColor: C.panel2 }, subject.alive === false && styles.deadPortraitFrame]}>
           <Image
@@ -3914,7 +4037,7 @@ export default function App() {
                 width: RAVENWOOD_SHEET_WIDTH * scale,
                 height: RAVENWOOD_SHEET_HEIGHT * scale,
                 left: -crop.x * scale + (frameWidth - crop.width * scale) / 2,
-                top: -crop.y * scale + (frameHeight - crop.height * scale) / 2,
+                top: -crop.y * scale + (frameHeight - crop.height * scale) / 2 + placementY,
                 opacity: subject.alive === false ? 0.56 : 1
               }
             ]}
