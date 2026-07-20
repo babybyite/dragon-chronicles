@@ -13,6 +13,12 @@ import {
   View
 } from "react-native";
 import type { ImageSourcePropType } from "react-native";
+import {
+  ravenwoodGuestPortraitAssets,
+  ravenwoodPlayerPortraitAssets,
+  ravenwoodStaffPortraitAssets
+} from "./ravenwoodPortraitAssets";
+import type { MysteryVisualRace, RavenwoodGuestPortraitAsset } from "./ravenwoodPortraitAssets";
 
 type ThemeName = "dark" | "pastel";
 type Screen = "menu" | "bookSelect" | "builder1" | "builder2" | "chronicle" | "load" | "past" | "settings" | "family" | "relationships" | "character" | "journal" | "paper" | "mysteryDetectiveSelect" | "mysteryPortraitSelect" | "mystery" | "mysteryCharacter" | "mysteryRelations" | "mysteryMap" | "mysteryJournal";
@@ -335,260 +341,11 @@ const FAMILY_TREE_CANVAS_WIDTH = 1640;
 const RAVENWOOD_MIN_NPC_AGE = 9;
 const RAVENWOOD_MAX_NPC_AGE = 75;
 const RAVENWOOD_MIN_STAFF_AGE = 18;
-const RAVENWOOD_SHEET_WIDTH = 971;
-const RAVENWOOD_SHEET_HEIGHT = 1619;
-const RAVENWOOD_CELL_WIDTH = 194;
-const RAVENWOOD_CELL_HEIGHT = 404;
-const RAVENWOOD_CROP_TOP_OFFSET = 52;
-
-type MysteryVisualRace = "fair" | "olive" | "black" | "eastern";
-
-type RavenwoodGuestPortraitAsset = {
-  key: string;
-  source: ImageSourcePropType;
-  sourceKind: "guest" | "staff" | "player";
-  sex: Sex;
-  visualRace: MysteryVisualRace;
-  lineage: string;
-  age: number;
-  crop: { x: number; y: number; width: number; height: number };
-};
-
-const ravenwoodPortraitSheetSources: ImageSourcePropType[] = [
-  require("./assets/ravenwood/guest_portraits/sheets/sheet01.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet02.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet03.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet04.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet05.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet06.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet07.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet08.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet09.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet10.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet11.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet12.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet13.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet14.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet15.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet16.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet17.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet18.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet19.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet20.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet21.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet22.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet23.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet24.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet25.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet26.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet27.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet28.png"),
-  require("./assets/ravenwood/guest_portraits/sheets/sheet29.png")
-];
-
-const ravenwoodStaffPortraitSheetSources: ImageSourcePropType[] = [
-  require("./assets/ravenwood/staff_portraits/sheets/staff01.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff02.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff03.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff04.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff05.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff06.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff07.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff08.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff09.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff10.png"),
-  require("./assets/ravenwood/staff_portraits/sheets/staff11.png")
-];
-
-const ravenwoodPlayerPortraitSheetSources: ImageSourcePropType[] = [
-  require("./assets/ravenwood/player_portraits/sheets/player01.png"),
-  require("./assets/ravenwood/player_portraits/sheets/player02.png"),
-  require("./assets/ravenwood/player_portraits/sheets/player03.png"),
-  require("./assets/ravenwood/player_portraits/sheets/player04.png"),
-  require("./assets/ravenwood/player_portraits/sheets/player05.png"),
-  require("./assets/ravenwood/player_portraits/sheets/player06.png")
-];
-
-const ravenwoodPortraitSexRows: Sex[][] = [
-  ["Female", "Female", "Male", "Male"],
-  ["Female", "Female", "Male", "Female"],
-  ["Male", "Female", "Male", "Male"],
-  ["Female", "Female", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Male", "Female", "Female", "Female"],
-  ["Male", "Female", "Female", "Male"],
-  ["Female", "Male", "Female", "Female"],
-  ["Male", "Male", "Female", "Female"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Female", "Female", "Female"],
-  ["Female", "Male", "Female", "Male"],
-  ["Male", "Female", "Male", "Female"],
-  ["Female", "Male", "Male", "Female"],
-  ["Male", "Female", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Female"],
-  ["Male", "Female", "Male", "Female"],
-  ["Male", "Female", "Male", "Female"]
-];
-
-const ravenwoodStaffPortraitSexRows: Sex[][] = [
-  ["Female", "Male", "Male", "Female"],
-  ["Male", "Female", "Male", "Female"],
-  ["Male", "Female", "Female", "Male"],
-  ["Female", "Female", "Male", "Male"],
-  ["Male", "Female", "Male", "Female"],
-  ["Female", "Female", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Male", "Male", "Female", "Male"],
-  ["Female", "Female", "Male", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Male", "Female", "Male", "Male"]
-];
-
-const ravenwoodPlayerPortraitSexRows: Sex[][] = [
-  ["Female", "Male", "Female", "Female"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"],
-  ["Female", "Male", "Female", "Male"]
-];
-
-const ravenwoodPortraitRaceRows: MysteryVisualRace[][] = [
-  ["olive", "black", "eastern", "fair"],
-  ["fair", "fair", "fair", "fair"],
-  ["fair", "fair", "black", "eastern"],
-  ["black", "fair", "eastern", "eastern"],
-  ["fair", "black", "eastern", "fair"],
-  ["olive", "eastern", "black", "eastern"],
-  ["fair", "fair", "olive", "black"],
-  ["fair", "black", "fair", "fair"],
-  ["fair", "black", "fair", "eastern"],
-  ["fair", "black", "eastern", "olive"],
-  ["fair", "olive", "black", "olive"],
-  ["fair", "fair", "eastern", "fair"],
-  ["olive", "fair", "black", "fair"],
-  ["eastern", "fair", "fair", "fair"],
-  ["eastern", "olive", "olive", "olive"],
-  ["fair", "fair", "fair", "black"],
-  ["fair", "fair", "fair", "olive"],
-  ["fair", "fair", "black", "fair"],
-  ["fair", "fair", "eastern", "olive"],
-  ["fair", "fair", "black", "fair"],
-  ["fair", "black", "fair", "eastern"],
-  ["olive", "olive", "eastern", "black"],
-  ["fair", "olive", "black", "eastern"],
-  ["fair", "black", "fair", "eastern"],
-  ["olive", "black", "fair", "eastern"],
-  ["fair", "black", "eastern", "olive"],
-  ["black", "black", "black", "olive"],
-  ["fair", "fair", "fair", "black"],
-  ["black", "black", "eastern", "black"]
-];
-
-const ravenwoodStaffPortraitRaceRows: MysteryVisualRace[][] = [
-  ["fair", "black", "olive", "eastern"],
-  ["fair", "fair", "black", "eastern"],
-  ["fair", "black", "eastern", "black"],
-  ["olive", "black", "eastern", "fair"],
-  ["fair", "black", "eastern", "olive"],
-  ["black", "fair", "eastern", "olive"],
-  ["fair", "black", "eastern", "olive"],
-  ["fair", "black", "fair", "eastern"],
-  ["olive", "black", "olive", "eastern"],
-  ["fair", "black", "eastern", "fair"],
-  ["olive", "black", "fair", "eastern"]
-];
-
-const ravenwoodPlayerPortraitRaceRows: MysteryVisualRace[][] = [
-  ["olive", "fair", "olive", "fair"],
-  ["fair", "black", "eastern", "olive"],
-  ["fair", "black", "olive", "olive"],
-  ["olive", "olive", "eastern", "olive"],
-  ["fair", "fair", "eastern", "black"],
-  ["olive", "fair", "eastern", "olive"]
-];
-
-const RAVENWOOD_GUEST_SELECTABLE_SHEET_START_INDEX = 10;
-const ravenwoodPortraitAges = [10, 16, 24, 30, 50];
-const ravenwoodStaffPortraitAges = [16, 24, 30, 50];
 const ravenwoodPlayerSelectableAges = [24, 30, 50];
 
-const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = ravenwoodPortraitSheetSources.flatMap((source, sheetIndex) =>
-  sheetIndex < RAVENWOOD_GUEST_SELECTABLE_SHEET_START_INDEX ? [] :
-  ravenwoodPortraitSexRows[sheetIndex].flatMap((rowSex, rowIndex) =>
-    ravenwoodPortraitAges.map((age, columnIndex) => ({
-      key: `rw-s${sheetIndex + 1}-r${rowIndex + 1}-a${age}`,
-      source,
-      sourceKind: "guest",
-      sex: rowSex,
-      visualRace: ravenwoodPortraitRaceRows[sheetIndex][rowIndex],
-      lineage: `sheet-${sheetIndex + 1}-row-${rowIndex + 1}`,
-      age,
-      crop: {
-        x: columnIndex * RAVENWOOD_CELL_WIDTH,
-        y: rowIndex * RAVENWOOD_CELL_HEIGHT + RAVENWOOD_CROP_TOP_OFFSET,
-        width: RAVENWOOD_CELL_WIDTH,
-        height: RAVENWOOD_CELL_HEIGHT - RAVENWOOD_CROP_TOP_OFFSET
-      }
-    }))
-  )
+const ravenwoodPortraitByKey: Record<string, RavenwoodGuestPortraitAsset> = Object.fromEntries(
+  [...ravenwoodGuestPortraitAssets, ...ravenwoodStaffPortraitAssets, ...ravenwoodPlayerPortraitAssets].map((asset) => [asset.key, asset])
 );
-
-const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = ravenwoodStaffPortraitSheetSources.flatMap((source, sheetIndex) =>
-  ravenwoodStaffPortraitSexRows[sheetIndex].flatMap((rowSex, rowIndex) =>
-    ravenwoodStaffPortraitAges.map((age, staffColumnIndex) => {
-      const columnIndex = staffColumnIndex + 1;
-      return {
-        key: `rw-staff-s${sheetIndex + 1}-r${rowIndex + 1}-a${age}`,
-        source,
-        sourceKind: "staff",
-        sex: rowSex,
-        visualRace: ravenwoodStaffPortraitRaceRows[sheetIndex][rowIndex],
-        lineage: `staff-sheet-${sheetIndex + 1}-row-${rowIndex + 1}`,
-        age,
-        crop: {
-          x: columnIndex * RAVENWOOD_CELL_WIDTH,
-          y: rowIndex * RAVENWOOD_CELL_HEIGHT + RAVENWOOD_CROP_TOP_OFFSET,
-          width: RAVENWOOD_CELL_WIDTH,
-          height: RAVENWOOD_CELL_HEIGHT - RAVENWOOD_CROP_TOP_OFFSET
-        }
-      };
-    })
-  )
-);
-
-const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = ravenwoodPlayerPortraitSheetSources.flatMap((source, sheetIndex) =>
-  ravenwoodPlayerPortraitSexRows[sheetIndex].flatMap((rowSex, rowIndex) =>
-    ravenwoodPortraitAges.map((age, columnIndex) => ({
-      key: `rw-player-s${sheetIndex + 1}-r${rowIndex + 1}-a${age}`,
-      source,
-      sourceKind: "player",
-      sex: rowSex,
-      visualRace: ravenwoodPlayerPortraitRaceRows[sheetIndex][rowIndex],
-      lineage: `player-sheet-${sheetIndex + 1}-row-${rowIndex + 1}`,
-      age,
-      crop: {
-        x: columnIndex * RAVENWOOD_CELL_WIDTH,
-        y: rowIndex * RAVENWOOD_CELL_HEIGHT + RAVENWOOD_CROP_TOP_OFFSET,
-        width: RAVENWOOD_CELL_WIDTH,
-        height: RAVENWOOD_CELL_HEIGHT - RAVENWOOD_CROP_TOP_OFFSET
-      }
-    }))
-  )
-);
-
-const ravenwoodPortraitByKey = Object.fromEntries([...ravenwoodGuestPortraitAssets, ...ravenwoodStaffPortraitAssets, ...ravenwoodPlayerPortraitAssets].map((asset) => [asset.key, asset]));
 
 type PortraitSubject = {
   id?: string;
@@ -617,8 +374,8 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     hairStyle: "Wavy",
     hairColor: "Brown",
     faceTrait: "Sharp-Boned",
-    portraitLineage: "player-sheet-1-row-3",
-    visualRace: "olive",
+    portraitLineage: "player-custom01-row-03",
+    visualRace: "black",
     quirks: [
       { id: "dog", label: "Keeps a retired search dog", check: "Search", modifier: 3 },
       { id: "voices", label: "Never forgets a voice", check: "History", modifier: 2 },
@@ -634,8 +391,8 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     hairStyle: "Short",
     hairColor: "Black",
     faceTrait: "Scarred",
-    portraitLineage: "player-sheet-1-row-2",
-    visualRace: "fair",
+    portraitLineage: "player-custom01-row-02",
+    visualRace: "olive",
     quirks: [
       { id: "clock", label: "Repairs pocket watches by habit", check: "Sleight of Hand", modifier: 2 },
       { id: "soldier", label: "Served as a field orderly", check: "Medicine", modifier: 3 },
@@ -651,7 +408,7 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     hairStyle: "Long Straight",
     hairColor: "Black",
     faceTrait: "Mismatched Eyes",
-    portraitLineage: "player-sheet-2-row-3",
+    portraitLineage: "player-player05-row-03",
     visualRace: "eastern",
     quirks: [
       { id: "cards", label: "Reads people over card games", check: "Deception", modifier: 3 },
@@ -668,8 +425,8 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     hairStyle: "Messy Bun",
     hairColor: "Black",
     faceTrait: "Freckles",
-    portraitLineage: "player-sheet-2-row-2",
-    visualRace: "black",
+    portraitLineage: "player-custom02-row-04",
+    visualRace: "eastern",
     quirks: [
       { id: "garden", label: "Grew up tending kitchen gardens", check: "Medicine", modifier: 2 },
       { id: "quiet", label: "Moves quietly when others argue", check: "Stealth", modifier: 3 },
@@ -685,7 +442,7 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     hairStyle: "Braided",
     hairColor: "Blonde",
     faceTrait: "Half-Blind",
-    portraitLineage: "player-sheet-5-row-1",
+    portraitLineage: "player-player05-row-01",
     visualRace: "fair",
     quirks: [
       { id: "ledgers", label: "Balances household ledgers for fun", check: "History", modifier: 3 },
@@ -702,7 +459,7 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     hairStyle: "Curly",
     hairColor: "Dark Red",
     faceTrait: "Sharp-Boned",
-    portraitLineage: "player-sheet-5-row-4",
+    portraitLineage: "player-player05-row-04",
     visualRace: "black",
     quirks: [
       { id: "boxing", label: "Boxed at university", check: "Athletics", modifier: 3 },
@@ -4295,13 +4052,15 @@ export default function App() {
     const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 122 : isMap ? 68 : 62;
     if (ravenwoodPortrait) {
       const isStaffPortrait = ravenwoodPortrait.sourceKind === "staff";
+      const sourceWidth = ravenwoodPortrait.imageWidth;
+      const sourceHeight = ravenwoodPortrait.imageHeight;
       const cropPaddingX = 0;
       const cropPaddingTop = 0;
       const cropPaddingBottom = 0;
-      const cropX = clamp(ravenwoodPortrait.crop.x - cropPaddingX, 0, RAVENWOOD_SHEET_WIDTH - 1);
-      const cropY = clamp(ravenwoodPortrait.crop.y - cropPaddingTop, 0, RAVENWOOD_SHEET_HEIGHT - 1);
-      const cropWidth = Math.min(RAVENWOOD_SHEET_WIDTH - cropX, ravenwoodPortrait.crop.width + cropPaddingX * 2);
-      const cropHeight = Math.min(RAVENWOOD_SHEET_HEIGHT - cropY, ravenwoodPortrait.crop.height + cropPaddingTop + cropPaddingBottom);
+      const cropX = clamp(ravenwoodPortrait.crop.x - cropPaddingX, 0, sourceWidth - 1);
+      const cropY = clamp(ravenwoodPortrait.crop.y - cropPaddingTop, 0, sourceHeight - 1);
+      const cropWidth = Math.min(sourceWidth - cropX, ravenwoodPortrait.crop.width + cropPaddingX * 2);
+      const cropHeight = Math.min(sourceHeight - cropY, ravenwoodPortrait.crop.height + cropPaddingTop + cropPaddingBottom);
       const crop = {
         x: cropX,
         y: cropY,
@@ -4347,8 +4106,8 @@ export default function App() {
             style={[
               styles.ravenwoodPortraitSheet,
               {
-                width: RAVENWOOD_SHEET_WIDTH * scale,
-                height: RAVENWOOD_SHEET_HEIGHT * scale,
+                width: sourceWidth * scale,
+                height: sourceHeight * scale,
                 left: -crop.x * scale + (frameWidth - crop.width * scale) / 2,
                 top: -crop.y * scale + (frameHeight - crop.height * scale) / 2 + placementY,
                 opacity: subject.alive === false ? 0.56 : 1
