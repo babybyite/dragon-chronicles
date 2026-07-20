@@ -386,7 +386,7 @@ const FAMILY_TREE_CANVAS_WIDTH = 1640;
 const RAVENWOOD_MIN_NPC_AGE = 9;
 const RAVENWOOD_MAX_NPC_AGE = 75;
 const RAVENWOOD_MIN_STAFF_AGE = 18;
-const ravenwoodPlayerSelectableAges = [24, 30, 50];
+const ravenwoodPlayerSelectableAges = [10, 16, 24, 30, 50];
 
 const ravenwoodPortraitByKey: Record<string, RavenwoodGuestPortraitAsset> = Object.fromEntries(
   [...ravenwoodGuestPortraitAssets, ...ravenwoodStaffPortraitAssets, ...ravenwoodPlayerPortraitAssets].map((asset) => [asset.key, asset])
@@ -438,20 +438,6 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
       { id: "clock", label: "Repairs pocket watches by habit", check: "Sleight of Hand", modifier: 3 },
       { id: "soldier", label: "Served as a field orderly", check: "Medicine", modifier: 3 },
       { id: "temper", label: "Answers insults too quickly", check: "Persuasion", modifier: -3 }
-    ]
-  },
-  "player-custom01-row-04": {
-    id: "ren-ito",
-    firstName: "Ren",
-    familyName: "Ito",
-    origin: "Northern Ports",
-    hairStyle: "Shaved",
-    hairColor: "Black",
-    faceTrait: "Scarred",
-    quirks: [
-      { id: "lockpick", label: "Collects forgotten room keys", check: "Sleight of Hand", modifier: 3 },
-      { id: "duelist", label: "Practices with a cane blade", check: "Athletics", modifier: 3 },
-      { id: "smirk", label: "Smiles at exactly the wrong time", check: "Composure", modifier: -3 }
     ]
   },
   "player-custom02-row-01": {
@@ -580,20 +566,6 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
       { id: "vase", label: "Knocks over delicate things", check: "Sleight of Hand", modifier: -3 }
     ]
   },
-  "player-custom04-row-03": {
-    id: "priya-sen",
-    firstName: "Priya",
-    familyName: "Sen",
-    origin: "Southern Provinces",
-    hairStyle: "Messy Bun",
-    hairColor: "Black",
-    faceTrait: "Sharp-Boned",
-    quirks: [
-      { id: "pulse", label: "Can read a pulse without a clock", check: "Medicine", modifier: 3 },
-      { id: "poise", label: "Keeps courtly poise under pressure", check: "Composure", modifier: 3 },
-      { id: "mud", label: "Hates ruining formal shoes", check: "Athletics", modifier: -3 }
-    ]
-  },
   "player-custom04-row-04": {
     id: "soren-park",
     firstName: "Soren",
@@ -606,20 +578,6 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
       { id: "smoke", label: "Can place pipe tobacco by scent", check: "Search", modifier: 3 },
       { id: "mask", label: "Never lets panic reach the face", check: "Composure", modifier: 3 },
       { id: "romance", label: "Misses obvious romantic hints", check: "Rizz", modifier: -3 }
-    ]
-  },
-  "player-player05-row-01": {
-    id: "rosalie-thorne",
-    firstName: "Rosalie",
-    familyName: "Thorne",
-    origin: "Deep Cities",
-    hairStyle: "Braided",
-    hairColor: "Blonde",
-    faceTrait: "Half-Blind",
-    quirks: [
-      { id: "ledgers", label: "Balances household ledgers for fun", check: "History", modifier: 3 },
-      { id: "aunt", label: "Has an aunt in every respectable scandal", check: "Persuasion", modifier: 3 },
-      { id: "depth", label: "Hates cramped service passages", check: "Stealth", modifier: -3 }
     ]
   },
   "player-player05-row-02": {
