@@ -15,7 +15,7 @@ import {
 import type { ImageSourcePropType } from "react-native";
 
 type ThemeName = "dark" | "pastel";
-type Screen = "menu" | "bookSelect" | "builder1" | "builder2" | "chronicle" | "load" | "past" | "settings" | "family" | "relationships" | "character" | "journal" | "paper" | "mystery" | "mysteryCharacter" | "mysteryRelations" | "mysteryMap" | "mysteryJournal";
+type Screen = "menu" | "bookSelect" | "builder1" | "builder2" | "chronicle" | "load" | "past" | "settings" | "family" | "relationships" | "character" | "journal" | "paper" | "mysteryDetectiveSelect" | "mysteryPortraitSelect" | "mystery" | "mysteryCharacter" | "mysteryRelations" | "mysteryMap" | "mysteryJournal";
 type BirthStatus = "Royal" | "Noble" | "Bastard" | "Commoner";
 type Sex = "Female" | "Male";
 type RelationCategory = "family" | "palace" | "city";
@@ -170,6 +170,22 @@ type Story = {
 
 type Daytime = "Morning" | "Breakfast" | "Midday" | "Lunch" | "Afternoon" | "Evening" | "Night" | "Midnight";
 
+type MysteryCheckKind = "Search" | "Interview" | "Force" | "Stealth" | "Composure";
+
+type MysteryDetectiveQuirk = {
+  id: string;
+  label: string;
+  check: MysteryCheckKind;
+  modifier: number;
+};
+
+type MysteryDetectiveProfile = Pick<CharacterDraft, "firstName" | "familyName" | "sex" | "origin" | "hairStyle" | "hairColor" | "faceTrait"> & {
+  id: string;
+  portraitLineage: string;
+  visualRace: MysteryVisualRace;
+  quirks: MysteryDetectiveQuirk[];
+};
+
 type MysteryRoom = {
   id: string;
   name: string;
@@ -240,7 +256,7 @@ type MysteryNpcRelationship = {
 type MysteryGame = {
   id: string;
   title: string;
-  player: Pick<CharacterDraft, "firstName" | "familyName" | "sex" | "origin" | "hairStyle" | "hairColor" | "faceTrait"> & Pick<PortraitSubject, "ravenwoodPortraitKey" | "portraitLineage" | "visualRace"> & { id: string };
+  player: Pick<CharacterDraft, "firstName" | "familyName" | "sex" | "origin" | "hairStyle" | "hairColor" | "faceTrait"> & Pick<PortraitSubject, "ravenwoodPortraitKey" | "portraitLineage" | "visualRace"> & { id: string; age: number; detectiveId?: string; detectiveQuirks?: MysteryDetectiveQuirk[] };
   day: number;
   daytime: Daytime;
   rooms: MysteryRoom[];
@@ -504,6 +520,7 @@ const ravenwoodPlayerPortraitRaceRows: MysteryVisualRace[][] = [
 const RAVENWOOD_GUEST_SELECTABLE_SHEET_START_INDEX = 10;
 const ravenwoodPortraitAges = [10, 16, 24, 30, 50];
 const ravenwoodStaffPortraitAges = [16, 24, 30, 50];
+const ravenwoodPlayerSelectableAges = [24, 30, 50];
 
 const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = ravenwoodPortraitSheetSources.flatMap((source, sheetIndex) =>
   sheetIndex < RAVENWOOD_GUEST_SELECTABLE_SHEET_START_INDEX ? [] :
@@ -587,6 +604,111 @@ type PortraitSubject = {
   visualRace?: MysteryVisualRace;
   alive?: boolean;
 };
+
+const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
+  {
+    id: "eleanor-vale",
+    firstName: "Eleanor",
+    familyName: "Vale",
+    sex: "Female",
+    origin: "Western Marches",
+    hairStyle: "Wavy",
+    hairColor: "Brown",
+    faceTrait: "Sharp-Boned",
+    portraitLineage: "player-sheet-1-row-3",
+    visualRace: "olive",
+    quirks: [
+      { id: "dog", label: "Keeps a retired search dog", check: "Search", modifier: 2 },
+      { id: "voices", label: "Never forgets a voice", check: "Interview", modifier: 1 },
+      { id: "stairs", label: "Old stair injury aches in a chase", check: "Stealth", modifier: -1 }
+    ]
+  },
+  {
+    id: "adrian-locke",
+    firstName: "Adrian",
+    familyName: "Locke",
+    sex: "Male",
+    origin: "Northlands",
+    hairStyle: "Short",
+    hairColor: "Black",
+    faceTrait: "Scarred",
+    portraitLineage: "player-sheet-1-row-2",
+    visualRace: "fair",
+    quirks: [
+      { id: "clock", label: "Repairs pocket watches by habit", check: "Search", modifier: 1 },
+      { id: "soldier", label: "Served as a field orderly", check: "Composure", modifier: 2 },
+      { id: "temper", label: "Answers insults too quickly", check: "Interview", modifier: -1 }
+    ]
+  },
+  {
+    id: "camille-duval",
+    firstName: "Camille",
+    familyName: "Duval",
+    sex: "Female",
+    origin: "Eastern Courts",
+    hairStyle: "Long Straight",
+    hairColor: "Black",
+    faceTrait: "Mismatched Eyes",
+    portraitLineage: "player-sheet-2-row-3",
+    visualRace: "eastern",
+    quirks: [
+      { id: "cards", label: "Reads people over card games", check: "Interview", modifier: 2 },
+      { id: "perfume", label: "Knows expensive perfumes on sight", check: "Search", modifier: 1 },
+      { id: "storm", label: "Sleeps badly during storms", check: "Composure", modifier: -1 }
+    ]
+  },
+  {
+    id: "kenji-mori",
+    firstName: "Kenji",
+    familyName: "Mori",
+    sex: "Male",
+    origin: "Steppe",
+    hairStyle: "Messy Bun",
+    hairColor: "Black",
+    faceTrait: "Freckles",
+    portraitLineage: "player-sheet-2-row-2",
+    visualRace: "black",
+    quirks: [
+      { id: "garden", label: "Grew up tending kitchen gardens", check: "Search", modifier: 1 },
+      { id: "quiet", label: "Moves quietly when others argue", check: "Stealth", modifier: 2 },
+      { id: "blood", label: "Gets faint at the sight of fresh blood", check: "Composure", modifier: -1 }
+    ]
+  },
+  {
+    id: "rosalie-thorne",
+    firstName: "Rosalie",
+    familyName: "Thorne",
+    sex: "Female",
+    origin: "Deep Cities",
+    hairStyle: "Braided",
+    hairColor: "Blonde",
+    faceTrait: "Half-Blind",
+    portraitLineage: "player-sheet-5-row-1",
+    visualRace: "fair",
+    quirks: [
+      { id: "ledgers", label: "Balances household ledgers for fun", check: "Search", modifier: 2 },
+      { id: "aunt", label: "Has an aunt in every respectable scandal", check: "Interview", modifier: 1 },
+      { id: "depth", label: "Hates cramped service passages", check: "Stealth", modifier: -1 }
+    ]
+  },
+  {
+    id: "lucian-crow",
+    firstName: "Lucian",
+    familyName: "Crow",
+    sex: "Male",
+    origin: "Western Marches",
+    hairStyle: "Curly",
+    hairColor: "Dark Red",
+    faceTrait: "Sharp-Boned",
+    portraitLineage: "player-sheet-5-row-4",
+    visualRace: "black",
+    quirks: [
+      { id: "boxing", label: "Boxed at university", check: "Force", modifier: 2 },
+      { id: "theatre", label: "Can mimic polite manners perfectly", check: "Interview", modifier: 1 },
+      { id: "dust", label: "Coughs in dusty archives", check: "Search", modifier: -1 }
+    ]
+  }
+];
 
 const firstNames = ["Aelira", "Mirelle", "Vaessa", "Rowan", "Lucian", "Dorian", "Veyr", "Sable", "Corenna", "Tavik"];
 const childNames = ["Elian", "Mara", "Neris", "Orren", "Lysa", "Theo", "Asha", "Rook", "Selene", "Bryn"];
@@ -703,15 +825,47 @@ function fallbackRavenwoodPlayerPortrait(subject: Pick<PortraitSubject, "firstNa
   return pool[stableHash(`${subject.firstName}:${subject.familyName}:${subject.sex}`) % pool.length];
 }
 
+function ravenwoodPlayerPortraitFor(profile: MysteryDetectiveProfile, age: number): RavenwoodGuestPortraitAsset | null {
+  const targetAge = ravenwoodPortraitAge(age);
+  return ravenwoodPlayerPortraitAssets.find((asset) =>
+    asset.lineage === profile.portraitLineage &&
+    asset.sex === profile.sex &&
+    asset.age === targetAge
+  ) ?? null;
+}
+
+function mysteryPlayerAge(player: Pick<MysteryGame["player"], "age">): number {
+  return player.age ?? 30;
+}
+
 function mysteryPlayerPortraitSubject(player: MysteryGame["player"]): PortraitSubject {
   const fallback = player.ravenwoodPortraitKey ? null : fallbackRavenwoodPlayerPortrait(player);
   return {
     ...player,
-    age: 30,
+    age: mysteryPlayerAge(player),
     alive: true,
     ravenwoodPortraitKey: player.ravenwoodPortraitKey ?? fallback?.key,
     portraitLineage: player.portraitLineage ?? fallback?.lineage,
     visualRace: player.visualRace ?? fallback?.visualRace
+  };
+}
+
+function mysteryDetectivePortraitSubject(profile: MysteryDetectiveProfile, age: number): PortraitSubject {
+  const portrait = ravenwoodPlayerPortraitFor(profile, age);
+  return {
+    id: profile.id,
+    firstName: profile.firstName,
+    familyName: profile.familyName,
+    sex: profile.sex,
+    age,
+    origin: profile.origin,
+    hairStyle: profile.hairStyle,
+    hairColor: profile.hairColor,
+    faceTrait: profile.faceTrait,
+    ravenwoodPortraitKey: portrait?.key,
+    portraitLineage: portrait?.lineage ?? profile.portraitLineage,
+    visualRace: portrait?.visualRace ?? profile.visualRace,
+    alive: true
   };
 }
 
@@ -2271,14 +2425,18 @@ function makeMysteryNpc(
   };
 }
 
-function createMysteryGameFromDraft(draft: CharacterDraft): MysteryGame {
+function createMysteryGameFromDraft(draft: CharacterDraft, detectiveProfile?: MysteryDetectiveProfile, detectiveAge = 30): MysteryGame {
+  const playerInput = detectiveProfile ?? draft;
+  const playerAge = detectiveProfile ? detectiveAge : 30;
   const usedNames = new Set<string>();
   const usedFirstNames = new Set<string>();
   const usedPortraitKeys = new Set<string>();
-  const playerFamilyName = ravenwoodFamilyName(draft.familyName.trim());
+  const playerFamilyName = ravenwoodFamilyName(playerInput.familyName.trim());
   const blockedFamilyNames = new Set<string>([playerFamilyName.toLowerCase()]);
-  const playerFirstName = uniqueRavenwoodFirstName(draft.sex, playerFamilyName, usedNames, usedFirstNames, draft.firstName.trim());
-  const playerPortrait = chooseRavenwoodPlayerPortrait({ sex: draft.sex, age: 30, usedPortraitKeys });
+  const playerFirstName = uniqueRavenwoodFirstName(playerInput.sex, playerFamilyName, usedNames, usedFirstNames, playerInput.firstName.trim());
+  const playerPortrait = detectiveProfile
+    ? ravenwoodPlayerPortraitFor(detectiveProfile, playerAge)
+    : chooseRavenwoodPlayerPortrait({ sex: playerInput.sex, age: playerAge, usedPortraitKeys });
   const rooms = buildMysteryRooms();
   const guestRooms = rooms.filter((room) => room.id.startsWith("guest-room"));
   const playerRoom = pick(guestRooms);
@@ -2499,11 +2657,14 @@ function createMysteryGameFromDraft(draft: CharacterDraft): MysteryGame {
       id: uid(),
       firstName: playerFirstName,
       familyName: playerFamilyName,
-      sex: draft.sex,
-      origin: draft.origin,
-      hairStyle: draft.hairStyle,
-      hairColor: draft.hairColor,
-      faceTrait: draft.faceTrait,
+      sex: playerInput.sex,
+      origin: playerInput.origin,
+      hairStyle: playerInput.hairStyle,
+      hairColor: playerInput.hairColor,
+      faceTrait: playerInput.faceTrait,
+      age: playerAge,
+      detectiveId: detectiveProfile?.id,
+      detectiveQuirks: detectiveProfile?.quirks,
       ravenwoodPortraitKey: playerPortrait?.key,
       portraitLineage: playerPortrait?.lineage,
       visualRace: playerPortrait?.visualRace
@@ -2773,6 +2934,8 @@ export default function App() {
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [mysteries, setMysteries] = useState<MysteryGame[]>([]);
   const [activeMysteryId, setActiveMysteryId] = useState<string | null>(null);
+  const [selectedMysteryDetectiveId, setSelectedMysteryDetectiveId] = useState(ravenwoodDetectiveProfiles[0].id);
+  const [selectedMysteryDetectiveAge, setSelectedMysteryDetectiveAge] = useState(24);
   const [treeZoom, setTreeZoom] = useState(1);
   const [babyNames, setBabyNames] = useState<string[]>([]);
   const [influenceTargets, setInfluenceTargets] = useState<Record<string, string>>({});
@@ -2788,6 +2951,10 @@ export default function App() {
   const C = themes[themeName];
   const activeStory = useMemo(() => stories.find((story) => story.id === activeStoryId) ?? null, [activeStoryId, stories]);
   const activeMystery = useMemo(() => mysteries.find((mystery) => mystery.id === activeMysteryId) ?? null, [activeMysteryId, mysteries]);
+  const selectedMysteryDetective = useMemo(
+    () => ravenwoodDetectiveProfiles.find((profile) => profile.id === selectedMysteryDetectiveId) ?? ravenwoodDetectiveProfiles[0],
+    [selectedMysteryDetectiveId]
+  );
 
   useEffect(() => {
     if (screen !== "family" || !activeStory || treeViewportWidth <= 0) return;
@@ -2909,8 +3076,18 @@ export default function App() {
     setStories((current) => current.map((story) => (story.id === activeStoryId ? mutator(story) : story)));
   }
 
+  function chooseMysteryDetective(profileId: string) {
+    setSelectedMysteryDetectiveId(profileId);
+    setSelectedMysteryDetectiveAge(24);
+  }
+
+  function confirmMysteryDetective() {
+    setSelectedMysteryDetectiveAge(24);
+    setScreen("mysteryPortraitSelect");
+  }
+
   function startMystery() {
-    const mystery = createMysteryGameFromDraft(draft);
+    const mystery = createMysteryGameFromDraft(draft, selectedMysteryDetective, selectedMysteryDetectiveAge);
     setMysteries((current) => [mystery, ...current]);
     setActiveMysteryId(mystery.id);
     setMysteryInput("");
@@ -2951,7 +3128,7 @@ export default function App() {
         firstName: mystery.player.firstName,
         familyName: mystery.player.familyName,
         sex: mystery.player.sex,
-        age: 30,
+        age: mysteryPlayerAge(mystery.player),
         ravenwoodPortraitKey: mystery.player.ravenwoodPortraitKey,
         portraitLineage: mystery.player.portraitLineage,
         visualRace: mystery.player.visualRace,
@@ -2971,11 +3148,31 @@ export default function App() {
     return { day, daytime: daytimes[index + 1] };
   }
 
-  function mysteryRoll(text: string): string | undefined {
-    if (!text.toLowerCase().match(/search|force|sneak|attack|kill|accuse|pick|break|listen|follow/)) return undefined;
+  function mysteryCheckKindForText(text: string): MysteryCheckKind | undefined {
+    const lower = text.toLowerCase();
+    if (lower.match(/\b(force|attack|kill|fight|break|push|strike|shove|shoot|stab)\b/)) return "Force";
+    if (lower.match(/\b(sneak|hide|follow|tail|shadow|pick|slip|crawl|quiet)\b/)) return "Stealth";
+    if (lower.match(/\b(accuse|arrest|ask|question|interview|convince|command|promise|truth|press)\b/)) return "Interview";
+    if (lower.match(/\b(search|investigate|proof|evidence|listen|inspect|study|look|read|trace)\b/)) return "Search";
+    if (lower.match(/\b(body|corpse|blood|death|dead|fear|panic|storm|midnight|wait|watch)\b/)) return "Composure";
+    return undefined;
+  }
+
+  function mysteryQuirkModifierFor(quirks: MysteryDetectiveQuirk[] | undefined, check: MysteryCheckKind): number {
+    return (quirks ?? [])
+      .filter((quirk) => quirk.check === check)
+      .reduce((total, quirk) => total + quirk.modifier, 0);
+  }
+
+  function mysteryRoll(text: string, mystery: MysteryGame): string | undefined {
+    const check = mysteryCheckKindForText(text);
+    if (!check) return undefined;
     const die = rand(1, 20);
-    const result = die + rand(1, 4);
-    return `Roll: d20 ${die} + instinct = ${result}`;
+    const instinct = rand(1, 4);
+    const quirkModifier = mysteryQuirkModifierFor(mystery.player.detectiveQuirks, check);
+    const result = die + instinct + quirkModifier;
+    const quirkText = quirkModifier === 0 ? "" : " with detective trait";
+    return `Roll: ${check} d20 ${die} + instinct ${instinct}${quirkText} = ${result}`;
   }
 
   function appendMysteryJournal(journal: StoryMessage[], archived: StoryMessage[]): StoryMessage[] {
@@ -3118,6 +3315,7 @@ export default function App() {
     patchMystery((mystery) => {
       const nextTime = nextMysteryTime(mystery.day, mystery.daytime);
       const lower = text.toLowerCase();
+      const rollText = mysteryRoll(text, mystery);
       const namedSuspect = mystery.npcs.find((npc) => lower.includes(npc.firstName.toLowerCase()) || lower.includes(fullName(npc).toLowerCase()));
       const suspectMurders = namedSuspect ? mystery.murders.filter((murder) => murder.killerId === namedSuspect.id) : [];
       const suspectProofs = suspectMurders.flatMap((murder) => murder.proofs?.length ? murder.proofs : [murder.proof]);
@@ -3154,38 +3352,38 @@ export default function App() {
         const foundProof = matchingMurder ? (matchingMurder.proofs?.length ? matchingMurder.proofs : [matchingMurder.proof]).find((proof) => !discoveredProof.includes(proof)) : undefined;
         if (matchingMurder && foundProof) {
           discoveredProof.push(foundProof);
-          messages.push({ id: uid(), speaker: "GM", text: `You find proof: ${foundProof}. It points toward ${mysteryNpcName(mystery, matchingMurder.killerId)} if you can connect it cleanly.` });
+          messages.push({ id: uid(), speaker: "GM", text: `You find proof: ${foundProof}. It points toward ${mysteryNpcName(mystery, matchingMurder.killerId)} if you can connect it cleanly.`, roll: rollText });
           ledgerLines.push(`Proof discovered in ${mysteryRoomName(mystery, currentRoom)}: ${foundProof}. Linked killer: ${mysteryNpcName(mystery, matchingMurder.killerId)}.`);
         } else {
-          messages.push({ id: uid(), speaker: "GM", text: `You press the ${mysteryRoomName(mystery, currentRoom)} for answers. Dust, etiquette, and old money resist you.` });
-          ledgerLines.push(`Search/investigation found no new proof in ${mysteryRoomName(mystery, currentRoom)}.`);
+          messages.push({ id: uid(), speaker: "GM", text: `You press the ${mysteryRoomName(mystery, currentRoom)} for answers. Dust, etiquette, and old money resist you.`, roll: rollText });
+          ledgerLines.push(`Search/investigation found no new proof in ${mysteryRoomName(mystery, currentRoom)}.${rollText ? ` ${rollText}.` : ""}`);
         }
       } else if ((lower.includes("accuse") || lower.includes("arrest")) && namedSuspect && suspectMurders.length > 0) {
         if (discoveredProof.some((proof) => suspectProofs.includes(proof))) {
           finished = true;
           won = true;
           summary = `${mystery.player.firstName} proved ${fullName(namedSuspect)} was tied to the Ravenwood murders.`;
-          messages.push({ id: uid(), speaker: "GM", text: `${fullName(namedSuspect)} breaks under the weight of proof. The arrest is made before midnight can claim another name.` });
+          messages.push({ id: uid(), speaker: "GM", text: `${fullName(namedSuspect)} breaks under the weight of proof. The arrest is made before midnight can claim another name.`, roll: rollText });
           ledgerLines.push(`Win by arrest: accused ${fullName(namedSuspect)} with matching proof. Case finished.`);
         } else {
-          messages.push({ id: uid(), speaker: "GM", text: `${fullName(namedSuspect)} smiles at the accusation. Without proof, the room turns against you.` });
-          ledgerLines.push(`Failed accusation: ${fullName(namedSuspect)} is a real killer but no discovered proof matched yet.`);
+          messages.push({ id: uid(), speaker: "GM", text: `${fullName(namedSuspect)} smiles at the accusation. Without proof, the room turns against you.`, roll: rollText });
+          ledgerLines.push(`Failed accusation: ${fullName(namedSuspect)} is a real killer but no discovered proof matched yet.${rollText ? ` ${rollText}.` : ""}`);
         }
       } else if ((lower.includes("kill") || lower.includes("attack") || lower.includes("shoot") || lower.includes("stab")) && namedSuspect && suspectMurders.length > 0) {
         finished = true;
         won = true;
         summary = `${mystery.player.firstName} killed ${fullName(namedSuspect)} and ended the murders.`;
         npcs = npcs.map((npc) => npc.id === namedSuspect.id ? { ...npc, alive: false } : npc);
-        messages.push({ id: uid(), speaker: "GM", text: `${fullName(namedSuspect)} dies before the house can protect them. It is not clean justice, but Ravenwood survives.` });
-        ledgerLines.push(`Win by killing culprit: ${fullName(namedSuspect)} marked dead. Case finished.`);
+        messages.push({ id: uid(), speaker: "GM", text: `${fullName(namedSuspect)} dies before the house can protect them. It is not clean justice, but Ravenwood survives.`, roll: rollText });
+        ledgerLines.push(`Win by killing culprit: ${fullName(namedSuspect)} marked dead. Case finished.${rollText ? ` ${rollText}.` : ""}`);
       } else if (movementRoom && movementRoom.id !== mystery.currentRoomId) {
         ledgerLines.push(`Room description shown for ${movementRoom.name}.`);
       } else if (mysterySpeechIntent(text)) {
-        messages.push(mysteryDialogueMessage(text, { ...mystery, currentRoomId: currentRoom, npcs, discoveredProof }, namedSuspect));
-        ledgerLines.push(`Dialogue resolved in ${mysteryRoomName(mystery, currentRoom)}${namedSuspect ? ` with ${fullName(namedSuspect)}` : ""}.`);
+        const dialogue = mysteryDialogueMessage(text, { ...mystery, currentRoomId: currentRoom, npcs, discoveredProof }, namedSuspect);
+        messages.push({ ...dialogue, roll: rollText });
+        ledgerLines.push(`Dialogue resolved in ${mysteryRoomName(mystery, currentRoom)}${namedSuspect ? ` with ${fullName(namedSuspect)}` : ""}.${rollText ? ` ${rollText}.` : ""}`);
       } else {
         const room = mysteryRoomName(mystery, currentRoom);
-        const rollText = mysteryRoll(text);
         const people = mysteryPeopleInRoom({ ...mystery, currentRoomId: currentRoom, npcs }, currentRoom).filter((person) => person.id !== mystery.player.id) as MysteryNpc[];
         const knownProof = discoveredProof.length > 0 ? ` You are carrying ${discoveredProof.length} piece${discoveredProof.length === 1 ? "" : "s"} of proof, so careless questions may change who trusts you.` : "";
         const nearby = people.length > 0 ? ` ${fullName(people[0])} is close enough to notice your interest.` : " No one nearby openly reacts.";
@@ -4438,7 +4636,7 @@ export default function App() {
         <Card>
           <Text style={[styles.heading, { color: C.text }]}>Ravenwood Murder Mystery Book</Text>
           <Text style={[styles.body, { color: C.text }]}>A 13-day murder investigation in a mansion hotel with suspects, secrets and open exploration.</Text>
-          <Button label="Begin This Book" onPress={startMystery} />
+          <Button label="Begin This Book" onPress={() => setScreen("mysteryDetectiveSelect")} />
         </Card>
         <Card>
           <Text style={[styles.heading, { color: C.text }]}>Birmingham Books</Text>
@@ -4451,6 +4649,78 @@ export default function App() {
           <Button label="Blank For Now" onPress={() => undefined} disabled />
         </Card>
         <Button label="Back" onPress={() => setScreen("menu")} />
+      </Shell>
+    );
+  }
+
+  if (screen === "mysteryDetectiveSelect") {
+    return (
+      <Shell>
+        <View style={styles.rowBetween}>
+          <Text style={[styles.titleSmall, { color: C.text }]}>Choose Detective</Text>
+          <Button small label="Back" onPress={() => setScreen("bookSelect")} />
+        </View>
+        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.detectiveCarousel}>
+          {ravenwoodDetectiveProfiles.map((profile) => {
+            const selected = selectedMysteryDetective.id === profile.id;
+            return (
+              <Pressable
+                key={profile.id}
+                onPress={() => chooseMysteryDetective(profile.id)}
+                style={[styles.detectiveCard, { backgroundColor: selected ? C.panel2 : C.panel, borderColor: selected ? C.accent : C.line }]}
+              >
+                <PortraitImage subject={mysteryDetectivePortraitSubject(profile, 24)} size="hero" highlight={selected} />
+                <Text style={[styles.heading, styles.detectiveName, { color: C.text }]}>{profile.firstName} {profile.familyName}</Text>
+                <Text style={[styles.rollText, { color: C.dim }]}>{profile.sex} - age 24 portrait</Text>
+                <View style={styles.detectiveQuirkList}>
+                  {profile.quirks.map((quirk) => (
+                    <View key={quirk.id} style={[styles.detectiveQuirkRow, { borderColor: C.line }]}>
+                      <Text style={[styles.body, styles.detectiveQuirkText, { color: C.text }]}>{quirk.label}</Text>
+                      <Text style={[styles.rollText, styles.gameHiddenText]}>{quirk.modifier > 0 ? "+" : ""}{quirk.modifier} {quirk.check}</Text>
+                    </View>
+                  ))}
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        <Button label="THIS IS MY DETECTIVE" onPress={confirmMysteryDetective} />
+      </Shell>
+    );
+  }
+
+  if (screen === "mysteryPortraitSelect") {
+    return (
+      <Shell>
+        <View style={styles.rowBetween}>
+          <Text style={[styles.titleSmall, { color: C.text }]}>Choose Portrait Age</Text>
+          <Button small label="Back" onPress={() => setScreen("mysteryDetectiveSelect")} />
+        </View>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>{selectedMysteryDetective.firstName} {selectedMysteryDetective.familyName}</Text>
+          <Text style={[styles.body, { color: C.text }]}>The case will begin with this detective at the selected age.</Text>
+          <View style={styles.detectiveAgeGrid}>
+            {ravenwoodPlayerSelectableAges.map((age) => {
+              const selected = selectedMysteryDetectiveAge === age;
+              return (
+                <Pressable
+                  key={age}
+                  onPress={() => setSelectedMysteryDetectiveAge(age)}
+                  style={[styles.detectiveAgeCard, { backgroundColor: selected ? C.panel2 : C.panel, borderColor: selected ? C.accent : C.line }]}
+                >
+                  <PortraitImage subject={mysteryDetectivePortraitSubject(selectedMysteryDetective, age)} size="hero" highlight={selected} />
+                  <Text style={[styles.heading, styles.detectiveAgeLabel, { color: C.text }]}>Age {age}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={styles.detectiveQuirkList}>
+            {selectedMysteryDetective.quirks.map((quirk) => (
+              <Text key={quirk.id} style={[styles.rollText, styles.gameHiddenText]}>{quirk.label}: {quirk.modifier > 0 ? "+" : ""}{quirk.modifier} {quirk.check}</Text>
+            ))}
+          </View>
+        </Card>
+        <Button label="Start Case" onPress={startMystery} />
       </Shell>
     );
   }
@@ -4512,12 +4782,23 @@ export default function App() {
             <View style={styles.characterHeaderText}>
               <Text style={[styles.heading, { color: C.text }]}>{activeMystery.player.firstName} {activeMystery.player.familyName}</Text>
               <Text style={{ color: C.dim }}>{activeMystery.player.sex}</Text>
+              <Text style={{ color: C.dim }}>Age {mysteryPlayerAge(activeMystery.player)}</Text>
               <Text style={{ color: C.dim }}>Room key: {mysteryRoomName(activeMystery, activeMystery.playerRoomId)}</Text>
               <Text style={{ color: C.dim }}>Current room: {mysteryRoomName(activeMystery, activeMystery.currentRoomId)}</Text>
               <Text style={{ color: C.dim }}>Day {activeMystery.day}, {activeMystery.daytime}</Text>
             </View>
           </View>
         </Card>
+        {activeMystery.player.detectiveQuirks?.length ? (
+          <Card>
+            <Text style={[styles.heading, { color: C.text }]}>Quirks</Text>
+            {activeMystery.player.detectiveQuirks.map((quirk) => (
+              <Text key={quirk.id} style={[styles.body, { color: C.text }]}>
+                {quirk.label} <Text style={styles.gameHiddenText}>({quirk.modifier > 0 ? "+" : ""}{quirk.modifier} {quirk.check})</Text>
+              </Text>
+            ))}
+          </Card>
+        ) : null}
         <Card>
           <Text style={[styles.heading, { color: C.text }]}>Inventory</Text>
           {activeMystery.inventory.length === 0 ? <Text style={[styles.body, { color: C.text }]}>Nothing carried.</Text> : null}
@@ -5132,7 +5413,7 @@ export default function App() {
         {activeMysteries.map((mystery) => (
           <Card key={mystery.id}>
             <Text style={[styles.heading, { color: C.text }]}>{mystery.title}</Text>
-            <Text style={{ color: C.dim }}>{mystery.player.firstName} {mystery.player.familyName}, {mystery.player.sex}, day {mystery.day}, {mystery.daytime}</Text>
+            <Text style={{ color: C.dim }}>{mystery.player.firstName} {mystery.player.familyName}, {mystery.player.sex}, age {mysteryPlayerAge(mystery.player)}, day {mystery.day}, {mystery.daytime}</Text>
             <View style={styles.row}>
               <Button small label="Open" onPress={() => { setActiveMysteryId(mystery.id); setScreen("mystery"); }} />
               <Button small label="Delete Save" onPress={() => removeMystery(mystery.id)} variant="warning" />
@@ -5382,6 +5663,15 @@ const styles = StyleSheet.create({
   bottomMenuText: { fontSize: 12, fontWeight: "800", textAlign: "center" },
   mysteryHeaderProfile: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 10, flex: 1, minWidth: 0 },
   mysteryHeaderName: { flexShrink: 1, textAlign: "right" },
+  detectiveCarousel: { gap: 14, paddingRight: 12 },
+  detectiveCard: { width: 268, borderWidth: 1, borderRadius: 8, padding: 14, gap: 10, alignItems: "center" },
+  detectiveName: { textAlign: "center" },
+  detectiveQuirkList: { alignSelf: "stretch", gap: 8, marginTop: 4 },
+  detectiveQuirkRow: { borderTopWidth: 1, paddingTop: 8 },
+  detectiveQuirkText: { marginTop: 0 },
+  detectiveAgeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  detectiveAgeCard: { width: 148, borderWidth: 1, borderRadius: 8, padding: 12, alignItems: "center", gap: 8 },
+  detectiveAgeLabel: { fontSize: 18, lineHeight: 22 },
   mysteryStoryFrame: { minHeight: 0 },
   mysteryDayPanel: { alignItems: "center", justifyContent: "center", padding: 10, borderWidth: 1, borderColor: "rgba(240, 196, 92, 0.28)" },
   mysterySceneHeader: { minHeight: 144, borderWidth: 1, borderRadius: 8, padding: 10, flexDirection: "row", alignItems: "center", gap: 12 },
