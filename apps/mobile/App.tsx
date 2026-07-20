@@ -3886,10 +3886,10 @@ export default function App() {
           : isMap
             ? styles.portraitMapFrame
             : styles.portraitThumbFrame;
-    const frameWidth = isHero ? 132 : isLarge ? 82 : isResident ? 82 : isMap ? 46 : 40;
+    const frameWidth = isHero ? 98 : isLarge ? 62 : isResident ? 62 : isMap ? 34 : 30;
     const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 122 : isMap ? 68 : 62;
     if (ravenwoodPortrait) {
-      const cropPaddingX = isHero ? -10 : isResident ? -22 : isMap ? -14 : -16;
+      const cropPaddingX = isHero ? -24 : isResident ? -28 : isMap ? -20 : -22;
       const cropPaddingTop = isHero ? 14 : isResident ? 20 : isMap ? 24 : 24;
       const cropPaddingBottom = isHero ? 18 : isResident ? 18 : isMap ? 16 : 16;
       const cropX = clamp(ravenwoodPortrait.crop.x - cropPaddingX, 0, RAVENWOOD_SHEET_WIDTH - 1);
@@ -3902,7 +3902,7 @@ export default function App() {
         width: Math.max(1, cropWidth),
         height: Math.max(1, cropHeight)
       };
-      const scale = Math.min(frameWidth / crop.width, frameHeight / crop.height) * (isResident ? 1.05 : isMap ? 1.02 : 1.03);
+      const scale = Math.max(frameWidth / crop.width, frameHeight / crop.height) * (isResident ? 1.03 : isMap ? 1.02 : 1.02);
       return (
         <View style={[frameStyle, { borderColor: highlight ? C.accent : C.line, backgroundColor: C.panel2 }, subject.alive === false && styles.deadPortraitFrame]}>
           <Image
@@ -5145,13 +5145,13 @@ const styles = StyleSheet.create({
   scenePill: { borderRadius: 8, overflow: "hidden", paddingHorizontal: 10, paddingVertical: 7, fontSize: 12, fontWeight: "800", textTransform: "uppercase" },
   portrait: { width: 132, minHeight: 224, borderWidth: 1, borderRadius: 8, padding: 10, alignItems: "center", justifyContent: "space-between" },
   portraitStage: { fontSize: 11, textTransform: "uppercase" },
-  portraitImageFrame: { width: 82, height: 128, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
-  portraitHeroFrame: { width: 132, height: 190, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitImageFrame: { width: 62, height: 128, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitHeroFrame: { width: 98, height: 190, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitImage: { width: "100%", height: "100%" },
   ravenwoodPortraitSheet: { position: "absolute" },
-  portraitResidentFrame: { width: 82, height: 122, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
-  portraitMapFrame: { width: 46, height: 68, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
-  portraitThumbFrame: { width: 40, height: 62, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitResidentFrame: { width: 62, height: 122, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitMapFrame: { width: 34, height: 68, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitThumbFrame: { width: 30, height: 62, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitThumb: { width: "100%", height: "100%" },
   picturelessPortrait: { alignItems: "center", justifyContent: "center", gap: 4 },
   picturelessInitials: { fontWeight: "900", textAlign: "center" },
