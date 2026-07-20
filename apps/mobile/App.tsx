@@ -3889,9 +3889,9 @@ export default function App() {
     const frameWidth = isHero ? 114 : isLarge ? 72 : isResident ? 72 : isMap ? 40 : 36;
     const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 122 : isMap ? 68 : 62;
     if (ravenwoodPortrait) {
-      const cropPaddingX = isHero ? -18 : isResident ? -25 : isMap ? -17 : -19;
-      const cropPaddingTop = isHero ? 14 : isResident ? 20 : isMap ? 24 : 24;
-      const cropPaddingBottom = isHero ? 18 : isResident ? 18 : isMap ? 16 : 16;
+      const cropPaddingX = 0;
+      const cropPaddingTop = 0;
+      const cropPaddingBottom = 0;
       const cropX = clamp(ravenwoodPortrait.crop.x - cropPaddingX, 0, RAVENWOOD_SHEET_WIDTH - 1);
       const cropY = clamp(ravenwoodPortrait.crop.y - cropPaddingTop, 0, RAVENWOOD_SHEET_HEIGHT - 1);
       const cropWidth = Math.min(RAVENWOOD_SHEET_WIDTH - cropX, ravenwoodPortrait.crop.width + cropPaddingX * 2);
