@@ -170,7 +170,7 @@ type Story = {
 
 type Daytime = "Morning" | "Breakfast" | "Midday" | "Lunch" | "Afternoon" | "Evening" | "Night" | "Midnight";
 
-type MysteryCheckKind = "Search" | "Interview" | "Force" | "Stealth" | "Composure";
+type MysteryCheckKind = "Athletics" | "History" | "Search" | "Medicine" | "Charisma" | "Persuasion" | "Deception" | "Sleight of Hand" | "Stealth" | "Composure" | "Rizz";
 
 type MysteryDetectiveQuirk = {
   id: string;
@@ -185,6 +185,8 @@ type MysteryDetectiveProfile = Pick<CharacterDraft, "firstName" | "familyName" |
   visualRace: MysteryVisualRace;
   quirks: MysteryDetectiveQuirk[];
 };
+
+const mysteryRollTypes: MysteryCheckKind[] = ["Athletics", "History", "Search", "Medicine", "Charisma", "Persuasion", "Deception", "Sleight of Hand", "Stealth", "Composure", "Rizz"];
 
 type MysteryRoom = {
   id: string;
@@ -618,9 +620,9 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     portraitLineage: "player-sheet-1-row-3",
     visualRace: "olive",
     quirks: [
-      { id: "dog", label: "Keeps a retired search dog", check: "Search", modifier: 2 },
-      { id: "voices", label: "Never forgets a voice", check: "Interview", modifier: 1 },
-      { id: "stairs", label: "Old stair injury aches in a chase", check: "Stealth", modifier: -1 }
+      { id: "dog", label: "Keeps a retired search dog", check: "Search", modifier: 3 },
+      { id: "voices", label: "Never forgets a voice", check: "History", modifier: 2 },
+      { id: "stairs", label: "Old stair injury aches in a chase", check: "Athletics", modifier: -3 }
     ]
   },
   {
@@ -635,9 +637,9 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     portraitLineage: "player-sheet-1-row-2",
     visualRace: "fair",
     quirks: [
-      { id: "clock", label: "Repairs pocket watches by habit", check: "Search", modifier: 1 },
-      { id: "soldier", label: "Served as a field orderly", check: "Composure", modifier: 2 },
-      { id: "temper", label: "Answers insults too quickly", check: "Interview", modifier: -1 }
+      { id: "clock", label: "Repairs pocket watches by habit", check: "Sleight of Hand", modifier: 2 },
+      { id: "soldier", label: "Served as a field orderly", check: "Medicine", modifier: 3 },
+      { id: "temper", label: "Answers insults too quickly", check: "Persuasion", modifier: -3 }
     ]
   },
   {
@@ -652,9 +654,9 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     portraitLineage: "player-sheet-2-row-3",
     visualRace: "eastern",
     quirks: [
-      { id: "cards", label: "Reads people over card games", check: "Interview", modifier: 2 },
-      { id: "perfume", label: "Knows expensive perfumes on sight", check: "Search", modifier: 1 },
-      { id: "storm", label: "Sleeps badly during storms", check: "Composure", modifier: -1 }
+      { id: "cards", label: "Reads people over card games", check: "Deception", modifier: 3 },
+      { id: "perfume", label: "Knows expensive perfumes on sight", check: "Search", modifier: 2 },
+      { id: "storm", label: "Sleeps badly during storms", check: "Composure", modifier: -3 }
     ]
   },
   {
@@ -669,9 +671,9 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     portraitLineage: "player-sheet-2-row-2",
     visualRace: "black",
     quirks: [
-      { id: "garden", label: "Grew up tending kitchen gardens", check: "Search", modifier: 1 },
-      { id: "quiet", label: "Moves quietly when others argue", check: "Stealth", modifier: 2 },
-      { id: "blood", label: "Gets faint at the sight of fresh blood", check: "Composure", modifier: -1 }
+      { id: "garden", label: "Grew up tending kitchen gardens", check: "Medicine", modifier: 2 },
+      { id: "quiet", label: "Moves quietly when others argue", check: "Stealth", modifier: 3 },
+      { id: "blood", label: "Gets faint at the sight of fresh blood", check: "Composure", modifier: -3 }
     ]
   },
   {
@@ -686,9 +688,9 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     portraitLineage: "player-sheet-5-row-1",
     visualRace: "fair",
     quirks: [
-      { id: "ledgers", label: "Balances household ledgers for fun", check: "Search", modifier: 2 },
-      { id: "aunt", label: "Has an aunt in every respectable scandal", check: "Interview", modifier: 1 },
-      { id: "depth", label: "Hates cramped service passages", check: "Stealth", modifier: -1 }
+      { id: "ledgers", label: "Balances household ledgers for fun", check: "History", modifier: 3 },
+      { id: "aunt", label: "Has an aunt in every respectable scandal", check: "Persuasion", modifier: 2 },
+      { id: "depth", label: "Hates cramped service passages", check: "Stealth", modifier: -3 }
     ]
   },
   {
@@ -703,9 +705,9 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = [
     portraitLineage: "player-sheet-5-row-4",
     visualRace: "black",
     quirks: [
-      { id: "boxing", label: "Boxed at university", check: "Force", modifier: 2 },
-      { id: "theatre", label: "Can mimic polite manners perfectly", check: "Interview", modifier: 1 },
-      { id: "dust", label: "Coughs in dusty archives", check: "Search", modifier: -1 }
+      { id: "boxing", label: "Boxed at university", check: "Athletics", modifier: 3 },
+      { id: "theatre", label: "Can mimic polite manners perfectly", check: "Rizz", modifier: 2 },
+      { id: "dust", label: "Coughs in dusty archives", check: "Search", modifier: -3 }
     ]
   }
 ];
@@ -867,6 +869,10 @@ function mysteryDetectivePortraitSubject(profile: MysteryDetectiveProfile, age: 
     visualRace: portrait?.visualRace ?? profile.visualRace,
     alive: true
   };
+}
+
+function signedModifier(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
 }
 
 function bastardSuspicionFeature(player: Pick<CharacterDraft, "hairColor" | "faceTrait" | "origin">): string {
@@ -2678,7 +2684,7 @@ function createMysteryGameFromDraft(draft: CharacterDraft, detectiveProfile?: My
     currentRoomId: "grand-hall",
     playerRoomId: playerRoom.id,
     messages: [
-      { id: uid(), speaker: "System", text: "Ravenwood prototype: investigate freely. Text advances time; some risky choices display a roll." },
+      { id: uid(), speaker: "System", text: "Ravenwood prototype: investigate freely. Text advances time; risky actions use d12 rolls." },
       { id: uid(), speaker: "GM", text: `${playerFirstName} ${playerFamilyName} receives a brass key for ${playerRoom.name} in the Great Hall. ${openingServant ? `${openingServant.firstName} ${openingServant.familyName}, a ${openingServant.occupation.toLowerCase()}, waits nearby to answer the first questions. ` : ""}The host explains that ${lockdownReason}; no one is leaving Ravenwood Manor for the foreseeable future.` }
     ],
     journal: [],
@@ -3150,29 +3156,35 @@ export default function App() {
 
   function mysteryCheckKindForText(text: string): MysteryCheckKind | undefined {
     const lower = text.toLowerCase();
-    if (lower.match(/\b(force|attack|kill|fight|break|push|strike|shove|shoot|stab)\b/)) return "Force";
-    if (lower.match(/\b(sneak|hide|follow|tail|shadow|pick|slip|crawl|quiet)\b/)) return "Stealth";
-    if (lower.match(/\b(accuse|arrest|ask|question|interview|convince|command|promise|truth|press)\b/)) return "Interview";
-    if (lower.match(/\b(search|investigate|proof|evidence|listen|inspect|study|look|read|trace)\b/)) return "Search";
-    if (lower.match(/\b(body|corpse|blood|death|dead|fear|panic|storm|midnight|wait|watch)\b/)) return "Composure";
+    if (lower.match(/\b(flirt|romance|romantic|kiss|date|dance|seduce|wink|blush)\b/)) return "Rizz";
+    if (lower.match(/\b(pickpocket|palm|steal|snatch|plant|lockpick|pick the lock|unlock|sleight|conceal)\b/)) return "Sleight of Hand";
+    if (lower.match(/\b(sneak|hide|follow|tail|shadow|slip past|crawl|quiet|eavesdrop)\b/)) return "Stealth";
+    if (lower.match(/\b(lie|bluff|deceive|trick|mislead|pretend|fake|cover story|disguise)\b/)) return "Deception";
+    if (lower.match(/\b(persuade|convince|promise|negotiate|reason|plead|appeal|argue)\b/)) return "Persuasion";
+    if (lower.match(/\b(charm|command|impress|confidence|talk|greet|socialize|speak|ask|question|interview|accuse|arrest)\b/)) return "Charisma";
+    if (lower.match(/\b(body|corpse|blood|death|dead|wound|poison|illness|medicine|medical|doctor|examine|heal|treat)\b/)) return "Medicine";
+    if (lower.match(/\b(history|remember|recall|archive|record|ledger|family tree|lineage|antique|old story|date|guest book)\b/)) return "History";
+    if (lower.match(/\b(search|investigate|proof|evidence|listen|inspect|study|look|read|trace|clue|find)\b/)) return "Search";
+    if (lower.match(/\b(fear|panic|storm|midnight|wait|watch|endure|calm|pressure|threat|threaten)\b/)) return "Composure";
+    if (lower.match(/\b(force|attack|kill|fight|break|push|strike|shove|shoot|stab|run|chase|climb|carry|jump|swim|athletic)\b/)) return "Athletics";
     return undefined;
   }
 
   function mysteryQuirkModifierFor(quirks: MysteryDetectiveQuirk[] | undefined, check: MysteryCheckKind): number {
-    return (quirks ?? [])
+    const total = (quirks ?? [])
       .filter((quirk) => quirk.check === check)
       .reduce((total, quirk) => total + quirk.modifier, 0);
+    return clamp(total, -3, 3);
   }
 
   function mysteryRoll(text: string, mystery: MysteryGame): string | undefined {
     const check = mysteryCheckKindForText(text);
     if (!check) return undefined;
-    const die = rand(1, 20);
-    const instinct = rand(1, 4);
+    const die = rand(1, 12);
     const quirkModifier = mysteryQuirkModifierFor(mystery.player.detectiveQuirks, check);
-    const result = die + instinct + quirkModifier;
+    const result = die + quirkModifier;
     const quirkText = quirkModifier === 0 ? "" : " with detective trait";
-    return `Roll: ${check} d20 ${die} + instinct ${instinct}${quirkText} = ${result}`;
+    return `Roll: ${check} d12 ${die}${quirkText} = ${result}`;
   }
 
   function appendMysteryJournal(journal: StoryMessage[], archived: StoryMessage[]): StoryMessage[] {
@@ -4676,7 +4688,7 @@ export default function App() {
                   {profile.quirks.map((quirk) => (
                     <View key={quirk.id} style={[styles.detectiveQuirkRow, { borderColor: C.line }]}>
                       <Text style={[styles.body, styles.detectiveQuirkText, { color: C.text }]}>{quirk.label}</Text>
-                      <Text style={[styles.rollText, styles.gameHiddenText]}>{quirk.modifier > 0 ? "+" : ""}{quirk.modifier} {quirk.check}</Text>
+                      <Text style={[styles.rollText, styles.gameHiddenText]}>{signedModifier(quirk.modifier)} {quirk.check}</Text>
                     </View>
                   ))}
                 </View>
@@ -4716,7 +4728,7 @@ export default function App() {
           </View>
           <View style={styles.detectiveQuirkList}>
             {selectedMysteryDetective.quirks.map((quirk) => (
-              <Text key={quirk.id} style={[styles.rollText, styles.gameHiddenText]}>{quirk.label}: {quirk.modifier > 0 ? "+" : ""}{quirk.modifier} {quirk.check}</Text>
+              <Text key={quirk.id} style={[styles.rollText, styles.gameHiddenText]}>{quirk.label}: {signedModifier(quirk.modifier)} {quirk.check}</Text>
             ))}
           </View>
         </Card>
@@ -4794,11 +4806,24 @@ export default function App() {
             <Text style={[styles.heading, { color: C.text }]}>Quirks</Text>
             {activeMystery.player.detectiveQuirks.map((quirk) => (
               <Text key={quirk.id} style={[styles.body, { color: C.text }]}>
-                {quirk.label} <Text style={styles.gameHiddenText}>({quirk.modifier > 0 ? "+" : ""}{quirk.modifier} {quirk.check})</Text>
+                {quirk.label} <Text style={styles.gameHiddenText}>({signedModifier(quirk.modifier)} {quirk.check})</Text>
               </Text>
             ))}
           </Card>
         ) : null}
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Roll Modifiers</Text>
+          <View style={styles.detectiveModifierGrid}>
+            {mysteryRollTypes.map((check) => {
+              const modifier = mysteryQuirkModifierFor(activeMystery.player.detectiveQuirks, check);
+              return (
+                <Text key={check} style={[styles.rollText, modifier === 0 ? { color: C.dim } : styles.gameHiddenText]}>
+                  {check}: {signedModifier(modifier)}
+                </Text>
+              );
+            })}
+          </View>
+        </Card>
         <Card>
           <Text style={[styles.heading, { color: C.text }]}>Inventory</Text>
           {activeMystery.inventory.length === 0 ? <Text style={[styles.body, { color: C.text }]}>Nothing carried.</Text> : null}
@@ -5669,6 +5694,7 @@ const styles = StyleSheet.create({
   detectiveQuirkList: { alignSelf: "stretch", gap: 8, marginTop: 4 },
   detectiveQuirkRow: { borderTopWidth: 1, paddingTop: 8 },
   detectiveQuirkText: { marginTop: 0 },
+  detectiveModifierGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   detectiveAgeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   detectiveAgeCard: { width: 148, borderWidth: 1, borderRadius: 8, padding: 12, alignItems: "center", gap: 8 },
   detectiveAgeLabel: { fontSize: 18, lineHeight: 22 },
