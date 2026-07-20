@@ -337,6 +337,32 @@ const locationBackgrounds: Record<string, ImageSourcePropType> = {
   sewers: require("./assets/locations/sewers.png")
 };
 
+const ravenwoodRoomBackgrounds: Record<string, ImageSourcePropType> = {
+  "grand-hall": require("./assets/ravenwood/room_backgrounds/great_hall.jpg"),
+  "drawing-room": require("./assets/ravenwood/room_backgrounds/drawing_room.jpg"),
+  "dining-room": require("./assets/ravenwood/room_backgrounds/dining_room.jpg"),
+  library: require("./assets/ravenwood/room_backgrounds/library.jpg"),
+  conservatory: require("./assets/ravenwood/room_backgrounds/conservatory.jpg"),
+  "billiards-room": require("./assets/ravenwood/room_backgrounds/billiards_room.jpg"),
+  "smoking-room": require("./assets/ravenwood/room_backgrounds/smoking_room.jpg"),
+  "garden-terrace": require("./assets/ravenwood/room_backgrounds/garden_terrace.jpg"),
+  kitchen: require("./assets/ravenwood/room_backgrounds/kitchen.jpg"),
+  "staff-corridor": require("./assets/ravenwood/room_backgrounds/staff_corridor.jpg"),
+  "servants-hall": require("./assets/ravenwood/room_backgrounds/staff_corridor.jpg"),
+  pantry: require("./assets/ravenwood/room_backgrounds/kitchen.jpg"),
+  laundry: require("./assets/ravenwood/room_backgrounds/staff_corridor.jpg"),
+  "back-stairs": require("./assets/ravenwood/room_backgrounds/staff_corridor.jpg"),
+  "west-gallery": require("./assets/ravenwood/room_backgrounds/great_hall.jpg")
+};
+
+function ravenwoodRoomBackgroundFor(mystery: Pick<MysteryGame, "rooms" | "currentRoomId">): ImageSourcePropType {
+  const currentRoom = mystery.rooms.find((room) => room.id === mystery.currentRoomId);
+  if (ravenwoodRoomBackgrounds[mystery.currentRoomId]) return ravenwoodRoomBackgrounds[mystery.currentRoomId];
+  if (currentRoom?.kind === "service") return ravenwoodRoomBackgrounds.kitchen;
+  if (currentRoom?.kind === "staff") return ravenwoodRoomBackgrounds["staff-corridor"];
+  return ravenwoodRoomBackgrounds["grand-hall"];
+}
+
 const FAMILY_TREE_CANVAS_WIDTH = 1640;
 const RAVENWOOD_MIN_NPC_AGE = 9;
 const RAVENWOOD_MAX_NPC_AGE = 75;
@@ -4379,48 +4405,77 @@ export default function App() {
   function MysteryStoryWindow({ mystery }: { mystery: MysteryGame }) {
     const visibleMessages = mystery.messages.slice(-5);
     const currentRoom = mysteryRoomName(mystery, mystery.currentRoomId);
-    return (
-      <View style={[styles.storyFrame, styles.mysteryStoryFrame, { borderColor: C.line, backgroundColor: C.panel }]}>
-        <View style={[styles.mysterySceneHeader, { backgroundColor: themeName === "dark" ? "#141217" : "#efe8dc", borderColor: "rgba(240, 196, 92, 0.28)" }]}>
-          <PortraitImage subject={mysteryPlayerPortraitSubject(mystery.player)} size="large" highlight />
-          <View style={styles.mysterySceneMeta}>
-            <Text style={styles.storyPlaceLabel}>Day</Text>
-            <View style={styles.mysterySceneMetaRow}>
-              <Text style={styles.storyYearNumber}>{mystery.day}</Text>
-              <View style={styles.mysteryScenePlaceBlock}>
-                <Text style={styles.storyPlaceSmall}>{mystery.daytime}</Text>
-                <Text style={styles.mysteryScenePlaceName}>{currentRoom}</Text>
-              </View>
+    const roomBackground = themeName === "dark" ? ravenwoodRoomBackgroundFor(mystery) : undefined;
+    const sceneHeaderStyle = [styles.mysterySceneHeader, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "#141217" : "#efe8dc", borderColor: "rgba(240, 196, 92, 0.28)" }];
+    const storyPanelStyle = [styles.storyTextPanel, styles.mysteryTextPanelWide, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.82)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }];
+    const inputPanelStyle = [styles.storyInputPanel, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.78)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }];
+    const sceneHeaderContent = (
+      <>
+        <PortraitImage subject={mysteryPlayerPortraitSubject(mystery.player)} size="large" highlight />
+        <View style={styles.mysterySceneMeta}>
+          <Text style={styles.storyPlaceLabel}>Day</Text>
+          <View style={styles.mysterySceneMetaRow}>
+            <Text style={styles.storyYearNumber}>{mystery.day}</Text>
+            <View style={styles.mysteryScenePlaceBlock}>
+              <Text style={styles.storyPlaceSmall}>{mystery.daytime}</Text>
+              <Text style={styles.mysteryScenePlaceName}>{currentRoom}</Text>
             </View>
           </View>
         </View>
-        <View style={[styles.storyTextPanel, styles.mysteryTextPanelWide, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.82)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }]}>
-          <ScrollView style={[styles.storyMessages, styles.mysteryStoryMessages]}>
-            {visibleMessages.map((message) => (
-              <View key={message.id} style={styles.storyMessageBlock}>
-                <Text style={[styles.storySpeaker, { color: message.speaker === "Player" ? C.accent : C.gold }]}>{message.speaker}</Text>
-                {message.speaker === "GM" ? <MysteryMessageText message={message} mystery={mystery} /> : <Text style={[styles.body, { color: C.text }]}>{message.text}</Text>}
-                {message.roll ? <Text style={[styles.rollText, { color: C.dim }]}>{message.roll}</Text> : null}
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-        <View style={[styles.storyInputPanel, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.78)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }]}>
-          <TextInput
-            value={mysteryInput}
-            onChangeText={(value) => setMysteryInput(value.slice(0, 500))}
-            placeholder="Write what your detective tries..."
-            placeholderTextColor={C.dim}
-            multiline
-            maxLength={500}
-            editable={!mystery.finished}
-            style={[styles.storyInput, { color: C.text }]}
-          />
-          <View style={styles.storySendButton}>
-            <Button small label="Send" onPress={submitMysteryInput} disabled={mystery.finished || mysteryInput.trim().length === 0} />
+      </>
+    );
+    const storyPanelContent = (
+      <ScrollView style={[styles.storyMessages, styles.mysteryStoryMessages]}>
+        {visibleMessages.map((message) => (
+          <View key={message.id} style={styles.storyMessageBlock}>
+            <Text style={[styles.storySpeaker, { color: message.speaker === "Player" ? C.accent : C.gold }]}>{message.speaker}</Text>
+            {message.speaker === "GM" ? <MysteryMessageText message={message} mystery={mystery} /> : <Text style={[styles.body, { color: C.text }]}>{message.text}</Text>}
+            {message.roll ? <Text style={[styles.rollText, { color: C.dim }]}>{message.roll}</Text> : null}
           </View>
-          <Text style={[styles.rollText, styles.storyCount, { color: C.dim }]}>{mysteryInput.length}/500</Text>
+        ))}
+      </ScrollView>
+    );
+    const inputPanelContent = (
+      <>
+        <TextInput
+          value={mysteryInput}
+          onChangeText={(value) => setMysteryInput(value.slice(0, 500))}
+          placeholder="Write what your detective tries..."
+          placeholderTextColor={C.dim}
+          multiline
+          maxLength={500}
+          editable={!mystery.finished}
+          style={[styles.storyInput, { color: C.text }]}
+        />
+        <View style={styles.storySendButton}>
+          <Button small label="Send" onPress={submitMysteryInput} disabled={mystery.finished || mysteryInput.trim().length === 0} />
         </View>
+        <Text style={[styles.rollText, styles.storyCount, { color: C.dim }]}>{mysteryInput.length}/500</Text>
+      </>
+    );
+    return (
+      <View style={[styles.storyFrame, styles.mysteryStoryFrame, { borderColor: C.line, backgroundColor: C.panel }]}>
+        {roomBackground ? (
+          <ImageBackground source={roomBackground} resizeMode="cover" imageStyle={[styles.ravenwoodBubbleBackdropImage, { opacity: 0.22 }]} style={sceneHeaderStyle}>
+            {sceneHeaderContent}
+          </ImageBackground>
+        ) : (
+          <View style={sceneHeaderStyle}>{sceneHeaderContent}</View>
+        )}
+        {roomBackground ? (
+          <ImageBackground source={roomBackground} resizeMode="cover" imageStyle={[styles.ravenwoodBubbleBackdropImage, { opacity: 0.16 }]} style={storyPanelStyle}>
+            {storyPanelContent}
+          </ImageBackground>
+        ) : (
+          <View style={storyPanelStyle}>{storyPanelContent}</View>
+        )}
+        {roomBackground ? (
+          <ImageBackground source={roomBackground} resizeMode="cover" imageStyle={[styles.ravenwoodBubbleBackdropImage, { opacity: 0.18 }]} style={inputPanelStyle}>
+            {inputPanelContent}
+          </ImageBackground>
+        ) : (
+          <View style={inputPanelStyle}>{inputPanelContent}</View>
+        )}
       </View>
     );
   }
@@ -5504,6 +5559,8 @@ const styles = StyleSheet.create({
   detectiveAgeLabel: { fontSize: 18, lineHeight: 22 },
   mysteryStoryFrame: { minHeight: 0 },
   mysteryDayPanel: { alignItems: "center", justifyContent: "center", padding: 10, borderWidth: 1, borderColor: "rgba(240, 196, 92, 0.28)" },
+  ravenwoodBubbleBackdrop: { overflow: "hidden" },
+  ravenwoodBubbleBackdropImage: { borderRadius: 8 },
   mysterySceneHeader: { minHeight: 144, borderWidth: 1, borderRadius: 8, padding: 10, flexDirection: "row", alignItems: "center", gap: 12 },
   mysterySceneMeta: { flex: 1, minWidth: 0, justifyContent: "center" },
   mysterySceneMetaRow: { flexDirection: "row", alignItems: "center", gap: 10 },
