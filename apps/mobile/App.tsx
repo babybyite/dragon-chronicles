@@ -240,7 +240,7 @@ type MysteryNpcRelationship = {
 type MysteryGame = {
   id: string;
   title: string;
-  player: Pick<CharacterDraft, "firstName" | "familyName" | "sex" | "origin" | "hairStyle" | "hairColor" | "faceTrait"> & { id: string };
+  player: Pick<CharacterDraft, "firstName" | "familyName" | "sex" | "origin" | "hairStyle" | "hairColor" | "faceTrait"> & Pick<PortraitSubject, "ravenwoodPortraitKey" | "portraitLineage" | "visualRace"> & { id: string };
   day: number;
   daytime: Daytime;
   rooms: MysteryRoom[];
@@ -642,6 +642,27 @@ function titleCase(value: string): string {
 
 function stableHash(value: string): number {
   return value.split("").reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7);
+}
+
+function fallbackRavenwoodPlayerPortrait(subject: Pick<PortraitSubject, "firstName" | "familyName" | "sex" | "visualRace">): RavenwoodGuestPortraitAsset | null {
+  const targetAge = ravenwoodPortraitAge(30);
+  const matchingRace = ravenwoodGuestPortraitAssets.filter((asset) => asset.sex === subject.sex && asset.age === targetAge && (!subject.visualRace || asset.visualRace === subject.visualRace));
+  const matchingSex = ravenwoodGuestPortraitAssets.filter((asset) => asset.sex === subject.sex && asset.age === targetAge);
+  const pool = matchingRace.length > 0 ? matchingRace : matchingSex;
+  if (pool.length === 0) return null;
+  return pool[stableHash(`${subject.firstName}:${subject.familyName}:${subject.sex}`) % pool.length];
+}
+
+function mysteryPlayerPortraitSubject(player: MysteryGame["player"]): PortraitSubject {
+  const fallback = player.ravenwoodPortraitKey ? null : fallbackRavenwoodPlayerPortrait(player);
+  return {
+    ...player,
+    age: 30,
+    alive: true,
+    ravenwoodPortraitKey: player.ravenwoodPortraitKey ?? fallback?.key,
+    portraitLineage: player.portraitLineage ?? fallback?.lineage,
+    visualRace: player.visualRace ?? fallback?.visualRace
+  };
 }
 
 function bastardSuspicionFeature(player: Pick<CharacterDraft, "hairColor" | "faceTrait" | "origin">): string {
@@ -2125,6 +2146,7 @@ function createMysteryGameFromDraft(draft: CharacterDraft): MysteryGame {
   const playerFamilyName = ravenwoodFamilyName(draft.familyName.trim());
   const blockedFamilyNames = new Set<string>([playerFamilyName.toLowerCase()]);
   const playerFirstName = uniqueRavenwoodFirstName(draft.sex, playerFamilyName, usedNames, usedFirstNames, draft.firstName.trim());
+  const playerPortrait = chooseRavenwoodGuestPortrait({ sex: draft.sex, age: 30, usedPortraitKeys });
   const rooms = buildMysteryRooms();
   const guestRooms = rooms.filter((room) => room.id.startsWith("guest-room"));
   const playerRoom = pick(guestRooms);
@@ -2341,7 +2363,10 @@ function createMysteryGameFromDraft(draft: CharacterDraft): MysteryGame {
       origin: draft.origin,
       hairStyle: draft.hairStyle,
       hairColor: draft.hairColor,
-      faceTrait: draft.faceTrait
+      faceTrait: draft.faceTrait,
+      ravenwoodPortraitKey: playerPortrait?.key,
+      portraitLineage: playerPortrait?.lineage,
+      visualRace: playerPortrait?.visualRace
     },
     day: 1,
     daytime: "Morning",
@@ -3861,19 +3886,23 @@ export default function App() {
           : isMap
             ? styles.portraitMapFrame
             : styles.portraitThumbFrame;
-    const frameWidth = isHero ? 132 : isLarge ? 82 : isResident ? 58 : isMap ? 46 : 40;
-    const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 86 : isMap ? 68 : 62;
+    const frameWidth = isHero ? 132 : isLarge ? 82 : isResident ? 82 : isMap ? 46 : 40;
+    const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 122 : isMap ? 68 : 62;
     if (ravenwoodPortrait) {
-      const cropPaddingX = isHero ? 5 : isResident ? 9 : isMap ? 12 : 10;
-      const cropPaddingTop = isHero ? 14 : isResident ? 24 : isMap ? 28 : 26;
-      const cropPaddingBottom = isHero ? 18 : isResident ? 20 : isMap ? 18 : 16;
+      const cropPaddingX = isHero ? 0 : isResident ? -12 : isMap ? -4 : -6;
+      const cropPaddingTop = isHero ? 14 : isResident ? 20 : isMap ? 24 : 24;
+      const cropPaddingBottom = isHero ? 18 : isResident ? 18 : isMap ? 16 : 16;
+      const cropX = clamp(ravenwoodPortrait.crop.x - cropPaddingX, 0, RAVENWOOD_SHEET_WIDTH - 1);
+      const cropY = clamp(ravenwoodPortrait.crop.y - cropPaddingTop, 0, RAVENWOOD_SHEET_HEIGHT - 1);
+      const cropWidth = Math.min(RAVENWOOD_SHEET_WIDTH - cropX, ravenwoodPortrait.crop.width + cropPaddingX * 2);
+      const cropHeight = Math.min(RAVENWOOD_SHEET_HEIGHT - cropY, ravenwoodPortrait.crop.height + cropPaddingTop + cropPaddingBottom);
       const crop = {
-        x: Math.max(0, ravenwoodPortrait.crop.x - cropPaddingX),
-        y: Math.max(0, ravenwoodPortrait.crop.y - cropPaddingTop),
-        width: Math.min(RAVENWOOD_SHEET_WIDTH - Math.max(0, ravenwoodPortrait.crop.x - cropPaddingX), ravenwoodPortrait.crop.width + cropPaddingX * 2),
-        height: Math.min(RAVENWOOD_SHEET_HEIGHT - Math.max(0, ravenwoodPortrait.crop.y - cropPaddingTop), ravenwoodPortrait.crop.height + cropPaddingTop + cropPaddingBottom)
+        x: cropX,
+        y: cropY,
+        width: Math.max(1, cropWidth),
+        height: Math.max(1, cropHeight)
       };
-      const scale = Math.min(frameWidth / crop.width, frameHeight / crop.height) * (isResident ? 1.08 : isMap ? 1.03 : 1.04);
+      const scale = Math.min(frameWidth / crop.width, frameHeight / crop.height) * (isResident ? 1.05 : isMap ? 1.02 : 1.03);
       return (
         <View style={[frameStyle, { borderColor: highlight ? C.accent : C.line, backgroundColor: C.panel2 }, subject.alive === false && styles.deadPortraitFrame]}>
           <Image
@@ -3936,6 +3965,14 @@ export default function App() {
             </View>
           </ImageBackground>
           <View style={[styles.storyTextPanel, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.82)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }]}>
+            <View style={styles.storyPlayerHeader}>
+              <PortraitImage subject={story.player} size="large" highlight />
+              <View style={styles.storyPlayerHeaderText}>
+                <Text style={[styles.storySpeaker, { color: C.gold }]}>Player</Text>
+                <Text style={[styles.heading, styles.storyPlayerName, { color: C.text }]}>{story.player.firstName} {story.player.familyName}</Text>
+                <Text style={[styles.rollText, { color: C.dim }]}>Age {story.player.age} - {story.player.birthStatus}</Text>
+              </View>
+            </View>
             {story.activeScene ? <Text style={[styles.scenePill, { color: "#fff", backgroundColor: C.accent }]}>{story.activeScene.type === "combat" ? "Active Combat" : "Active Scene"}</Text> : null}
             <ScrollView style={styles.storyMessages}>
               {visibleMessages.map((message) => (
@@ -4140,7 +4177,7 @@ export default function App() {
     return (
       <View style={[styles.storyFrame, styles.mysteryStoryFrame, { borderColor: C.line, backgroundColor: C.panel }]}>
         <View style={[styles.mysterySceneHeader, { backgroundColor: themeName === "dark" ? "#141217" : "#efe8dc", borderColor: "rgba(240, 196, 92, 0.28)" }]}>
-          <PortraitImage subject={{ ...mystery.player, age: 30, alive: true }} size="large" highlight />
+          <PortraitImage subject={mysteryPlayerPortraitSubject(mystery.player)} size="large" highlight />
           <View style={styles.mysterySceneMeta}>
             <Text style={styles.storyPlaceLabel}>Day</Text>
             <View style={styles.mysterySceneMetaRow}>
@@ -4280,7 +4317,7 @@ export default function App() {
         </View>
         <Card>
           <View style={styles.characterHeader}>
-            <PortraitImage subject={{ ...activeMystery.player, age: 30, alive: true }} size="hero" highlight />
+            <PortraitImage subject={mysteryPlayerPortraitSubject(activeMystery.player)} size="hero" highlight />
             <View style={styles.characterHeaderText}>
               <Text style={[styles.heading, { color: C.text }]}>{activeMystery.player.firstName} {activeMystery.player.familyName}</Text>
               <Text style={{ color: C.dim }}>{activeMystery.player.sex}</Text>
@@ -5085,6 +5122,9 @@ const styles = StyleSheet.create({
   storyPlaceSmall: { color: "#d5c0a4", fontSize: 10, textTransform: "uppercase", marginTop: 8 },
   storyPlaceName: { color: "#f5e3c8", fontSize: 15, lineHeight: 20, fontWeight: "700", textAlign: "center" },
   storyTextPanel: { flex: 1, minWidth: 0, borderWidth: 1, borderRadius: 8, padding: 12, gap: 8 },
+  storyPlayerHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  storyPlayerHeaderText: { flex: 1, minWidth: 0 },
+  storyPlayerName: { fontSize: 20, lineHeight: 24 },
   storyBackground: { minHeight: 470 },
   storyBackgroundImage: { opacity: 0.82 },
   storyTint: { flex: 1, minHeight: 470, padding: 16, gap: 10 },
@@ -5109,7 +5149,7 @@ const styles = StyleSheet.create({
   portraitHeroFrame: { width: 132, height: 190, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitImage: { width: "100%", height: "100%" },
   ravenwoodPortraitSheet: { position: "absolute" },
-  portraitResidentFrame: { width: 58, height: 86, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitResidentFrame: { width: 82, height: 122, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitMapFrame: { width: 46, height: 68, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitThumbFrame: { width: 40, height: 62, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitThumb: { width: "100%", height: "100%" },
