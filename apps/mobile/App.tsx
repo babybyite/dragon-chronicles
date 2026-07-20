@@ -2231,7 +2231,7 @@ function createMysteryGameFromDraft(draft: CharacterDraft): MysteryGame {
   const residentCount = rand(16, 20);
   const guestCount = rand(8, Math.min(12, residentCount - 8));
   const staffCount = residentCount - guestCount;
-  const childCount = rand(0, 3);
+  const childCount = rand(0, 2);
   const npcs: MysteryNpc[] = [];
   const npcRelationships: MysteryNpcRelationship[] = [];
   const roomsWithGuestSpace = () => guestRooms.filter((room) => room.id !== playerRoom.id && room.occupantIds.length < (room.capacity ?? 1));
@@ -4199,6 +4199,16 @@ export default function App() {
     );
   }
 
+  function MysteryTrustPill({ npc }: { npc: MysteryNpc }) {
+    const muted = !npc.alive;
+    return (
+      <View style={[styles.mysteryTrustPill, { borderColor: muted ? "#777" : C.good, backgroundColor: muted ? "rgba(70, 70, 74, 0.45)" : `${C.good}18` }]}>
+        <Text style={[styles.mysteryTrustPillLabel, { color: muted ? "#c9c9c9" : C.good }]}>Trust</Text>
+        <Text style={[styles.mysteryTrustPillValue, { color: muted ? "#d2d2d2" : C.text }]}>{npc.trust}</Text>
+      </View>
+    );
+  }
+
   function GameplayBottomMenu() {
     return (
       <View style={[styles.bottomMenu, { backgroundColor: C.panel, borderColor: C.line }]}>
@@ -4444,7 +4454,6 @@ export default function App() {
             <View style={styles.characterHeaderText}>
               <Text style={[styles.heading, { color: C.text }]}>{activeMystery.player.firstName} {activeMystery.player.familyName}</Text>
               <Text style={{ color: C.dim }}>{activeMystery.player.sex}</Text>
-              <Text style={{ color: C.dim }}>{activeMystery.player.origin}</Text>
               <Text style={{ color: C.dim }}>Room key: {mysteryRoomName(activeMystery, activeMystery.playerRoomId)}</Text>
               <Text style={{ color: C.dim }}>Current room: {mysteryRoomName(activeMystery, activeMystery.currentRoomId)}</Text>
               <Text style={{ color: C.dim }}>Day {activeMystery.day}, {activeMystery.daytime}</Text>
@@ -4496,20 +4505,20 @@ export default function App() {
                 <Text style={{ color: C.dim }}>{npc.role} - {npc.sex} - age {npc.age}{npc.isChild ? " - Child" : ""}</Text>
                 {!npc.alive ? <Text style={{ color: C.warning }}>Dead</Text> : null}
               </View>
+              <MysteryTrustPill npc={npc} />
             </View>
-            <RelationStatStrip relation={npc} showRomance={npc.romanceRevealed} />
-            {!npc.romanceRevealed ? <Text style={[styles.rollText, { color: C.dim }]}>Romance hidden until romantic action.</Text> : null}
+            {!npc.romanceRevealed ? <Text style={[styles.rollText, styles.discoverableHiddenText]}>Romance hidden until romantic action.</Text> : null}
             <View style={[styles.relationshipLedgerBox, { borderColor: C.line, backgroundColor: C.panel2 }]}>
-              <Text style={[styles.rollText, { color: C.gold }]}>NPC relationships for testing</Text>
+              <Text style={[styles.rollText, styles.gameHiddenText]}>NPC relationships for testing</Text>
               {mysteryRelationshipLinesFor(npc, activeMystery.npcs, activeMystery.npcRelationships ?? []).length === 0 ? (
                 <Text style={[styles.rollText, { color: C.dim }]}>No direct NPC relationship record.</Text>
               ) : mysteryRelationshipLinesFor(npc, activeMystery.npcs, activeMystery.npcRelationships ?? []).map((line) => (
-                <Text key={line} style={[styles.rollText, { color: C.text }]}>{line}</Text>
+                <Text key={line} style={[styles.rollText, line.includes("(hidden") ? styles.discoverableHiddenText : { color: C.text }]}>{line}</Text>
               ))}
             </View>
             <View style={styles.mysteryDossierGrid}>
               {npc.familyRelationNote ? <Text style={[styles.body, { color: C.gold }]}>Family relation: {npc.familyRelationNote}</Text> : null}
-              <Text style={[styles.body, { color: C.text }]}>Family status: {npc.familyStatus}</Text>
+              <Text style={[styles.body, npc.familyStatus.toLowerCase().includes("secret") ? styles.discoverableHiddenText : { color: C.text }]}>Family status: {npc.familyStatus}</Text>
               <Text style={[styles.body, { color: C.text }]}>Education: {npc.education}</Text>
               <Text style={[styles.body, { color: C.text }]}>Occupation: {npc.occupation}</Text>
               <Text style={[styles.body, { color: C.text }]}>Interests: {npc.interests.join(", ")}</Text>
@@ -4517,7 +4526,7 @@ export default function App() {
               <Text style={[styles.body, { color: C.text }]}>Current stay: {npc.currentStay ?? "Not recorded yet."}</Text>
               <Text style={[styles.body, { color: C.text }]}>Planned stay: {npc.plannedStay ?? "Not recorded yet."}</Text>
               <Text style={[styles.body, { color: C.text }]}>Previous stay: {npc.previousStay ?? "Not recorded yet."}</Text>
-              <Text style={[styles.body, { color: C.warning }]}>Secret: {readableMysterySecret(npc.secret)}</Text>
+              <Text style={[styles.body, styles.discoverableHiddenText]}>Secret: {readableMysterySecret(npc.secret)}</Text>
               <Text style={[styles.body, { color: C.text }]}>Quirk: {npc.quirk}</Text>
               <Text style={[styles.body, { color: C.dim }]}>Room/station: {mysteryRoomName(activeMystery, npc.role === "Guest" ? npc.roomId : npc.stationRoomId)}</Text>
             </View>
@@ -4582,15 +4591,15 @@ export default function App() {
           />
         </Card>
         <Card>
-          <Text style={[styles.heading, { color: C.text }]}>Case Blueprint For Testing</Text>
-          {blueprint.map((line) => <Text key={line} style={[styles.body, { color: C.warning }]}>{line}</Text>)}
-          {activeMystery.discoveredProof.length > 0 ? <Text style={[styles.body, { color: C.good }]}>Discovered proof: {activeMystery.discoveredProof.join(", ")}</Text> : null}
+          <Text style={[styles.heading, styles.gameHiddenText]}>Case Blueprint For Testing</Text>
+          {blueprint.map((line) => <Text key={line} style={[styles.body, styles.gameHiddenText]}>{line}</Text>)}
+          {activeMystery.discoveredProof.length > 0 ? <Text style={[styles.body, styles.discoverableHiddenText]}>Discovered proof: {activeMystery.discoveredProof.join(", ")}</Text> : null}
         </Card>
         <Card>
-          <Text style={[styles.heading, { color: C.text }]}>Sanity Ledger</Text>
+          <Text style={[styles.heading, styles.gameHiddenText]}>Sanity Ledger</Text>
           <View style={[styles.ledgerBox, { borderColor: C.line, backgroundColor: C.panel2 }]}>
             {(activeMystery.sanityLedger ?? ["No ledger recorded for this older save."]).map((line, index) => (
-              <Text key={`${index}-${line}`} style={[styles.ledgerText, { color: C.text }]}>{line}</Text>
+              <Text key={`${index}-${line}`} style={[styles.ledgerText, styles.gameHiddenText]}>{line}</Text>
             ))}
           </View>
         </Card>
@@ -5302,6 +5311,11 @@ const styles = StyleSheet.create({
   relationStatLabel: { fontSize: 8, lineHeight: 11, fontWeight: "900", letterSpacing: 0, textTransform: "uppercase" },
   relationStatValue: { fontSize: 21, lineHeight: 26, fontWeight: "300", marginTop: 1 },
   relationStatBar: { width: "100%", maxWidth: 44, height: 5, borderRadius: 8, overflow: "hidden", marginTop: 5 },
+  mysteryTrustPill: { minWidth: 56, minHeight: 34, borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, alignItems: "center", justifyContent: "center" },
+  mysteryTrustPillLabel: { fontSize: 8, lineHeight: 10, fontWeight: "900", textTransform: "uppercase" },
+  mysteryTrustPillValue: { fontSize: 18, lineHeight: 20, fontWeight: "800" },
+  gameHiddenText: { color: "#b97cff", fontWeight: "800" },
+  discoverableHiddenText: { color: "#8fd3ff", fontWeight: "800" },
   characterHeader: { flexDirection: "row", alignItems: "center", gap: 14 },
   characterHeaderText: { flex: 1, minWidth: 0, gap: 4 },
   fixedBottomMenu: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 14, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
