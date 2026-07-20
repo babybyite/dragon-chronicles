@@ -8706,8 +8706,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom01-row-02",
     age: 24,
     imageWidth: 204,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 204, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 204, height: 335 }
   },
   {
     key: "rw-player-custom01-r02-a30",
@@ -8718,8 +8718,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom01-row-02",
     age: 30,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom01-r02-a50",
@@ -8730,8 +8730,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom01-row-02",
     age: 50,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom01-r03-a10",
@@ -8826,8 +8826,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom01-row-04",
     age: 24,
     imageWidth: 196,
-    imageHeight: 302,
-    crop: { x: 0, y: 0, width: 196, height: 302 }
+    imageHeight: 324,
+    crop: { x: 0, y: 0, width: 196, height: 324 }
   },
   {
     key: "rw-player-custom01-r04-a30",
@@ -8946,8 +8946,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-02",
     age: 24,
     imageWidth: 204,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 204, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 204, height: 335 }
   },
   {
     key: "rw-player-custom02-r02-a30",
@@ -8958,8 +8958,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-02",
     age: 30,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom02-r02-a50",
@@ -8982,8 +8982,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-03",
     age: 10,
     imageWidth: 205,
-    imageHeight: 277,
-    crop: { x: 0, y: 0, width: 205, height: 277 }
+    imageHeight: 301,
+    crop: { x: 0, y: 0, width: 205, height: 301 }
   },
   {
     key: "rw-player-custom02-r03-a16",
@@ -8994,8 +8994,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-03",
     age: 16,
     imageWidth: 205,
-    imageHeight: 277,
-    crop: { x: 0, y: 0, width: 205, height: 277 }
+    imageHeight: 301,
+    crop: { x: 0, y: 0, width: 205, height: 301 }
   },
   {
     key: "rw-player-custom02-r03-a24",
@@ -9006,8 +9006,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-03",
     age: 24,
     imageWidth: 204,
-    imageHeight: 277,
-    crop: { x: 0, y: 0, width: 204, height: 277 }
+    imageHeight: 301,
+    crop: { x: 0, y: 0, width: 204, height: 301 }
   },
   {
     key: "rw-player-custom02-r03-a30",
@@ -9018,8 +9018,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-03",
     age: 30,
     imageWidth: 197,
-    imageHeight: 259,
-    crop: { x: 0, y: 0, width: 197, height: 259 }
+    imageHeight: 283,
+    crop: { x: 0, y: 0, width: 197, height: 283 }
   },
   {
     key: "rw-player-custom02-r03-a50",
@@ -9054,8 +9054,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-04",
     age: 16,
     imageWidth: 197,
-    imageHeight: 302,
-    crop: { x: 0, y: 0, width: 197, height: 302 }
+    imageHeight: 324,
+    crop: { x: 0, y: 0, width: 197, height: 324 }
   },
   {
     key: "rw-player-custom02-r04-a24",
@@ -9066,8 +9066,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-04",
     age: 24,
     imageWidth: 196,
-    imageHeight: 302,
-    crop: { x: 0, y: 0, width: 196, height: 302 }
+    imageHeight: 324,
+    crop: { x: 0, y: 0, width: 196, height: 324 }
   },
   {
     key: "rw-player-custom02-r04-a30",
@@ -9078,8 +9078,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-04",
     age: 30,
     imageWidth: 197,
-    imageHeight: 302,
-    crop: { x: 0, y: 0, width: 197, height: 302 }
+    imageHeight: 324,
+    crop: { x: 0, y: 0, width: 197, height: 324 }
   },
   {
     key: "rw-player-custom02-r04-a50",
@@ -9090,8 +9090,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom02-row-04",
     age: 50,
     imageWidth: 198,
-    imageHeight: 302,
-    crop: { x: 0, y: 0, width: 198, height: 302 }
+    imageHeight: 324,
+    crop: { x: 0, y: 0, width: 198, height: 324 }
   },
   {
     key: "rw-player-custom03-r01-a10",
@@ -9174,8 +9174,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-02",
     age: 16,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom03-r02-a24",
@@ -9186,8 +9186,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-02",
     age: 24,
     imageWidth: 204,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 204, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 204, height: 335 }
   },
   {
     key: "rw-player-custom03-r02-a30",
@@ -9198,8 +9198,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-02",
     age: 30,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom03-r02-a50",
@@ -9210,8 +9210,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-02",
     age: 50,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom03-r03-a10",
@@ -9222,8 +9222,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-03",
     age: 10,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom03-r03-a16",
@@ -9234,8 +9234,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-03",
     age: 16,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom03-r03-a24",
@@ -9246,8 +9246,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-03",
     age: 24,
     imageWidth: 204,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 204, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 204, height: 335 }
   },
   {
     key: "rw-player-custom03-r03-a30",
@@ -9258,8 +9258,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-03",
     age: 30,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom03-r03-a50",
@@ -9270,8 +9270,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom03-row-03",
     age: 50,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom03-r04-a10",
@@ -9402,8 +9402,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom04-row-02",
     age: 10,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom04-r02-a16",
@@ -9414,8 +9414,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom04-row-02",
     age: 16,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom04-r02-a24",
@@ -9438,8 +9438,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom04-row-02",
     age: 30,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom04-r02-a50",
@@ -9450,8 +9450,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom04-row-02",
     age: 50,
     imageWidth: 205,
-    imageHeight: 311,
-    crop: { x: 0, y: 0, width: 205, height: 311 }
+    imageHeight: 335,
+    crop: { x: 0, y: 0, width: 205, height: 335 }
   },
   {
     key: "rw-player-custom04-r03-a10",
@@ -9510,8 +9510,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom04-row-03",
     age: 50,
     imageWidth: 205,
-    imageHeight: 277,
-    crop: { x: 0, y: 0, width: 205, height: 277 }
+    imageHeight: 301,
+    crop: { x: 0, y: 0, width: 205, height: 301 }
   },
   {
     key: "rw-player-custom04-r04-a10",
@@ -9534,8 +9534,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom04-row-04",
     age: 16,
     imageWidth: 197,
-    imageHeight: 302,
-    crop: { x: 0, y: 0, width: 197, height: 302 }
+    imageHeight: 324,
+    crop: { x: 0, y: 0, width: 197, height: 324 }
   },
   {
     key: "rw-player-custom04-r04-a24",
@@ -9570,8 +9570,8 @@ export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     lineage: "player-custom04-row-04",
     age: 50,
     imageWidth: 198,
-    imageHeight: 302,
-    crop: { x: 0, y: 0, width: 198, height: 302 }
+    imageHeight: 324,
+    crop: { x: 0, y: 0, width: 198, height: 324 }
   },
   {
     key: "rw-player-player05-r01-a10",
