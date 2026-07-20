@@ -780,6 +780,15 @@ function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function shuffled<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = rand(0, index);
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  }
+  return copy;
+}
+
 function rand(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
@@ -2028,6 +2037,38 @@ function mysteryChildGuardianRelation(childSex: Sex, childAge: number, guardian:
   return { childRelation: `${niblingRole} of`, guardianRelation: `${auntUncleRole} of`, reasonRole: auntUncleRole };
 }
 
+function mysteryBalancedSexPlan(total: number, playerSex?: Sex): Sex[] {
+  if (total <= 0) return [];
+  const nearEven = roll(0.5);
+  const femaleLeansMajority = roll(0.5);
+  const ratioAllowed = (femaleCount: number, maleCount: number) => {
+    const count = femaleCount + maleCount;
+    return count <= 0 || Math.max(femaleCount, maleCount) / count <= 0.6;
+  };
+  const candidates = Array.from({ length: total + 1 }, (_, femaleCount) => {
+    const maleCount = total - femaleCount;
+    const playerFemaleCount = playerSex === "Female" ? 1 : 0;
+    const playerMaleCount = playerSex === "Male" ? 1 : 0;
+    return {
+      femaleCount,
+      maleCount,
+      gap: Math.abs(femaleCount - maleCount),
+      allowed: ratioAllowed(femaleCount, maleCount) && ratioAllowed(femaleCount + playerFemaleCount, maleCount + playerMaleCount)
+    };
+  }).filter((candidate) => candidate.allowed);
+  const safestCandidates = candidates.length > 0 ? candidates : [{ femaleCount: Math.ceil(total / 2), maleCount: Math.floor(total / 2), gap: total % 2, allowed: true }];
+  const targetGap = nearEven ? Math.min(...safestCandidates.map((candidate) => candidate.gap)) : Math.max(...safestCandidates.map((candidate) => candidate.gap));
+  const preferred = safestCandidates.filter((candidate) =>
+    candidate.gap === targetGap &&
+    (candidate.femaleCount === candidate.maleCount || (femaleLeansMajority ? candidate.femaleCount >= candidate.maleCount : candidate.maleCount >= candidate.femaleCount))
+  );
+  const chosen = pick(preferred.length > 0 ? preferred : safestCandidates.filter((candidate) => candidate.gap === targetGap));
+  return shuffled([
+    ...Array.from({ length: chosen.femaleCount }, () => "Female" as Sex),
+    ...Array.from({ length: chosen.maleCount }, () => "Male" as Sex)
+  ]);
+}
+
 function mysteryEducationFor(age: number, role: MysteryNpc["role"]): string {
   if (age < 14) return pick(["Some elementary school", "Completed elementary school", "Home-schooled through secondary level", "No formal education"]);
   if (age < 18) return role === "Guest" ? pick(["Some secondary school", "Home-schooled through secondary level", "Drama school training"]) : pick(["Some secondary school", "Workplace skills training", "Food hygiene training", "No formal education"]);
@@ -2261,6 +2302,7 @@ function buildMysterySanityLedger(mystery: Pick<MysteryGame, "id" | "title" | "p
     `Clock: Day ${mystery.day}, ${mystery.daytime}. Inventory: ${mystery.inventory.join(", ")}.`,
     `Rooms: ${mystery.rooms.length} total; ${mystery.rooms.filter((room) => room.accessible).length} accessible at start.`,
     `NPCs: ${mystery.npcs.length} total; ${mystery.npcs.filter((npc) => npc.role === "Guest").length} guests; ${mystery.npcs.filter((npc) => npc.role === "Staff").length} staff.`,
+    `NPC sex balance: ${mystery.npcs.filter((npc) => npc.sex === "Female").length} female; ${mystery.npcs.filter((npc) => npc.sex === "Male").length} male.`,
     "NPC roster:"
   ];
   lines.push(...mystery.npcs.map((npc) => `- ${fullName(npc)}: ${npc.sex}, age ${npc.age}, ${npc.role}, ${npc.alive ? "alive" : "dead"}, room/station ${roomName(npc.role === "Guest" ? npc.roomId : npc.stationRoomId)}. Stay: ${npc.currentStay ?? "not recorded"} ${npc.plannedStay ?? ""} Previous: ${npc.previousStay ?? "not recorded"}`));
@@ -2456,6 +2498,9 @@ function createMysteryGameFromDraft(draft: CharacterDraft, detectiveProfile?: My
   const childCount = rand(0, 2);
   const npcs: MysteryNpc[] = [];
   const npcRelationships: MysteryNpcRelationship[] = [];
+  const residentSexPlan = mysteryBalancedSexPlan(residentCount, playerInput.sex);
+  let residentSexIndex = 0;
+  const nextResidentSex = () => residentSexPlan[residentSexIndex++] ?? pick<Sex>(["Female", "Male"]);
   const roomsWithGuestSpace = () => guestRooms.filter((room) => room.id !== playerRoom.id && room.occupantIds.length < (room.capacity ?? 1));
   const moveNpcToRoom = (npc: MysteryNpc, room: MysteryRoom) => {
     const oldRoom = rooms.find((candidate) => candidate.id === npc.roomId);
@@ -2493,7 +2538,7 @@ function createMysteryGameFromDraft(draft: CharacterDraft, detectiveProfile?: My
       : [];
     const familyLink = relatedAdult ? pick(possibleFamilyLinks) : null;
     const relatedAge = relatedAdult?.age ?? rand(18, RAVENWOOD_MAX_NPC_AGE);
-    const sex = pick<Sex>(["Female", "Male"]);
+    const sex = nextResidentSex();
     const age = familyLink === "Spouse"
       ? clamp(relatedAge + rand(-9, 9), 18, RAVENWOOD_MAX_NPC_AGE)
       : familyLink === "Sibling" || familyLink === "Cousin"
@@ -2556,7 +2601,7 @@ function createMysteryGameFromDraft(draft: CharacterDraft, detectiveProfile?: My
     const childRoom = guestRooms.find((room) => room.id === guardian.roomId) ?? pick(guestRooms.filter((room) => room.id !== playerRoom.id));
     if (!childRoom.occupantIds.includes(guardian.id)) moveNpcToRoom(guardian, childRoom);
     ensureChildCanStayWithAdult(childRoom);
-    const childSex = pick<Sex>(["Female", "Male"]);
+    const childSex = nextResidentSex();
     const guardianRelation = mysteryChildGuardianRelation(childSex, childAge, guardian);
     const child = makeMysteryNpc({
       role: "Guest",
@@ -2591,7 +2636,7 @@ function createMysteryGameFromDraft(draft: CharacterDraft, detectiveProfile?: My
   }
   for (let index = 0; index < staffCount; index += 1) {
     const stationRoomId = pick(staffStations);
-    const sex = pick<Sex>(["Female", "Male"]);
+    const sex = nextResidentSex();
     const age = rand(RAVENWOOD_MIN_STAFF_AGE, RAVENWOOD_MAX_NPC_AGE);
     const portrait = chooseRavenwoodStaffPortrait({ sex, age, usedPortraitKeys });
     const npc = makeMysteryNpc({
