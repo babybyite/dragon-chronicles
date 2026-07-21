@@ -113,10 +113,12 @@ type StoryMessageSegment = {
 
 type StoryMessage = {
   id: string;
-  speaker: "GM" | "Player" | "System";
+  speaker: "Ravenwood Mansion" | "Player" | "System";
   text: string;
   roll?: string;
   rich?: StoryMessageSegment[];
+  archiveDay?: number;
+  archiveDaytime?: Daytime;
 };
 
 type StoryChoice = {
@@ -185,7 +187,7 @@ type MysteryDetectiveQuirk = {
   modifier: number;
 };
 
-type MysteryDetectiveProfile = Pick<CharacterDraft, "firstName" | "familyName" | "sex" | "origin" | "hairStyle" | "hairColor" | "faceTrait"> & {
+type MysteryDetectiveProfile = Pick<CharacterDraft, "firstName" | "familyName" | "sex" | "origin" | "hairStyle" | "hairColor"> & {
   id: string;
   portraitLineage: string;
   visualRace: MysteryVisualRace;
@@ -386,7 +388,7 @@ const FAMILY_TREE_CANVAS_WIDTH = 1640;
 const RAVENWOOD_MIN_NPC_AGE = 9;
 const RAVENWOOD_MAX_NPC_AGE = 75;
 const RAVENWOOD_MIN_STAFF_AGE = 18;
-const ravenwoodPlayerSelectableAges = [10, 16, 24, 30, 50];
+const ravenwoodPlayerSelectableAges = [12, 16, 24, 30, 50];
 
 const ravenwoodPortraitByKey: Record<string, RavenwoodGuestPortraitAsset> = Object.fromEntries(
   [...ravenwoodGuestPortraitAssets, ...ravenwoodStaffPortraitAssets, ...ravenwoodPlayerPortraitAssets].map((asset) => [asset.key, asset])
@@ -413,17 +415,16 @@ type MysteryDetectiveProfilePreset = Omit<MysteryDetectiveProfile, "sex" | "port
 
 const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePreset> = {
   "player-custom01-row-01": {
-    id: "lin-vale",
+    id: "lin-ward",
     firstName: "Lin",
-    familyName: "Vale",
+    familyName: "Ward",
     origin: "Western Marches",
     hairStyle: "Wavy",
-    hairColor: "Brown",
-    faceTrait: "Sharp-Boned",
+    hairColor: "Black",
     quirks: [
-      { id: "dog", label: "Keeps a retired search dog", check: "Search", modifier: 3 },
-      { id: "voices", label: "Never forgets a voice", check: "History", modifier: 3 },
-      { id: "stairs", label: "Old stair injury aches in a chase", check: "Athletics", modifier: -3 }
+      { id: "dog", label: "Grew up with a retired search dog", check: "Search", modifier: 3 },
+      { id: "memory", label: "Has photographic memory", check: "History", modifier: 3 },
+      { id: "stairs", label: "Has an old bike-fall injury", check: "Athletics", modifier: -3 }
     ]
   },
   "player-custom01-row-02": {
@@ -433,11 +434,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Northlands",
     hairStyle: "Short",
     hairColor: "Black",
-    faceTrait: "Scarred",
     quirks: [
-      { id: "clock", label: "Repairs pocket watches by habit", check: "Sleight of Hand", modifier: 3 },
-      { id: "soldier", label: "Served as a field orderly", check: "Medicine", modifier: 3 },
-      { id: "temper", label: "Answers insults too quickly", check: "Persuasion", modifier: -3 }
+      { id: "clock", label: "Repairs pocket watches for fun", check: "Sleight of Hand", modifier: 3 },
+      { id: "soldier", label: "Binges medical drama series", check: "Medicine", modifier: 3 },
+      { id: "temper", label: "Takes everything a little too personal", check: "Charisma", modifier: -3 }
     ]
   },
   "player-custom02-row-01": {
@@ -447,11 +447,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Deep Cities",
     hairStyle: "Long Straight",
     hairColor: "Blonde",
-    faceTrait: "Mismatched Eyes",
     quirks: [
-      { id: "perfume", label: "Knows expensive perfumes on sight", check: "Search", modifier: 3 },
-      { id: "salon", label: "Was raised around salon gossip", check: "Persuasion", modifier: 3 },
-      { id: "heights", label: "Loses nerve near high balconies", check: "Composure", modifier: -3 }
+      { id: "airbnb", label: "Cleans airbnbs", check: "Search", modifier: 3 },
+      { id: "street", label: "Speaks street", check: "Persuasion", modifier: 3 },
+      { id: "dizzy", label: "The sight of blood makes her dizzy", check: "Composure", modifier: -3 }
     ]
   },
   "player-custom02-row-02": {
@@ -461,11 +460,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Island Courts",
     hairStyle: "Messy Bun",
     hairColor: "Black",
-    faceTrait: "Freckles",
     quirks: [
       { id: "garden", label: "Grew up tending kitchen gardens", check: "Medicine", modifier: 3 },
-      { id: "quiet", label: "Moves quietly when others argue", check: "Stealth", modifier: 3 },
-      { id: "blood", label: "Gets faint at the sight of fresh blood", check: "Composure", modifier: -3 }
+      { id: "quiet", label: "Has light, quiet walk", check: "Stealth", modifier: 3 },
+      { id: "partner", label: "Never had a romantic interest before", check: "Rizz", modifier: -3 }
     ]
   },
   "player-custom02-row-03": {
@@ -475,11 +473,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Western Marches",
     hairStyle: "Wavy",
     hairColor: "Blonde",
-    faceTrait: "Sharp-Boned",
     quirks: [
-      { id: "ledger", label: "Balances household ledgers for fun", check: "History", modifier: 3 },
-      { id: "mirror", label: "Practiced false smiles in mirrors", check: "Deception", modifier: 3 },
-      { id: "needle", label: "Cannot look at medical needles", check: "Medicine", modifier: -3 }
+      { id: "mirror", label: "Acted in a couple of series", check: "Charisma", modifier: 3 },
+      { id: "ledger", label: "Flirts like a pro", check: "Rizz", modifier: 3 },
+      { id: "patient", label: "Does not know where the spoons are in his own kitchen", check: "Search", modifier: -3 }
     ]
   },
   "player-custom03-row-01": {
@@ -488,12 +485,11 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     familyName: "Gray",
     origin: "Northlands",
     hairStyle: "Long Straight",
-    hairColor: "Platinum Blonde",
-    faceTrait: "Half-Blind",
+    hairColor: "Ginger",
     quirks: [
-      { id: "archive", label: "Knows old trial records by heart", check: "History", modifier: 3 },
-      { id: "bedside", label: "Volunteered in a fever ward", check: "Medicine", modifier: 3 },
-      { id: "cold", label: "Hands shake in cold rooms", check: "Sleight of Hand", modifier: -3 }
+      { id: "newspaper", label: "Enjoys browing the news, has an opinion on everything", check: "History", modifier: 3 },
+      { id: "nurse", label: "Her mothes was a nurse", check: "Medicine", modifier: 3 },
+      { id: "clumsy", label: "Acts clumsy under pressure", check: "Sleight of Hand", modifier: -3 }
     ]
   },
   "player-custom03-row-02": {
@@ -503,11 +499,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Southern Provinces",
     hairStyle: "Curly",
     hairColor: "Black",
-    faceTrait: "Sharp-Boned",
     quirks: [
-      { id: "theatre", label: "Can mimic polite manners perfectly", check: "Rizz", modifier: 3 },
-      { id: "ink", label: "Spots forged ink at a glance", check: "Search", modifier: 3 },
-      { id: "candor", label: "Finds direct lies distasteful", check: "Deception", modifier: -3 }
+      { id: "politics", label: "Family is in politics, he writes his father's speaches", check: "Persuation", modifier: 3 },
+      { id: "pressure", label: "Opeartes well under pressure", check: "Composure", modifier: 3 },
+      { id: "lies", label: "Finds direct lies distasteful", check: "Deception", modifier: -3 }
     ]
   },
   "player-custom03-row-03": {
@@ -517,11 +512,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Harbor Quarter",
     hairStyle: "Braided",
     hairColor: "Dark Red",
-    faceTrait: "Fire-Burned",
     quirks: [
-      { id: "cards", label: "Reads people over card games", check: "Deception", modifier: 3 },
-      { id: "dockside", label: "Knows how smugglers hide cargo", check: "Search", modifier: 3 },
-      { id: "rank", label: "Bridles under aristocratic orders", check: "Charisma", modifier: -3 }
+      { id: "cards", label: "Tells fortune from tarto cards", check: "Deception", modifier: 3 },
+      { id: "weed", label: "Smuggles weed into festivals: never got caught", check: "Search", modifier: 3 },
+      { id: "news", label: "Does not follow the news", check: "History", modifier: -3 }
     ]
   },
   "player-custom03-row-04": {
@@ -531,10 +525,9 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Deep Cities",
     hairStyle: "Messy Bun",
     hairColor: "Brown",
-    faceTrait: "Freckles",
     quirks: [
       { id: "maps", label: "Sketches floor plans from memory", check: "Search", modifier: 3 },
-      { id: "student", label: "Still remembers university scandals", check: "History", modifier: 3 },
+      { id: "lie", label: "Spots a lie from a mile away", check: "Charisma", modifier: 3 },
       { id: "flirt", label: "Turns awkward when flirted with", check: "Rizz", modifier: -3 }
     ]
   },
@@ -547,9 +540,9 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     hairColor: "Black",
     faceTrait: "Scarred",
     quirks: [
-      { id: "boxing", label: "Boxed at university", check: "Athletics", modifier: 3 },
-      { id: "hospital", label: "Recognizes battlefield injuries", check: "Medicine", modifier: 3 },
-      { id: "pride", label: "Takes insults personally", check: "Persuasion", modifier: -3 }
+      { id: "boxing", label: "Takes boxing lessons", check: "Athletics", modifier: 3 },
+      { id: "perfume", label: "Wears a very expensive perfume", check: "Rizz", modifier: 3 },
+      { id: "step", label: "Walks in a heavy, noisy way", check: "Stealth", modifier: -3 }
     ]
   },
   "player-custom04-row-02": {
@@ -559,11 +552,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Western Marches",
     hairStyle: "Curly",
     hairColor: "Ginger",
-    faceTrait: "Freckles",
     quirks: [
-      { id: "aunt", label: "Has an aunt in every respectable scandal", check: "Persuasion", modifier: 3 },
-      { id: "waltz", label: "Can cross a ballroom unnoticed", check: "Stealth", modifier: 3 },
-      { id: "vase", label: "Knocks over delicate things", check: "Sleight of Hand", modifier: -3 }
+      { id: "flower", label: "Organizes flowers in her aunts flower shop", check: "Sleight of Hand", modifier: 3 },
+      { id: "cat", label: "Moves like a cat", check: "Stealth", modifier: 3 },
+      { id: "face", label: "Vowed to always speak the truth", check: "Deception", modifier: -3 }
     ]
   },
   "player-custom04-row-04": {
@@ -573,11 +565,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Eastern Coast",
     hairStyle: "Shaved",
     hairColor: "Black",
-    faceTrait: "Vitiligo",
     quirks: [
-      { id: "smoke", label: "Can place pipe tobacco by scent", check: "Search", modifier: 3 },
-      { id: "mask", label: "Never lets panic reach the face", check: "Composure", modifier: 3 },
-      { id: "romance", label: "Misses obvious romantic hints", check: "Rizz", modifier: -3 }
+      { id: "poligraph", label: "Trained himself to decieve even a poligarph", check: "Deception", modifier: 3 },
+      { id: "mask", label: "Never lets panic take over", check: "Composure", modifier: 3 },
+      { id: "cardio", label: "Thinks cardio is overrated", check: "Athletics", modifier: -3 }
     ]
   },
   "player-player05-row-02": {
@@ -587,11 +578,10 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Northlands",
     hairStyle: "Short",
     hairColor: "Brown",
-    faceTrait: "Sharp-Boned",
     quirks: [
-      { id: "horse", label: "Was raised around hunting parties", check: "Athletics", modifier: 3 },
-      { id: "toast", label: "Can charm a hostile dinner table", check: "Charisma", modifier: 3 },
-      { id: "library-dust", label: "Coughs in dusty archives", check: "Search", modifier: -3 }
+      { id: "ear", label: "Made a habit of eavesdropping", check: "Stealth", modifier: 3 },
+      { id: "peace", label: "Resident peacemaker at family gatherings", check: "Charisma", modifier: 3 },
+      { id: "government", label: "Thinks that they are lying to us", check: "History", modifier: -3 }
     ]
   },
   "player-player05-row-03": {
@@ -601,25 +591,24 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     origin: "Southern Provinces",
     hairStyle: "Long Straight",
     hairColor: "Black",
-    faceTrait: "Mismatched Eyes",
     quirks: [
-      { id: "cards", label: "Reads people over card games", check: "Deception", modifier: 3 },
-      { id: "perfume", label: "Knows expensive perfumes on sight", check: "Search", modifier: 3 },
-      { id: "storm", label: "Sleeps badly during storms", check: "Composure", modifier: -3 }
+      { id: "cards", label: "Reads people very effectively at a poker table", check: "Deception", modifier: 3 },
+      { id: "little", label: "Pays attention to the little things", check: "Search", modifier: 3 },
+      { id: "rude", label: "Has a rude attitude", check: "Charisma", modifier: -3 }
     ]
   },
   "player-player05-row-04": {
-    id: "lucian-crow",
-    firstName: "Lucian",
+    id: "edwin-crow",
+    firstName: "Edwin",
     familyName: "Crow",
     origin: "Western Marches",
     hairStyle: "Curly",
     hairColor: "Dark Red",
     faceTrait: "Sharp-Boned",
     quirks: [
-      { id: "boxing", label: "Boxed at university", check: "Athletics", modifier: 3 },
-      { id: "theatre", label: "Can mimic polite manners perfectly", check: "Rizz", modifier: 3 },
-      { id: "dust", label: "Coughs in dusty archives", check: "Search", modifier: -3 }
+      { id: "trust", label: "Has a very trust worthy presence", check: "Charisma", modifier: 3 },
+      { id: "laptop", label: "Brought his laptop that works with satellites", check: "Histroy", modifier: 3 },
+      { id: "stuff", label: "Respects anothers property", check: "Search", modifier: -3 }
     ]
   }
 };
@@ -1350,8 +1339,7 @@ const daytimes: Daytime[] = ["Morning", "Breakfast", "Midday", "Lunch", "Afterno
 const mysteryMethods = [
   "Blunt-force trauma",
   "Stabbing with a knife or sharp tool",
-  "Manual strangulation",
-  "Ligature strangulation",
+  "Strangulation",
   "Suffocation with bedding or fabric",
   "Drowning in a bath",
   "Drowning in a pool or ornamental pond",
@@ -1364,13 +1352,10 @@ const mysteryMethods = [
   "Deliberate gas leak",
   "Electrocution through tampered equipment",
   "Pushed down a staircase",
-  "Pushed or thrown from a balcony",
+  "Pushed from a balcony",
   "Pushed from a window",
-  "Vehicle brakes deliberately tampered with",
   "Killed in a deliberately set fire",
   "Trapped in smoke from a controlled fire",
-  "Fatal head injury staged as an accidental fall",
-  "Victim drugged, then smothered",
   "Electrical appliance placed into bathwater",
   "Fatal assault followed by concealment of the body"
 ];
@@ -1378,9 +1363,9 @@ const mysteryLockdownReasons = ["a snow storm has buried the road", "a landslide
 const mysteryWitnessClues = [
   "Witness: {witness} heard {victim} threaten {killer} shortly before the murder, but will only speak after trust is gained.",
   "Witness: {witness} saw {killer} near the crime scene at an unusual hour and is frightened to say it openly.",
-  "Witness: {witness} noticed {killer} changing clothes after the murder window and needs careful questioning.",
-  "Witness: {witness} overheard {killer} and {victim} arguing about the motive before the death.",
-  "Witness: {witness} saw {killer} leave by a service route that does not match their public alibi."
+  "Witness: {witness} noticed {killer} changing clothes after the esitimated time of the murder and needs careful questioning.",
+  "Witness: {witness} overheard {killer} and {victim} arguing about something.",
+  "Witness: {witness} saw {killer} pass by a service route that does not match their public alibi."
 ];
 const mysteryMotiveTemplates = [
   "To prevent {victim} from exposing {killer}'s affair with {linked_character}.",
@@ -1390,9 +1375,9 @@ const mysteryMotiveTemplates = [
   "To prevent {victim} from telling {partner} about {killer}'s second relationship.",
   "To stop {victim} revealing that {killer} had stolen money from work.",
   "To prevent {victim} from exposing {killer}'s gambling debts.",
-  "To keep {victim} from proving that {killer} had forged a document.",
+  "To keep {victim} from proving that {killer} had killed before.",
   "To stop {victim} from revealing a blackmail scheme.",
-  "To silence {victim} after a private argument about inheritance."
+  "To gain the inheritance from {victim}'s will."
 ];
 const mysteryMinorMotiveTemplates = [
   "To stop {victim} revealing that {killer} had been in a forbidden room.",
@@ -1508,9 +1493,9 @@ const mysteryGuestCareerProfiles: { minAge: number; occupation: string; educatio
   { minAge: 55, occupation: "Retired", educations: ["Secondary school diploma", "General education diploma", "Workplace skills training", "Office administration training"] }
 ];
 const staffStations = ["kitchen", "staff-corridor", "servants-hall", "laundry", "pantry", "garden-terrace", "back-stairs"];
-const ravenwoodMaleNames = ["Theodore", "Asher", "Cedric", "Soraaro", "Adrian", "Alaric", "Ambrose", "Arthur", "Bastian", "Benedict", "Blaise", "Caspian", "Dorian", "Edgar", "Edmund", "Elias", "Felix", "Florian", "Gabriel", "Gideon", "Hugo", "Jasper", "Julian", "Laurent", "Leander", "Leon", "Lucian", "Magnus", "Marcel", "Marius", "Oliver", "Percival", "Raphael", "Remy", "Rowan", "Sebastian", "Silas", "Soren", "Tristan", "Victor", "Vincent", "Xavier", "Elio", "Mael", "Noel", "Rafael", "Thierry", "Alejandro", "Alonso", "Cruz", "Diego", "Esteban", "Javier", "Leandro", "Lorenzo", "Mateo", "Santiago", "Dimitri", "Ilya", "Nikolai", "Stefan", "Akira", "Daichi", "Haru", "Hiro", "Itsuki", "Kaoru", "Kenji", "Ren", "Riku", "Sora", "Taejin", "Jun", "Minho", "Seojun", "Yichen", "Jian", "Lian", "Ming", "Renji", "Toma", "Alden", "Arden", "August", "Claude", "Corvin", "Elian", "Emil", "Evander", "Hadrian", "Hector", "Isidore", "Matthias", "Nicolas", "Octavian", "Orion", "Roman", "Sylvain", "Valentin", "Aurel", "Cassiel", "Lucien", "Nicolás", "Aleksi", "Emilian", "Kasimir", "Lev", "Mikhail", "Emiliaric", "Laurenvin", "Sorenan", "Jasperric", "Hiroien", "Soraair", "Ilyaas", "Alaricien", "Rafaelien", "Yichenvren", "Kenjiar", "Junen", "Valesian", "Asheran", "Emilia", "Javierian", "Matthiasas", "Alaricrel", "Felixric", "Thierren", "Itsukiric", "Oliveris", "Silasis", "Mariusor", "Aurelar", "Rikuric", "Mikhaiiel", "Gabrievar", "Sylvairiel", "Isideo", "Sebastiaian", "Marcelvon"];
-const ravenwoodFemaleNames = ["Adeline", "Aurelia", "Beatrice", "Belladonna", "Briar", "Camille", "Cassandra", "Celeste", "Celine", "Clara", "Cordelia", "Dahlia", "Delphine", "Eleanor", "Elise", "Elodie", "Emmeline", "Estelle", "Evangeline", "Flora", "Genevieve", "Giselle", "Helena", "Isadora", "Ivy", "Josephine", "Juliette", "Lenore", "Lilian", "Lorelei", "Lucille", "Madeleine", "Margot", "Marielle", "Mireille", "Nadine", "Noelle", "Odette", "Ophelia", "Rosalie", "Sabine", "Selene", "Seraphine", "Sylvie", "Theodora", "Valentina", "Vesper", "Victoria", "Vivienne", "Willow", "Amara", "Anaïs", "Aveline", "Cressida", "Elara", "Fleur", "Isabeau", "Lavinia", "Melisande", "Ondine", "Alba", "Amalia", "Catalina", "Elena", "Esmeralda", "Inés", "Isabella", "Lucia", "Marisol", "Paloma", "Anastasia", "Danica", "Irina", "Katya", "Milena", "Nadia", "Oksana", "Svetlana", "Tatiana", "Zoya", "Aiko", "Akari", "Emi", "Hana", "Haruka", "Kaede", "Mei", "Miyu", "Reina", "Yuna", "Chaewon", "Haeun", "Jisoo", "Nari", "Sora", "Xia", "Yue", "Lian", "Meilin", "Rin", "Inésyne", "Jisooa", "Sabineina", "Josephinora", "Reinaalia", "Isada", "Willowyne", "Irinaia", "Valentinis", "Isadorira", "Katyais", "Seraphi", "Aikois", "Marieuna", "Seleneuna", "Palomarea", "Elenaenne", "Helenaa", "Inéselle", "Naria", "Chaewira", "Xiaea", "Sabineora", "Evangelineora", "Meiis", "Rinea", "Hanaette", "Kaedeenne", "Harukaina", "Danicaia", "Emiora", "Giselleline", "Briaris", "Akariyne", "Anaïsina", "Emieria", "Irinavenne", "Loreleiia", "Reinaina", "Aikoira"];
-const ravenwoodSurnames = ["Ash", "Black", "Briar", "Crow", "Dusk", "Elder", "Ember", "Ever", "Fair", "Fallow", "Fern", "Frost", "Glen", "Grey", "Hallow", "Hawke", "Hazel", "Hollow", "Iron", "Ivory", "Lark", "Marlowe", "Mist", "Moon", "Night", "Oak", "Raven", "Rose", "Rowan", "Sable", "Shadow", "Silver", "Snow", "Star", "Stone", "Storm", "Thorn", "Vale", "Vane", "Winter", "Wren", "Wilde", "Wood", "Bell", "Blake", "Byron", "Carrow", "Dacre", "Darcy", "Devereux", "Fairfax", "Graves", "Hale", "Harrow", "Hart", "Huxley", "Locke", "March", "Morrow", "Poe", "Quill", "Reeve", "Sinclair", "Sterling", "Thorne", "Voss", "Whitlock", "Wycliffe", "Arden", "Beaumont", "Bellefleur", "Clairmont", "Delacroix", "Desmarais", "Duval", "Fontaine", "Laurent", "Lenoir", "Moreau", "Rochefort", "Valmont", "Villiers", "Alarcón", "Delgado", "Montoya", "Navarro", "Salazar", "Serrano", "Valdés", "Vega", "Volkov", "Morozov", "Orlov", "Petrov", "Romanov", "Sokolov", "Vasiliev", "Dragomir", "Takeda", "Kuroda", "Mori", "Akiyama", "Hayashi", "Ishikawa", "Han", "Seo", "Kang", "Jin", "Lin", "Shen", "Wei", "Zhao", "Crowbyron", "La Zhaofield", "Von Crowhurst", "La Salazarvane", "La Duvalclair", "Della Mistmere", "La Thornewick", "St. Lockebridge", "Del Fernember", "Du Thornridge", "Bellbridge", "St. Zhaowood", "Von Irondell", "St. Fallowclair", "Delgadoquill", "Villiersstone", "Du Wycliffehart", "Le Wood", "Von Seostorm", "Hayashihayashi", "Du Seomont", "Blakefield", "Le Fontainemoor", "De Fernwell", "Larkmist", "Le Halerose", "De Jinsokolov", "Le Snowfield", "Shadowwinter", "Van Fairfaxthorne", "Moreaualarcón", "La Stonestar", "Della Morozovstone", "Von Vasilievwood", "Ravenwinter", "Van Elderhurst", "Vasilievshade", "Du Ravenshade", "Du Darcy", "Evercliff", "Von Duvalmont", "Le Jinhurst", "Del Starsterling", "De Hallow", "De Thornerose", "La Ravenarden", "De Ardenbrook", "Della Fallowwood", "La Fallowclair", "La Fontainecourt", "La Beaumontbridge", "Silverwinter", "Glenhart", "St. Hazelzhao", "De Huxleyrose", "St. Clairmontromanov", "Devereuxhurst", "Roseshade", "Del Vasilievgrave", "Van Romanovwick", "Du Fairthorne"];
+const ravenwoodMaleNames = ["Theodore", "Asher", "Cedric", "Soraaro", "Adrian", "Alaric", "Ambrose", "Arthur", "Bastian", "Benedict", "Blaise", "Caspian", "Dorian", "Edgar", "Edmund", "Elias", "Felix", "Florian", "Gabriel", "Gideon", "Hugo", "Jasper", "Julian", "Laurent", "Leander", "Leon", "Lucian", "Magnus", "Marcel", "Marius", "Oliver", "Percival", "Raphael", "Remy", "Rowan", "Sebastian", "Silas", "Soren", "Tristan", "Victor", "Vincent", "Xavier", "Elio", "Mael", "Noel", "Rafael", "Thierry", "Alejandro", "Alonso", "Cruz", "Diego", "Esteban", "Javier", "Leandro", "Lorenzo", "Mateo", "Santiago", "Dimitri", "Ilya", "Nikolai", "Stefan", "Akira", "Daichi", "Haru", "Hiro", "Itsuki", "Kaoru", "Kenji", "Ren", "Riku", "Sora", "Taejin", "Jun", "Minho", "Seojun", "Yichen", "Jian", "Lian", "Ming", "Renji", "Toma", "Alden", "Arden", "August", "Claude", "Corvin", "Elian", "Emil", "Evander", "Hadrian", "Hector", "Isidore", "Matthias", "Nicolas", "Octavian", "Orion", "Roman", "Sylvain", "Valentin", "Aurel", "Cassiel", "Lucien", "Nicolás", "Aleksi", "Emilian", "Kasimir", "Lev", "Mikhail", "Emiliaric", "Laurenvin", "Sorenan", "Jasperric", "Hiroien", "Soraair", "Ilyaas", "Alaricien", "Rafaelien", "Yichenvren", "Kenjiar", "Junen", "Valesian", "Asheran", "Emilia", "Javierian", "Matthiasas", "Alaricrel", "Felixric", "Thierren", "Itsukiric", "Oliveris", "Silasis", "Mariusor", "Aurelar", "Rikuric", "Mikhaiiel", "Gabrievar", "Sylvairiel", "Isideo", "Sebastiaian", "Marcelvon", "Abel", "Abraham", "Achilles", "Adam", "Adelard", "Adrianus", "Aeneas", "Aidan", "Alban", "Albert", "Albin", "Albrecht", "Alessio", "Alfonso", "Alfred", "Alistair", "Alonzo", "Amadeo", "Ansel", "Anselm", "Anton", "Antonio", "Archer", "Armand", "Armin", "Arnold", "Arsen", "Arturo", "Auberon", "Augustin", "Aurelio", "Baptiste", "Barnaby", "Barrett", "Bartholomew", "Beau", "Bellamy", "Berenger", "Bernard", "Bertrand", "Blaine", "Boris", "Bowen", "Bram", "Brendan", "Briar", "Broderick", "Byron", "Caelan", "Caesar", "Caius", "Callum", "Calvin", "Cassian", "Cato", "Cillian", "Cyril", "Damian", "Dante", "Darius", "Dashiell", "Declan", "Desmond", "Dominic", "Donovan", "Drake", "Eamon", "Easton", "Edric", "Edwin", "Elric", "Emmanuel", "Enzo", "Eric", "Ernest", "Eryk", "Ethan", "Eugene", "Fabian", "Fabio", "Ferdinand", "Finn", "Finnian", "Francis", "Frederick", "Gareth", "Gaston", "Gael", "Geoffrey", "George", "Gerard", "Godric", "Grayson", "Gregor", "Griffin", "Hamish", "Harold", "Harlan", "Harvey", "Henrik", "Ignatius", "Isaac", "Ivan", "Jace", "James", "Jerome", "Joel", "Jonah", "Jonathan", "Jordan", "Kai", "Kieran", "Killian", "Kristian", "Lachlan", "Lars", "Lawrence", "Lazar", "Lennox", "Liam", "Linus", "Lionel", "Lorcan", "Louis", "Luca", "Lukas", "Luther", "Malachi", "Malcolm", "Manuel", "Marco", "Marcus", "Maxim", "Maximilian", "Micah", "Milan", "Miles", "Milo", "Morgan", "Nathaniel", "Neil", "Nero", "Neville", "Oscar", "Osric", "Owen", "Pascal", "Patrick", "Philip", "Pierce", "Quentin", "Quill", "Raoul", "Raymond", "Reece", "Reid", "Rhys", "Roderick", "Roland", "Ronan", "Rory", "Ruben", "Rufus", "Rupert", "Samson", "Samuel", "Saul", "Scott", "Shae", "Sheridan", "Simon", "Stellan", "Sullivan", "Tobias", "Ulric", "Ulysses", "Vaughn", "Viggo", "Walter", "Warren", "Wilfred", "William", "Wolfgang", "Wyatt", "Yannick", "Yorick", "Zachary", "Zane", "Zephyr", "Aldric", "Cassien", "Darien", "Elarion", "Lucarien", "Valeric", "Soravian", "Raphaelor", "Mikhailen", "Dorianis", "Cassianor", "Alarien", "Renjior", "Sylveric", "Leandros", "Evandriel", "Hadrien", "Lucanor", "Aurelios", "Theodren", "Kaelian", "Renvar", "Tavian", "Asterion", "Corvian", "Elianor", "Magnor", "Valerian", "Julorien", "Bastior", "Emilien"];
+const ravenwoodFemaleNames = ["Adeline", "Aurelia", "Beatrice", "Belladonna", "Camille", "Cassandra", "Celeste", "Celine", "Clara", "Cordelia", "Dahlia", "Delphine", "Eleanor", "Elise", "Elodie", "Emmeline", "Estelle", "Evangeline", "Flora", "Genevieve", "Giselle", "Helena", "Isadora", "Ivy", "Josephine", "Juliette", "Lenore", "Lilian", "Lorelei", "Lucille", "Madeleine", "Margot", "Marielle", "Mireille", "Nadine", "Noelle", "Odette", "Ophelia", "Rosalie", "Sabine", "Selene", "Seraphine", "Sylvie", "Theodora", "Valentina", "Vesper", "Victoria", "Vivienne", "Willow", "Amara", "Anaïs", "Aveline", "Cressida", "Elara", "Fleur", "Isabeau", "Lavinia", "Melisande", "Ondine", "Alba", "Amalia", "Catalina", "Elena", "Esmeralda", "Inés", "Isabella", "Lucia", "Marisol", "Paloma", "Anastasia", "Danica", "Irina", "Katya", "Milena", "Nadia", "Oksana", "Svetlana", "Tatiana", "Zoya", "Aiko", "Akari", "Emi", "Hana", "Haruka", "Kaede", "Mei", "Miyu", "Reina", "Yuna", "Chaewon", "Haeun", "Jisoo", "Nari", "Sora", "Xia", "Yue", "Lian", "Meilin", "Rin", "Inésyne", "Jisooa", "Sabineina", "Josephinora", "Reinaalia", "Isada", "Willowyne", "Irinaia", "Valentinis", "Isadorira", "Katyais", "Seraphi", "Aikois", "Marieuna", "Seleneuna", "Palomarea", "Elenaenne", "Helenaa", "Inéselle", "Naria", "Chaewira", "Xiaea", "Sabineora", "Evangelineora", "Meiis", "Rinea", "Hanaette", "Kaedeenne", "Harukaina", "Danicaia", "Emiora", "Giselleline", "Briaris", "Akariyne", "Anaïsina", "Emieria", "Irinavenne", "Loreleiia", "Reinaina", "Aikoira", "Abigail", "Adelaide", "Adelina", "Adriana", "Agatha", "Agnes", "Alessandra", "Alessia", "Alexandra", "Alice", "Alicia", "Alina", "Althea", "Amanda", "Amber", "Amelia", "Amelie", "Anastasie", "Angelique", "Annabelle", "Annalise", "Annika", "Antonia", "Arabella", "Ariadne", "Ariella", "Astrid", "Athena", "Audrey", "Autumn", "Avelina", "Azalea", "Bianca", "Blair", "Blythe", "Briony", "Calista", "Calliope", "Camellia", "Carina", "Caroline", "Catriona", "Cecelia", "Cecilia", "Cerise", "Charlotte", "Chiara", "Chloe", "Clarissa", "Clementine", "Colette", "Cosette", "Cynthia", "Daphne", "Delia", "Diana", "Dominique", "Edith", "Eileen", "Eleanora", "Eliana", "Elina", "Elisa", "Eliska", "Elliana", "Eloisa", "Elowen", "Elsa", "Emilia", "Emilie", "Enya", "Erika", "Esme", "Eulalia", "Eulalie", "Euphemia", "Evelyn", "Faith", "Felicia", "Felicity", "Fern", "Fiorella", "Florence", "Francesca", "Freya", "Gabriella", "Gemma", "Georgiana", "Gwendolyn", "Gwyneth", "Hazel", "Heidi", "Honora", "Imogen", "Iona", "Iris", "Isabelle", "Isolde", "Jacinta", "Jade", "Jessamine", "Joanna", "Jocelyn", "June", "Karina", "Katarina", "Laurel", "Leona", "Leontine", "Letitia", "Liora", "Lisette", "Loretta", "Louisa", "Louise", "Lucinda", "Lydia", "Lyra", "Mabel", "Maeve", "Magnolia", "Marceline", "Marina", "Matilda", "Meredith", "Minerva", "Mirabel", "Miranda", "Monica", "Morgana", "Nerissa", "Nina", "Oriana", "Ottilie", "Pandora", "Penelope", "Petra", "Philippa", "Phoebe", "Primrose", "Regina", "Renata", "Rosalind", "Rosemary", "Roxanne", "Ruby", "Sabrina", "Samantha", "Scarlett", "Serena", "Simone", "Sofia", "Sophie", "Stella", "Susanna", "Tabitha", "Thalia", "Theresa", "Tiffany", "Ursula", "Vanessa", "Vera", "Veronica", "Violet", "Virginia", "Willa", "Winifred", "Winter", "Yvette", "Zara", "Zinnia", "Altheia", "Araminta", "Belinda", "Bernadette", "Capucine", "Carlotta", "Celestine", "Clarimond", "Corinne", "Desiree", "Dominiquea", "Dorothea", "Eleanore", "Elisabetta", "Ernestine", "Euphrasie", "Florentine", "Geraldine", "Henrietta", "Hestia", "Isaline", "Jessamyn", "Leonie", "Lilou", "Liselotte", "Maelle", "Magdalene", "Maribelle", "Marigold", "Melina", "Mirabelle", "Noemi", "Ottavia", "Prisca", "Romilly", "Solene", "Tatienne", "Valencia", "Verena", "Yolande", "Zélie"];
+const ravenwoodSurnames = ["Ash", "Black", "Briar", "Crow", "Dusk", "Elder", "Ember", "Ever", "Fair", "Fallow", "Fern", "Frost", "Glen", "Grey", "Hallow", "Hawke", "Hazel", "Hollow", "Iron", "Ivory", "Lark", "Marlowe", "Mist", "Moon", "Night", "Oak", "Raven", "Rose", "Rowan", "Sable", "Shadow", "Silver", "Snow", "Star", "Stone", "Storm", "Thorn", "Vale", "Vane", "Winter", "Wren", "Wilde", "Wood", "Bell", "Blake", "Byron", "Carrow", "Dacre", "Darcy", "Devereux", "Fairfax", "Graves", "Hale", "Harrow", "Hart", "Huxley", "Locke", "March", "Morrow", "Poe", "Quill", "Reeve", "Sinclair", "Sterling", "Thorne", "Voss", "Whitlock", "Wycliffe", "Arden", "Beaumont", "Bellefleur", "Clairmont", "Delacroix", "Desmarais", "Duval", "Fontaine", "Laurent", "Lenoir", "Moreau", "Rochefort", "Valmont", "Villiers", "Alarcón", "Delgado", "Montoya", "Navarro", "Salazar", "Serrano", "Valdés", "Vega", "Volkov", "Morozov", "Orlov", "Petrov", "Romanov", "Sokolov", "Vasiliev", "Dragomir", "Takeda", "Kuroda", "Mori", "Akiyama", "Hayashi", "Ishikawa", "Han", "Seo", "Kang", "Jin", "Lin", "Shen", "Wei", "Zhao", "Crowbyron", "La Zhaofield", "Von Crowhurst", "La Salazarvane", "La Duvalclair", "Della Mistmere", "La Thornewick", "St. Lockebridge", "Del Fernember", "Du Thornridge", "Bellbridge", "St. Zhaowood", "Von Irondell", "St. Fallowclair", "Delgadoquill", "Villiersstone", "Du Wycliffehart", "Le Wood", "Von Seostorm", "Hayashihayashi", "Du Seomont", "Blakefield", "Le Fontainemoor", "De Fernwell", "Larkmist", "Le Halerose", "De Jinsokolov", "Le Snowfield", "Shadowwinter", "Van Fairfaxthorne", "Moreaualarcón", "La Stonestar", "Della Morozovstone", "Von Vasilievwood", "Ravenwinter", "Van Elderhurst", "Vasilievshade", "Du Ravenshade", "Du Darcy", "Evercliff", "Von Duvalmont", "Le Jinhurst", "Del Starsterling", "De Hallow", "De Thornerose", "La Ravenarden", "De Ardenbrook", "Della Fallowwood", "La Fallowclair", "La Fontainecourt", "La Beaumontbridge", "Silverwinter", "Glenhart", "St. Hazelzhao", "De Huxleyrose", "St. Clairmontromanov", "Devereuxhurst", "Roseshade", "Del Vasilievgrave", "Van Romanovwick", "Du Fairthorne","Ashcroft", "Ashbourne", "Ashfield", "Ashmere", "Ashford", "Ashwell", "Blackthorn", "Blackwood", "Blackwell", "Blackridge", "Blackmoor", "Blackstone", "Briarwood", "Briarfield", "Briarwell", "Crowhurst", "Crowley", "Crowmere", "Crowfield", "Crowstone", "Duskridge", "Duskmere", "Duskwood", "Elderwood", "Eldermere", "Elderbrook", "Elderfield", "Emberstone", "Emberwood", "Emberfield", "Everbrook", "Everfield", "Evermere", "Fairbrook", "Fairmont", "Fairfield", "Fallowmere", "Fallowbrook", "Fernbrook", "Fernfield", "Fernwick", "Frostmere", "Frostfield", "Frostwick", "Glenbrook", "Glenmere", "Greybrook", "Greyfield", "Greywick", "Greyhaven", "Greymoor", "Hallowmere", "Hallowbrook", "Hawkridge", "Hawkstone", "Hazelbrook", "Hazelfield", "Hazelwick", "Hollowbrook", "Hollowmere", "Ironbrook", "Ironfield", "Ivorybrook", "Ivoryfield", "Larkfield", "Larkwood", "Mistbrook", "Mistfield", "Mistmere", "Moonbrook", "Moonridge", "Nightbrook", "Nightfield", "Oakridge", "Oakmere", "Oakfield", "Ravenhurst", "Ravenwood", "Ravenmere", "Rosebrook", "Rosefield", "Rowanbrook", "Sablewood", "Sablemere", "Shadowbrook", "Shadowmere", "Silverbrook", "Silvermere", "Snowbrook", "Snowmere", "Starbrook", "Starfield", "Stonebrook", "Stonefield", "Stormbrook", "Stormfield", "Thornbrook", "Thornfield", "Thornmere", "Valebrook", "Valefield", "Winterbrook", "Wintermere", "Wrenfield", "Wildemere", "Woodcroft", "Woodmere"];
 
 function fillMysteryTemplate(template: string, killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryNpc[], witness?: MysteryNpc): string {
   const linkedPool = npcs.filter((npc) => npc.id !== killer.id && npc.id !== victim.id);
@@ -1851,20 +1836,63 @@ function mysteryMotiveFor(killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryN
   return `To stop ${fullName(victim)} from revealing a blackmail scheme`;
 }
 
-function uniqueRavenwoodFirstName(sex: Sex, familyName: string, usedNames: Set<string>, usedFirstNames: Set<string>, preferred?: string): string {
+function uniqueRavenwoodFirstName(
+  sex: Sex,
+  familyName: string,
+  usedNames: Set<string>,
+  usedFirstNames: Set<string>,
+  preferred?: string
+): string {
   const bank = sex === "Male" ? ravenwoodMaleNames : ravenwoodFemaleNames;
-  const candidates = preferred && bank.includes(preferred) ? [preferred, ...bank] : bank;
-  const found = candidates.find((name) => !usedFirstNames.has(name.toLowerCase()) && !usedNames.has(`${name} ${familyName}`.toLowerCase()));
-  if (found) {
-    usedFirstNames.add(found.toLowerCase());
-    usedNames.add(`${found} ${familyName}`.toLowerCase());
-    return found;
+
+  if (preferred && bank.includes(preferred)) {
+    const preferredFirstNameKey = preferred.toLowerCase();
+    const preferredFullNameKey = `${preferred} ${familyName}`.toLowerCase();
+
+    if (
+      !usedFirstNames.has(preferredFirstNameKey) &&
+      !usedNames.has(preferredFullNameKey)
+    ) {
+      usedFirstNames.add(preferredFirstNameKey);
+      usedNames.add(preferredFullNameKey);
+      return preferred;
+    }
   }
+
+  const availableNames = shuffled(bank).filter((name) => {
+    const firstNameKey = name.toLowerCase();
+    const fullNameKey = `${name} ${familyName}`.toLowerCase();
+
+    return (
+      !usedFirstNames.has(firstNameKey) &&
+      !usedNames.has(fullNameKey)
+    );
+  });
+
+  if (availableNames.length > 0) {
+    const selectedName = availableNames[0];
+
+    usedFirstNames.add(selectedName.toLowerCase());
+    usedNames.add(`${selectedName} ${familyName}`.toLowerCase());
+
+    return selectedName;
+  }
+
+  const fallbackBaseName = pick(bank);
   let suffix = 2;
-  while (usedFirstNames.has(`${bank[0]} ${suffix}`.toLowerCase()) || usedNames.has(`${bank[0]} ${suffix} ${familyName}`.toLowerCase())) suffix += 1;
-  const fallback = `${bank[0]} ${suffix}`;
+  let fallback = `${fallbackBaseName} ${suffix}`;
+
+  while (
+    usedFirstNames.has(fallback.toLowerCase()) ||
+    usedNames.has(`${fallback} ${familyName}`.toLowerCase())
+  ) {
+    suffix += 1;
+    fallback = `${fallbackBaseName} ${suffix}`;
+  }
+
   usedFirstNames.add(fallback.toLowerCase());
   usedNames.add(`${fallback} ${familyName}`.toLowerCase());
+
   return fallback;
 }
 
@@ -2419,15 +2447,37 @@ function makeMysteryNpc(
   };
 }
 
-function createMysteryGameFromDraft(draft: CharacterDraft, detectiveProfile?: MysteryDetectiveProfile, detectiveAge = 30): MysteryGame {
+function createMysteryGameFromDraft(
+  draft: CharacterDraft,
+  detectiveProfile?: MysteryDetectiveProfile,
+  detectiveAge = 30
+): MysteryGame {
   const playerInput = detectiveProfile ?? draft;
   const playerAge = detectiveProfile ? detectiveAge : 30;
   const usedNames = new Set<string>();
   const usedFirstNames = new Set<string>();
   const usedPortraitKeys = new Set<string>();
-  const playerFamilyName = ravenwoodFamilyName(playerInput.familyName.trim());
-  const blockedFamilyNames = new Set<string>([playerFamilyName.toLowerCase()]);
-  const playerFirstName = uniqueRavenwoodFirstName(playerInput.sex, playerFamilyName, usedNames, usedFirstNames, playerInput.firstName.trim());
+
+  const playerFamilyName = detectiveProfile
+    ? detectiveProfile.familyName.trim()
+    : ravenwoodFamilyName(playerInput.familyName.trim());
+
+  const playerFirstName = detectiveProfile
+    ? detectiveProfile.firstName.trim()
+    : uniqueRavenwoodFirstName(
+        playerInput.sex,
+        playerFamilyName,
+        usedNames,
+        usedFirstNames,
+        playerInput.firstName.trim()
+      );
+
+  usedFirstNames.add(playerFirstName.toLowerCase());
+  usedNames.add(`${playerFirstName} ${playerFamilyName}`.toLowerCase());
+
+  const blockedFamilyNames = new Set<string>([
+    playerFamilyName.toLowerCase()
+  ]);
   const playerPortrait = detectiveProfile
     ? ravenwoodPlayerPortraitFor(detectiveProfile, playerAge)
     : chooseRavenwoodPlayerPortrait({ sex: playerInput.sex, age: playerAge, usedPortraitKeys });
@@ -2665,26 +2715,38 @@ function createMysteryGameFromDraft(draft: CharacterDraft, detectiveProfile?: My
       ravenwoodPortraitKey: playerPortrait?.key,
       portraitLineage: playerPortrait?.lineage,
       visualRace: playerPortrait?.visualRace
-    },
-    day: 1,
-    daytime: "Morning",
-    rooms,
-    npcs,
-    npcRelationships,
-    murders,
-    currentRoomId: "grand-hall",
-    playerRoomId: playerRoom.id,
-    messages: [
-      { id: uid(), speaker: "System", text: "Ravenwood prototype: investigate freely. Text advances time; risky actions use d12 rolls." },
-      { id: uid(), speaker: "GM", text: `${playerFirstName} ${playerFamilyName} receives a brass key for ${playerRoom.name} in the Great Hall. ${openingServant ? `${openingServant.firstName} ${openingServant.familyName}, a ${openingServant.occupation.toLowerCase()}, waits nearby to answer the first questions. ` : ""}The host explains that ${lockdownReason}; no one is leaving Ravenwood Manor for the foreseeable future.` }
-    ],
-    journal: [],
-    journalNotes: "",
-    sanityLedger: [],
-    discoveredProof: [],
-    inventory,
-    finished: false,
-    won: false
+},
+day: 1,
+daytime: "Morning",
+rooms,
+npcs,
+npcRelationships,
+murders,
+currentRoomId: "grand-hall",
+playerRoomId: playerRoom.id,
+messages: [
+  {
+    id: uid(),
+    speaker: "System",
+    text: "Ravenwood prototype: investigate freely. Text advances time; risky actions use d12 rolls.",
+  },
+  {
+    id: uid(),
+    speaker: "GM",
+    text: `${playerFirstName} ${playerFamilyName} receives a brass key for ${playerRoom.name} in the Great Hall. ${
+      openingServant
+        ? `${openingServant.firstName} ${openingServant.familyName} - a ${openingServant.occupation.toLowerCase()} - explains that ${lockdownReason}; no one is leaving Ravenwood Manor for the foreseeable future. They also let you know that WIFI is down, and phone service is not working.`
+        : `The host explains that ${lockdownReason}; no one is leaving Ravenwood Manor for the foreseeable future.`
+    }`,
+  },
+],
+journal: [],
+journalNotes: "",
+sanityLedger: [],
+discoveredProof: [],
+inventory,
+finished: false,
+won: false,
   };
   return {
     ...mystery,
@@ -2943,6 +3005,7 @@ export default function App() {
   const [draggingMysteryItem, setDraggingMysteryItem] = useState<string | null>(null);
   const [storyInput, setStoryInput] = useState("");
   const [mysteryInput, setMysteryInput] = useState("");
+  const [expandedMysteryArchiveDays, setExpandedMysteryArchiveDays] = useState<Record<number, boolean>>({});
   const [treeViewportWidth, setTreeViewportWidth] = useState(0);
   const familyTreeRef = useRef<ScrollView | null>(null);
   const C = themes[themeName];
@@ -3178,6 +3241,18 @@ export default function App() {
     return `Roll: ${check} d12 ${die}${quirkText} = ${result}`;
   }
 
+  function stampMysteryMessages(
+    messages: StoryMessage[],
+    day: number,
+    daytime: Daytime
+  ): StoryMessage[] {
+    return messages.map((message) => ({
+      ...message,
+      archiveDay: message.archiveDay ?? day,
+      archiveDaytime: message.archiveDaytime ?? daytime
+    }));
+  }
+
   function appendMysteryJournal(journal: StoryMessage[], archived: StoryMessage[]): StoryMessage[] {
     const existingIds = new Set(journal.map((message) => message.id));
     return [...journal, ...archived.filter((message) => !existingIds.has(message.id))].slice(-120);
@@ -3231,14 +3306,14 @@ export default function App() {
 
   function mysteryRoomMood(room: MysteryRoom): string {
     const moods: Record<string, string> = {
-      "grand-hall": "polished floors, cold brass, and too many listening corners make the hall feel formal and unsafe",
-      "drawing-room": "soft chairs and low conversation make every pause feel deliberate",
-      "dining-room": "silverware waits beside cooling coffee, and the room smells faintly of toast and nerves",
+      "grand-hall": "polished floors, cold brass, and too many corners make the hall feel formal and unsafe",
+      "drawing-room": "the cold chairs and and the ligering smell of cigar darkes the room",
+      "dining-room": "silverware waits beside cooling coffee, and the room smells faintly of toast and jam",
       library: "dust, leather, and locked cabinets press close around the reading lamps",
-      conservatory: "wet leaves tap the glass while the storm makes the plants whisper",
-      "billiards-room": "green baize and cigar smoke hide small gestures badly",
+      conservatory: "wet leaves tap the glass while the wind makes the plants whisper",
+      "billiards-room": "poor lightning flickers while the billiard balls weem magestic",
       "smoking-room": "the air is stale with ash, brandy, and decisions made in private",
-      "west-gallery": "portraits stare down from the walls as if keeping their own account"
+      "west-gallery": "portraits stare down from the walls as juding you from above"
     };
     if (room.kind === "guest") return "a neat private room holds luggage, folded linen, and the quiet panic of interrupted plans";
     if (room.kind === "staff") return "work sounds carry through the narrow passage, quick footsteps and lowered voices";
@@ -3407,7 +3482,13 @@ export default function App() {
         ledgerLines.push(`${nextTime.daytime} gathering triggered; dining room attendance recalculated by deterministic hash.`);
       }
 
-      const splitMessages = splitMysteryMessages([...mystery.messages, ...messages]);
+      const stampedMessages = stampMysteryMessages(
+        [...mystery.messages, ...messages],
+        mystery.day,
+        mystery.daytime
+      );
+
+      const splitMessages = splitMysteryMessages(stampedMessages);
       journal = appendMysteryJournal(journal, splitMessages.archived);
 
       return {
@@ -3435,7 +3516,19 @@ export default function App() {
     const room = activeMystery.rooms.find((candidate) => candidate.id === roomId);
     if (!room?.accessible) return;
     patchMystery((mystery) => {
-      const splitMessages = splitMysteryMessages([...mystery.messages, mysteryRoomDescription({ ...mystery, currentRoomId: roomId }, roomId)]);
+      const stampedMessages = stampMysteryMessages(
+        [
+          ...mystery.messages,
+          mysteryRoomDescription(
+            { ...mystery, currentRoomId: roomId },
+            roomId
+          )
+        ],
+        mystery.day,
+        mystery.daytime
+      );
+
+      const splitMessages = splitMysteryMessages(stampedMessages);
       return {
         ...mystery,
         currentRoomId: roomId,
@@ -3691,7 +3784,20 @@ export default function App() {
   function changeMysteryInventory(item: string, action: "Abandon") {
     if (!activeMystery || action !== "Abandon") return;
     patchMystery((mystery) => {
-      const splitMessages = splitMysteryMessages([...mystery.messages, { id: uid(), speaker: "GM" as const, text: `${mystery.player.firstName} abandons ${item}.` }]);
+      const stampedMessages = stampMysteryMessages(
+        [
+          ...mystery.messages,
+          {
+            id: uid(),
+            speaker: "GM" as const,
+            text: `${mystery.player.firstName} abandons ${item}.`
+          }
+        ],
+        mystery.day,
+        mystery.daytime
+      );
+
+      const splitMessages = splitMysteryMessages(stampedMessages);
       return {
         ...mystery,
         inventory: mystery.inventory.filter((inventoryItem) => inventoryItem !== item),
@@ -4160,13 +4266,19 @@ export default function App() {
                 <Text style={[styles.heading, { color: C.text }]}>A Child Is Born</Text>
                 <Text style={[styles.body, { color: C.text }]}>{activeStory.pendingBirth.message}</Text>
                 {activeStory.pendingBirth.defaultNames.map((name, index) => (
-                  <Field
-                    key={`${activeStory.pendingBirth?.id}-${index}`}
-                    label={activeStory.pendingBirth?.babySexes[index] ?? "Baby"}
-                    value={babyNames[index] ?? name}
-                    placeholder={name}
-                    onChangeText={(value) => setBabyNames((current) => current.map((existing, babyIndex) => (babyIndex === index ? value : existing)))}
-                  />
+                  <View key={`${activeStory.pendingBirth?.id}-${index}`}>
+                    {Field({
+                      label: activeStory.pendingBirth?.babySexes[index] ?? "Baby",
+                      value: babyNames[index] ?? name,
+                      placeholder: name,
+                      onChangeText: (value) =>
+                        setBabyNames((current) =>
+                          current.map((existing, babyIndex) =>
+                            babyIndex === index ? value : existing
+                          )
+                        )
+                    })}
+                  </View>
                 ))}
                 <Button label="Name Child" onPress={nameBabies} />
               </View>
@@ -4752,47 +4864,131 @@ export default function App() {
   }
 
   if (screen === "mystery" && activeMystery) {
-    const roomsByFloor = [1, 2, 3].map((floor) => activeMystery.rooms.filter((room) => room.floor === floor));
-    return (
-      <Shell>
-        <MysteryHeader mystery={activeMystery} />
-        <MysteryStoryWindow mystery={activeMystery} />
-        <Card>
-          <Text style={[styles.label, { color: C.dim }]}>Places</Text>
-          {roomsByFloor.map((rooms, index) => (
-            <View key={index} style={styles.mysteryFloorBlock}>
-              <Text style={[styles.mysteryFloorTitle, { color: C.text }]}>Floor {index + 1}</Text>
-              <View style={styles.wrapRow}>
-                {rooms.map((room) => (
-                  <Chip
-                    key={room.id}
-                    label={room.name}
-                    selected={activeMystery.currentRoomId === room.id}
-                    disabled={!room.accessible || activeMystery.finished}
-                    onPress={() => visitMysteryRoom(room.id)}
-                  />
+    const roomsByFloor = [1, 2, 3].map((floor) =>
+      activeMystery.rooms.filter((room) => room.floor === floor)
+    );
+
+    return Shell({
+      children: (
+        <>
+          {MysteryHeader({ mystery: activeMystery })}
+
+          {MysteryStoryWindow({ mystery: activeMystery })}
+
+          {Card({
+            children: (
+              <>
+                <Text style={[styles.label, { color: C.dim }]}>Places</Text>
+
+                {roomsByFloor.map((rooms, index) => (
+                  <View key={index} style={styles.mysteryFloorBlock}>
+                    <Text
+                      style={[
+                        styles.mysteryFloorTitle,
+                        { color: C.text }
+                      ]}
+                    >
+                      Floor {index + 1}
+                    </Text>
+
+                    <View style={styles.wrapRow}>
+                      {rooms.map((room) => (
+                        <Chip
+                          key={room.id}
+                          label={room.name}
+                          selected={
+                            activeMystery.currentRoomId === room.id
+                          }
+                          disabled={
+                            !room.accessible || activeMystery.finished
+                          }
+                          onPress={() => visitMysteryRoom(room.id)}
+                        />
+                      ))}
+                    </View>
+                  </View>
                 ))}
+              </>
+            )
+          })}
+
+          {activeMystery.finished
+            ? Card({
+                children: (
+                  <>
+                    <Text
+                      style={[
+                        styles.heading,
+                        {
+                          color: activeMystery.won
+                            ? C.good
+                            : C.warning
+                        }
+                      ]}
+                    >
+                      {activeMystery.won
+                        ? "Case Won"
+                        : "Case Lost"}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.body,
+                        { color: C.text }
+                      ]}
+                    >
+                      {activeMystery.summary}
+                    </Text>
+                  </>
+                )
+              })
+            : null}
+
+          <Modal
+            visible={Boolean(activeMystery.lossPending)}
+            transparent
+            animationType="fade"
+          >
+            <View style={styles.modalShade}>
+              <View
+                style={[
+                  styles.modalCard,
+                  {
+                    backgroundColor: C.panel,
+                    borderColor: C.line
+                  }
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.heading,
+                    { color: C.warning }
+                  ]}
+                >
+                  Ravenwood Is Lost
+                </Text>
+
+                <Text
+                  style={[
+                    styles.body,
+                    { color: C.text }
+                  ]}
+                >
+                  The thirteenth midnight passes. The killer
+                  remains free, and the report moves to finished
+                  games.
+                </Text>
+
+                {Button({
+                  label: "Main Menu",
+                  onPress: closeMysteryLoss
+                })}
               </View>
             </View>
-          ))}
-        </Card>
-        {activeMystery.finished ? (
-          <Card>
-            <Text style={[styles.heading, { color: activeMystery.won ? C.good : C.warning }]}>{activeMystery.won ? "Case Won" : "Case Lost"}</Text>
-            <Text style={[styles.body, { color: C.text }]}>{activeMystery.summary}</Text>
-          </Card>
-        ) : null}
-        <Modal visible={Boolean(activeMystery.lossPending)} transparent animationType="fade">
-          <View style={styles.modalShade}>
-            <View style={[styles.modalCard, { backgroundColor: C.panel, borderColor: C.line }]}>
-              <Text style={[styles.heading, { color: C.warning }]}>Ravenwood Is Lost</Text>
-              <Text style={[styles.body, { color: C.text }]}>The thirteenth midnight passes. The killer remains free, and the report moves to finished games.</Text>
-              <Button label="Main Menu" onPress={closeMysteryLoss} />
-            </View>
-          </View>
-        </Modal>
-      </Shell>
-    );
+          </Modal>
+        </>
+      )
+    });
   }
 
   if (screen === "mysteryCharacter" && activeMystery) {
@@ -4950,24 +5146,63 @@ export default function App() {
   }
 
   if (screen === "mysteryJournal" && activeMystery) {
+    const archiveMessagesByDay = activeMystery.journal.reduce<
+      Record<number, StoryMessage[]>
+    >((groups, message) => {
+      const day = message.archiveDay ?? 1;
+
+      if (!groups[day]) {
+        groups[day] = [];
+      }
+
+      groups[day].push(message);
+      return groups;
+    }, {});
+
+    const archiveDays = Object.keys(archiveMessagesByDay)
+      .map(Number)
+      .sort((a, b) => b - a);
+
     const blueprint = activeMystery.murders.map((murder, index) => `Murder ${index + 1}: ${mysteryNpcName(activeMystery, murder.victimId)} by ${mysteryNpcName(activeMystery, murder.killerId)} on day ${murder.day} ${murder.daytime}, ${murder.method}. Motive: ${cleanSentenceEnd(murder.motive)}. Clues/proof: ${(murder.proofs?.length ? murder.proofs : [murder.proof]).join(", ")}.`);
-    return (
-      <Shell>
+    return Shell({
+      children: (
+        <>
         <View style={styles.rowBetween}>
           <Text style={[styles.titleSmall, { color: C.text }]}>Journal</Text>
           <Button small label="Back" onPress={() => setScreen("mystery")} />
         </View>
-        <Card>
-          <Text style={[styles.heading, { color: C.text }]}>Your Notes</Text>
-          <TextInput
-            value={activeMystery.journalNotes}
-            onChangeText={(journalNotes) => patchMystery((mystery) => ({ ...mystery, journalNotes: journalNotes.slice(0, 3000) }))}
-            placeholder="Write your own suspicions, clues, and theories..."
-            placeholderTextColor={C.dim}
-            multiline
-            style={[styles.input, styles.notesInput, { backgroundColor: C.panel2, borderColor: C.line, color: C.text }]}
-          />
-        </Card>
+        {Card({
+          children: (
+            <>
+              <Text style={[styles.heading, { color: C.text }]}>
+                Your Notes
+              </Text>
+
+              <TextInput
+                value={activeMystery.journalNotes}
+                onChangeText={(journalNotes) =>
+                  patchMystery((mystery) => ({
+                    ...mystery,
+                    journalNotes: journalNotes.slice(0, 3000)
+                  }))
+                }
+                placeholder="Write your own suspicions, clues, and theories..."
+                placeholderTextColor={C.dim}
+                multiline
+                maxLength={3000}
+                style={[
+                  styles.input,
+                  styles.notesInput,
+                  {
+                    backgroundColor: C.panel2,
+                    borderColor: C.line,
+                    color: C.text
+                  }
+                ]}
+              />
+            </>
+          )
+        })}
         <Card>
           <Text style={[styles.heading, styles.gameHiddenText]}>Case Blueprint For Testing</Text>
           {blueprint.map((line) => <Text key={line} style={[styles.body, styles.gameHiddenText]}>{line}</Text>)}
@@ -4981,17 +5216,114 @@ export default function App() {
             ))}
           </View>
         </Card>
-        <Text style={[styles.heading, { color: C.text }]}>Story Archive</Text>
-        {activeMystery.journal.length === 0 ? <Text style={[styles.subtitle, { color: C.dim }]}>Older story text will appear here after more than five responses.</Text> : null}
-        {activeMystery.journal.map((message) => (
-          <Card key={message.id}>
-            <Text style={[styles.storySpeaker, { color: message.speaker === "Player" ? C.accent : C.gold }]}>{message.speaker}</Text>
-            <Text style={[styles.body, { color: C.text }]}>{message.text}</Text>
-            {message.roll ? <Text style={[styles.rollText, { color: C.dim }]}>{message.roll}</Text> : null}
-          </Card>
-        ))}
-      </Shell>
-    );
+        <Text style={[styles.heading, { color: C.text }]}>
+          Story Archive
+        </Text>
+
+        {activeMystery.journal.length === 0 ? (
+          <Text style={[styles.subtitle, { color: C.dim }]}>
+            Older story text will appear here after more than five responses.
+          </Text>
+        ) : null}
+
+        {archiveDays.map((day) => {
+          const isExpanded =
+            expandedMysteryArchiveDays[day] ??
+            day === archiveDays[0];
+
+          const dayMessages = archiveMessagesByDay[day];
+
+          return (
+            <View key={`archive-day-${day}`}>
+              <Pressable
+                onPress={() =>
+                  setExpandedMysteryArchiveDays((current) => ({
+                    ...current,
+                    [day]: !(current[day] ?? day === archiveDays[0])
+                  }))
+                }
+                style={[
+                  styles.mysteryArchiveDayHeader,
+                  {
+                    backgroundColor: C.panel2,
+                    borderColor: C.line
+                  }
+                ]}
+              >
+                <View>
+                  <Text style={[styles.heading, { color: C.text }]}>
+                    Day {day}
+                  </Text>
+
+                  <Text style={[styles.rollText, { color: C.dim }]}>
+                    {dayMessages.length} archived{" "}
+                    {dayMessages.length === 1 ? "entry" : "entries"}
+                  </Text>
+                </View>
+
+                <Text
+                  style={[
+                    styles.mysteryArchiveArrow,
+                    { color: C.accent }
+                  ]}
+                >
+                  {isExpanded ? "▲" : "▼"}
+                </Text>
+              </Pressable>
+
+              {isExpanded
+                ? dayMessages.map((message) => (
+                    <Card key={message.id}>
+                      <View style={styles.rowBetween}>
+                        <Text
+                          style={[
+                            styles.storySpeaker,
+                            {
+                              color:
+                                message.speaker === "Player"
+                                  ? C.accent
+                                  : C.gold
+                            }
+                          ]}
+                        >
+                          {message.speaker}
+                        </Text>
+
+                        {message.archiveDaytime ? (
+                          <Text
+                            style={[
+                              styles.rollText,
+                              { color: C.dim }
+                            ]}
+                          >
+                            {message.archiveDaytime}
+                          </Text>
+                        ) : null}
+                      </View>
+
+                      <Text style={[styles.body, { color: C.text }]}>
+                        {message.text}
+                      </Text>
+
+                      {message.roll ? (
+                        <Text
+                          style={[
+                            styles.rollText,
+                            { color: C.dim }
+                          ]}
+                        >
+                          {message.roll}
+                        </Text>
+                      ) : null}
+                    </Card>
+                  ))
+                : null}
+            </View>
+          );
+        })}
+        </>
+      )
+    });
   }
 
   if (screen === "builder1") {
@@ -5000,8 +5332,19 @@ export default function App() {
         <Text style={[styles.titleSmall, { color: C.text }]}>Character Builder</Text>
         <Text style={[styles.subtitle, { color: C.dim }]}>Step 1 of 2: name, status, and bloodline.</Text>
         <Card>
-          <Field label="First Name" value={draft.firstName} onChangeText={(firstName) => patchDraft({ firstName })} placeholder="Aelira" />
-          <Field label="Family Name" value={draft.familyName} onChangeText={(familyName) => patchDraft({ familyName })} placeholder="Duskblade" />
+          {Field({
+            label: "First Name",
+            value: draft.firstName,
+            onChangeText: (firstName) => patchDraft({ firstName }),
+            placeholder: "Aelira"
+          })}
+
+          {Field({
+            label: "Family Name",
+            value: draft.familyName,
+            onChangeText: (familyName) => patchDraft({ familyName }),
+            placeholder: "Duskblade"
+          })}
           <Text style={[styles.label, { color: C.dim }]}>Sex</Text>
           <View style={styles.wrapRow}>{(["Female", "Male"] as const).map((sex) => <Chip key={sex} label={sex} selected={draft.sex === sex} onPress={() => chooseSex(sex)} />)}</View>
           <Text style={[styles.label, { color: C.dim }]}>Birth Status</Text>
@@ -5591,6 +5934,24 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0, 0, 0, 0.42)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8
+  },
+  mysteryArchiveDayHeader: {
+    minHeight: 62,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 10,
+    marginBottom: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+
+  mysteryArchiveArrow: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginLeft: 12
   },
   card: { borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 },
   deadTile: { backgroundColor: "#2f3033", borderColor: "#858585", borderWidth: 2, shadowColor: "#707070", shadowOpacity: 0.18, shadowRadius: 4, elevation: 0 },
