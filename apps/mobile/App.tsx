@@ -4569,7 +4569,8 @@ export default function App() {
     const visibleMessages = mystery.messages.slice(-5);
     const currentRoom = mysteryRoomName(mystery, mystery.currentRoomId);
     const roomBackground = ravenwoodRoomBackgroundFor(mystery, themeName);
-    const sceneHeaderStyle = [styles.mysterySceneHeader, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "#141217" : "#efe8dc", borderColor: "rgba(240, 196, 92, 0.28)" }];
+    const frameStyle = [styles.storyFrame, styles.mysteryStoryFrame, { borderColor: C.line, backgroundColor: C.panel }];
+    const sceneHeaderStyle = [styles.mysterySceneHeader, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(20, 18, 23, 0.76)" : "rgba(239, 232, 220, 0.74)", borderColor: "rgba(240, 196, 92, 0.28)" }];
     const storyPanelStyle = [styles.storyTextPanel, styles.mysteryTextPanelWide, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.82)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }];
     const inputPanelStyle = [styles.storyInputPanel, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.78)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }];
     const sceneHeaderContent = (
@@ -4616,30 +4617,21 @@ export default function App() {
         <Text style={[styles.rollText, styles.storyCount, { color: C.dim }]}>{mysteryInput.length}/500</Text>
       </>
     );
+    const frameContent = (
+      <>
+        <View style={sceneHeaderStyle}>{sceneHeaderContent}</View>
+        <View style={storyPanelStyle}>{storyPanelContent}</View>
+        <View style={inputPanelStyle}>{inputPanelContent}</View>
+      </>
+    );
     return (
-      <View style={[styles.storyFrame, styles.mysteryStoryFrame, { borderColor: C.line, backgroundColor: C.panel }]}>
-        {roomBackground ? (
-          <ImageBackground source={roomBackground} resizeMode="cover" imageStyle={[styles.ravenwoodBubbleBackdropImage, { opacity: 0.22 }]} style={sceneHeaderStyle}>
-            {sceneHeaderContent}
-          </ImageBackground>
-        ) : (
-          <View style={sceneHeaderStyle}>{sceneHeaderContent}</View>
-        )}
-        {roomBackground ? (
-          <ImageBackground source={roomBackground} resizeMode="cover" imageStyle={[styles.ravenwoodBubbleBackdropImage, { opacity: 0.16 }]} style={storyPanelStyle}>
-            {storyPanelContent}
-          </ImageBackground>
-        ) : (
-          <View style={storyPanelStyle}>{storyPanelContent}</View>
-        )}
-        {roomBackground ? (
-          <ImageBackground source={roomBackground} resizeMode="cover" imageStyle={[styles.ravenwoodBubbleBackdropImage, { opacity: 0.18 }]} style={inputPanelStyle}>
-            {inputPanelContent}
-          </ImageBackground>
-        ) : (
-          <View style={inputPanelStyle}>{inputPanelContent}</View>
-        )}
-      </View>
+      roomBackground ? (
+        <ImageBackground source={roomBackground} resizeMode="cover" imageStyle={styles.ravenwoodSceneBackdropImage} style={frameStyle}>
+          {frameContent}
+        </ImageBackground>
+      ) : (
+        <View style={frameStyle}>{frameContent}</View>
+      )
     );
   }
 
@@ -5724,6 +5716,7 @@ const styles = StyleSheet.create({
   mysteryDayPanel: { alignItems: "center", justifyContent: "center", padding: 10, borderWidth: 1, borderColor: "rgba(240, 196, 92, 0.28)" },
   ravenwoodBubbleBackdrop: { overflow: "hidden" },
   ravenwoodBubbleBackdropImage: { borderRadius: 8 },
+  ravenwoodSceneBackdropImage: { borderRadius: 8 },
   mysterySceneHeader: { minHeight: 144, borderWidth: 1, borderRadius: 8, padding: 10, flexDirection: "row", alignItems: "center", gap: 12 },
   mysterySceneMeta: { flex: 1, minWidth: 0, justifyContent: "center" },
   mysterySceneMetaRow: { flexDirection: "row", alignItems: "center", gap: 10 },
