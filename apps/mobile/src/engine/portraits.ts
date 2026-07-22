@@ -1,5 +1,4 @@
-import type { AtlantisExpression, CharacterDNA, NaturalHairColor } from "./genetics";
-import { rollAtlantisExpression } from "./genetics";
+import type { CharacterDNA, NaturalHairColor } from "./genetics";
 
 export type PortraitAgeStage = "age-00" | "age-12" | "age-16" | "age-24" | "age-30" | "age-50";
 export type BirthStatus = "Royal" | "Noble" | "Bastard" | "Commoner";
@@ -23,7 +22,6 @@ export type PortraitIdentity = {
   clothingColor: string;
   accessories: string[];
   injuries: VisibleInjury[];
-  atlantisExpression: AtlantisExpression;
 };
 
 export type PortraitLayers = {
@@ -34,9 +32,6 @@ export type PortraitLayers = {
   faceTraitKeys: string[];
   accessoryKeys: string[];
   crownKey?: "royal-crown";
-  glowOpacity: number;
-  eyeOverride?: string;
-  whiteHairStrand: boolean;
 };
 
 export function getPortraitAgeStage(age: number): PortraitAgeStage {
@@ -76,8 +71,7 @@ export function createPortraitIdentity(input: {
     clothingStyle: input.clothingStyle,
     clothingColor: input.clothingColor,
     accessories: input.accessories ?? [],
-    injuries: [],
-    atlantisExpression: rollAtlantisExpression(input.dna.bloodlineGenes.atlantis, input.hairColor, input.random)
+    injuries: []
   };
 }
 
@@ -113,9 +107,6 @@ export function buildPortraitLayers(input: {
     hairKey,
     faceTraitKeys: [...inheritedTraits, ...injuryKeys],
     accessoryKeys: identity.accessories.map((accessory) => `${stage}/accessories/${accessory}`),
-    crownKey: canWearRulingCrown(input.royalTitle) ? "royal-crown" : undefined,
-    glowOpacity: identity.atlantisExpression.glowOpacity,
-    eyeOverride: identity.atlantisExpression.eyeOverride,
-    whiteHairStrand: stage !== "age-00" && identity.atlantisExpression.whiteHairStrand
+    crownKey: canWearRulingCrown(input.royalTitle) ? "royal-crown" : undefined
   };
 }

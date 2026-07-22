@@ -113,7 +113,7 @@ type StoryMessageSegment = {
 
 type StoryMessage = {
   id: string;
-  speaker: "Ravenwood Mansion" | "Player" | "System";
+  speaker: "GM" | "Ravenwood Mansion" | "Player" | "System";
   text: string;
   roll?: string;
   rich?: StoryMessageSegment[];
@@ -191,6 +191,7 @@ type MysteryDetectiveProfile = Pick<CharacterDraft, "firstName" | "familyName" |
   id: string;
   portraitLineage: string;
   visualRace: MysteryVisualRace;
+  faceTrait?: string;
   quirks: MysteryDetectiveQuirk[];
 };
 
@@ -500,7 +501,7 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     hairStyle: "Curly",
     hairColor: "Black",
     quirks: [
-      { id: "politics", label: "Family is in politics, he writes his father's speaches", check: "Persuation", modifier: 3 },
+      { id: "politics", label: "Family is in politics, he writes his father's speaches", check: "Persuasion", modifier: 3 },
       { id: "pressure", label: "Opeartes well under pressure", check: "Composure", modifier: 3 },
       { id: "lies", label: "Finds direct lies distasteful", check: "Deception", modifier: -3 }
     ]
@@ -607,7 +608,7 @@ const ravenwoodDetectiveProfilePresets: Record<string, MysteryDetectiveProfilePr
     faceTrait: "Sharp-Boned",
     quirks: [
       { id: "trust", label: "Has a very trust worthy presence", check: "Charisma", modifier: 3 },
-      { id: "laptop", label: "Brought his laptop that works with satellites", check: "Histroy", modifier: 3 },
+      { id: "laptop", label: "Brought his laptop that works with satellites", check: "History", modifier: 3 },
       { id: "stuff", label: "Respects anothers property", check: "Search", modifier: -3 }
     ]
   }
@@ -651,7 +652,7 @@ const firstNames = ["Aelira", "Mirelle", "Vaessa", "Rowan", "Lucian", "Dorian", 
 const childNames = ["Elian", "Mara", "Neris", "Orren", "Lysa", "Theo", "Asha", "Rook", "Selene", "Bryn"];
 const extraNames = ["Ilyra", "Cassian", "Maelor", "Nyra", "Edric", "Rhaen", "Tamsin", "Gareth", "Yselle", "Kael", "Nadia", "Osric", "Helena", "Jory", "Maric", "Evara", "Tristan", "Liora"];
 const familyNames = ["Duskblade", "Ashcroft", "Ravenshade", "Embermere", "Wintermere", "Crownfall"];
-const bloodlines = ["Child of Atlantis", "Wolf Cub", "Witch Blood", "Common Blood"];
+const bloodlines = ["Wolf Cub", "Witch Blood", "Common Blood"];
 const origins = ["Northlands", "Eastern Courts", "Western Marches", "Steppe", "Deep Cities"];
 const hairStyles = ["Short", "Long Straight", "Wavy", "Curly", "Braided", "Shaved", "Messy Bun"];
 const hairColors = ["Black", "Brown", "Blonde", "Platinum Blonde", "Ash White", "Ginger", "Dark Red"];
@@ -1146,7 +1147,7 @@ function buildRoyalFamily(player: Story["player"], family: Person[], usedNames: 
       sex: "Female",
       age: rand(28, 72),
       birthStatus: "Royal",
-      bloodline: pick([knownRoyal.bloodline, "Common Blood", "Child of Atlantis"]),
+      bloodline: pick([knownRoyal.bloodline, "Common Blood", "Witch Blood"]),
       origin: knownRoyal.origin,
       royalTitle: "Ruling Queen",
       spouseId: king?.id
@@ -1163,7 +1164,7 @@ function buildRoyalFamily(player: Story["player"], family: Person[], usedNames: 
     sex: "Male",
     age: rand(36, 74),
     birthStatus: "Royal",
-    bloodline: pick(["Child of Atlantis", "Witch Blood", "Common Blood"]),
+    bloodline: pick(["Witch Blood", "Common Blood"]),
     origin: pick(origins),
     royalTitle: "Ruling King"
   });
@@ -1174,7 +1175,7 @@ function buildRoyalFamily(player: Story["player"], family: Person[], usedNames: 
     sex: "Female",
     age: clamp(king.age + rand(-14, 8), 24, 82),
     birthStatus: "Royal",
-    bloodline: pick(["Child of Atlantis", "Witch Blood", "Common Blood"]),
+    bloodline: pick(["Witch Blood", "Common Blood"]),
     origin: king.origin,
     royalTitle: "Ruling Queen",
     spouseId: king.id
@@ -1214,7 +1215,7 @@ function createKnownRelation(input: Partial<Relation> & { relation: string; age:
     relation: input.relation,
     age: input.age,
     birthStatus: input.birthStatus,
-    bloodline: input.bloodline ?? pick(["Common Blood", "Common Blood", "Common Blood", "Wolf Cub", "Witch Blood", "Child of Atlantis"]),
+    bloodline: input.bloodline ?? pick(["Common Blood", "Common Blood", "Common Blood", "Wolf Cub", "Witch Blood"]),
     origin: input.origin ?? pick(origins),
     hairStyle: input.hairStyle ?? pick(hairStyles),
     hairColor: input.hairColor ?? pick(hairColors),
@@ -1260,7 +1261,7 @@ function buildStartingRelations(player: Story["player"], family: Person[]): Rela
         relation: pick(servantRelations),
         age: rand(10, 70),
         birthStatus: pick<BirthStatus>(["Commoner", "Commoner", "Commoner", "Commoner", "Bastard", "Noble"]),
-        bloodline: pick(["Common Blood", "Common Blood", "Common Blood", "Common Blood", "Wolf Cub", "Witch Blood", "Child of Atlantis"]),
+        bloodline: pick(["Common Blood", "Common Blood", "Common Blood", "Common Blood", "Wolf Cub", "Witch Blood"]),
         familyName: pick(["No-House", "Riverborn", "Dockhand", "Miller", "Greywash"]),
         category: "palace",
         trust: rand(20, 48),
@@ -2708,7 +2709,7 @@ function createMysteryGameFromDraft(
       origin: playerInput.origin,
       hairStyle: playerInput.hairStyle,
       hairColor: playerInput.hairColor,
-      faceTrait: playerInput.faceTrait,
+      faceTrait: playerInput.faceTrait ?? initialDraft.faceTrait,
       age: playerAge,
       detectiveId: detectiveProfile?.id,
       detectiveQuirks: detectiveProfile?.quirks,
@@ -3069,7 +3070,7 @@ export default function App() {
       possessionValues: {},
       visibleBastardSigns,
       legitimacyDoubt,
-      fertility: rand(38, 78) + (draft.bloodline === "Witch Blood" || draft.bloodline === "Child of Atlantis" ? 8 : 0),
+      fertility: rand(38, 78) + (draft.bloodline === "Witch Blood" ? 8 : 0),
       labourLimit: rand(3, 5),
       legitimacySupport: { noble: 0, royal: 0, requiredNoble: rand(3, 5), petitioned: false },
       memory: []
@@ -4157,7 +4158,7 @@ export default function App() {
         spouseId: matchingRelation?.spouseId,
         visibleBastardSigns: successor.visibleBastardSigns ?? false,
         legitimacyDoubt: successor.birthStatus === "Bastard" ? rand(20, 60) : 0,
-        fertility: rand(38, 78) + (successor.bloodline === "Witch Blood" || successor.bloodline === "Child of Atlantis" ? 8 : 0),
+        fertility: rand(38, 78) + (successor.bloodline === "Witch Blood" ? 8 : 0),
         labourLimit: rand(3, 5),
         legitimacySupport: { noble: 0, royal: 0, requiredNoble: rand(3, 5), petitioned: false },
         memory: [`Continued the chronicle after ${oldPlayer.firstName} ${oldPlayer.familyName}'s death.`]
@@ -4750,9 +4751,9 @@ export default function App() {
   if (screen === "menu") {
     return (
       <Shell menuBackground>
-        <Text style={[styles.title, styles.menuTextShadow, { color: C.text }]}>Dragon Chronicles</Text>
-        <Text style={[styles.subtitle, styles.menuTextShadow, { color: themeName === "dark" ? "#e7e1dc" : C.text }]}>Forge a soul. Year by year, keep the bloodline alive.</Text>
-        <Button label="New Game" onPress={() => setScreen("bookSelect")} />
+        <Text style={[styles.title, styles.menuTextShadow, { color: C.text }]}>Ravenwood Murder Mystery</Text>
+        <Text style={[styles.subtitle, styles.menuTextShadow, { color: themeName === "dark" ? "#e7e1dc" : C.text }]}>Investigate the house, question suspects, and survive thirteen days.</Text>
+        <Button label="New Case" onPress={() => setScreen("mysteryDetectiveSelect")} />
         <Button label="Load Game" onPress={() => setScreen("load")} />
         <Button label="Past Games" onPress={() => setScreen("past")} />
         <Button label="Settings" onPress={() => setScreen("settings")} />
@@ -4764,27 +4765,12 @@ export default function App() {
   if (screen === "bookSelect") {
     return (
       <Shell>
-        <Text style={[styles.titleSmall, { color: C.text }]}>Choose Book</Text>
-        <Text style={[styles.subtitle, { color: C.dim }]}>Each book will become its own world and rules mood.</Text>
-        <Card>
-          <Text style={[styles.heading, { color: C.text }]}>Kingdom Of Old Atlantis</Text>
-          <Text style={[styles.body, { color: C.text }]}>Dynasty, bloodlines, court intrigue, and D&D-style exploration.</Text>
-          <Button label="Begin This Book" onPress={() => setScreen("builder1")} />
-        </Card>
+        <Text style={[styles.titleSmall, { color: C.text }]}>Choose Case</Text>
+        <Text style={[styles.subtitle, { color: C.dim }]}>Ravenwood is the active book for now.</Text>
         <Card>
           <Text style={[styles.heading, { color: C.text }]}>Ravenwood Murder Mystery Book</Text>
           <Text style={[styles.body, { color: C.text }]}>A 13-day murder investigation in a mansion hotel with suspects, secrets and open exploration.</Text>
           <Button label="Begin This Book" onPress={() => setScreen("mysteryDetectiveSelect")} />
-        </Card>
-        <Card>
-          <Text style={[styles.heading, { color: C.text }]}>Birmingham Books</Text>
-          <Text style={[styles.body, { color: C.dim }]}>Blank for now.</Text>
-          <Button label="Blank For Now" onPress={() => undefined} disabled />
-        </Card>
-        <Card>
-          <Text style={[styles.heading, { color: C.text }]}>Zombie Apocalypse Book</Text>
-          <Text style={[styles.body, { color: C.dim }]}>Blank for now.</Text>
-          <Button label="Blank For Now" onPress={() => undefined} disabled />
         </Card>
         <Button label="Back" onPress={() => setScreen("menu")} />
       </Shell>
@@ -5776,22 +5762,11 @@ export default function App() {
   }
 
   if (screen === "load") {
-    const active = stories.filter((story) => !story.finished && story.player.alive);
     const activeMysteries = mysteries.filter((mystery) => !mystery.finished);
     return (
       <Shell>
         <Text style={[styles.titleSmall, { color: C.text }]}>Load Game</Text>
-        {active.length === 0 && activeMysteries.length === 0 ? <Text style={[styles.subtitle, { color: C.dim }]}>No living chronicles or open cases yet.</Text> : null}
-        {active.map((story) => (
-          <Card key={story.id}>
-            <Text style={[styles.heading, { color: C.text }]}>{story.title}</Text>
-            <Text style={{ color: C.dim }}>{story.player.firstName}, {story.player.sex}, age {story.player.age}, year {story.currentYear}</Text>
-            <View style={styles.row}>
-              <Button small label="Open" onPress={() => { setActiveStoryId(story.id); setScreen("chronicle"); }} />
-              <Button small label="Delete Save" onPress={() => removeStory(story.id)} variant="warning" />
-            </View>
-          </Card>
-        ))}
+        {activeMysteries.length === 0 ? <Text style={[styles.subtitle, { color: C.dim }]}>No open cases yet.</Text> : null}
         {activeMysteries.map((mystery) => (
           <Card key={mystery.id}>
             <Text style={[styles.heading, { color: C.text }]}>{mystery.title}</Text>
@@ -5808,19 +5783,11 @@ export default function App() {
   }
 
   if (screen === "past") {
-    const past = stories.filter((story) => story.finished);
     const pastMysteries = mysteries.filter((mystery) => mystery.finished);
     return (
       <Shell>
         <Text style={[styles.titleSmall, { color: C.text }]}>Past Games</Text>
-        {past.length === 0 && pastMysteries.length === 0 ? <Text style={[styles.subtitle, { color: C.dim }]}>No finished chronicles or closed cases yet.</Text> : null}
-        {past.map((story) => (
-          <Card key={story.id}>
-            <Text style={[styles.heading, { color: C.text }]}>{story.title}</Text>
-            <Text style={[styles.body, { color: C.text }]}>{story.summary}</Text>
-            <Button small label="Delete Report" onPress={() => removeStory(story.id)} />
-          </Card>
-        ))}
+        {pastMysteries.length === 0 ? <Text style={[styles.subtitle, { color: C.dim }]}>No closed cases yet.</Text> : null}
         {pastMysteries.map((mystery) => (
           <Card key={mystery.id}>
             <Text style={[styles.heading, { color: C.text }]}>{mystery.title}</Text>

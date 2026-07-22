@@ -13,7 +13,6 @@ export type EyeColor = "Brown" | "Hazel" | "Green" | "Blue" | "Grey" | "Amber" |
 export type BodyBuild = "Slim" | "Athletic" | "Heavy" | "Muscular";
 
 export type BloodlineGenes = {
-  atlantis: number;
   witch: number;
   wolf: number;
   common: number;
@@ -41,28 +40,19 @@ export type CharacterDNA = {
   familySignatureIds: string[];
 };
 
-export type AtlantisExpression = {
-  glowOpacity: number;
-  eyeOverride?: Extract<EyeColor, "Blue" | "Light Purple" | "Grey">;
-  whiteHairStrand: boolean;
-};
-
 const clampPercent = (value: number): number => Math.max(0, Math.min(100, Math.round(value)));
-const pick = <T>(items: readonly T[], random: () => number): T => items[Math.floor(random() * items.length)];
 const mixNumber = (a: number, b: number, variation: number, random: () => number): number =>
   Math.round((a + b) / 2 + (random() * 2 - 1) * variation);
 
 export function normalizeBloodlineGenes(input: Partial<BloodlineGenes>): BloodlineGenes {
   const raw: BloodlineGenes = {
-    atlantis: Math.max(0, input.atlantis ?? 0),
     witch: Math.max(0, input.witch ?? 0),
     wolf: Math.max(0, input.wolf ?? 0),
     common: Math.max(0, input.common ?? 0)
   };
-  const total = raw.atlantis + raw.witch + raw.wolf + raw.common;
-  if (total <= 0) return { atlantis: 0, witch: 0, wolf: 0, common: 100 };
+  const total = raw.witch + raw.wolf + raw.common;
+  if (total <= 0) return { witch: 0, wolf: 0, common: 100 };
   return {
-    atlantis: clampPercent((raw.atlantis / total) * 100),
     witch: clampPercent((raw.witch / total) * 100),
     wolf: clampPercent((raw.wolf / total) * 100),
     common: clampPercent((raw.common / total) * 100)
@@ -71,26 +61,10 @@ export function normalizeBloodlineGenes(input: Partial<BloodlineGenes>): Bloodli
 
 export function inheritBloodlineGenes(mother: BloodlineGenes, father: BloodlineGenes): BloodlineGenes {
   return normalizeBloodlineGenes({
-    atlantis: (mother.atlantis + father.atlantis) / 2,
     witch: (mother.witch + father.witch) / 2,
     wolf: (mother.wolf + father.wolf) / 2,
     common: (mother.common + father.common) / 2
   });
-}
-
-export function rollAtlantisExpression(
-  atlantisGenePercent: number,
-  selectedHairColor: NaturalHairColor,
-  random: () => number = Math.random
-): AtlantisExpression {
-  const probability = clampPercent(atlantisGenePercent) / 100;
-  const magicalEyeColors = ["Blue", "Light Purple", "Grey"] as const;
-  const allowsWhiteStrand = selectedHairColor !== "Platinum Blonde" && selectedHairColor !== "Ash White";
-  return {
-    glowOpacity: Math.min(0.42, probability * 0.42),
-    eyeOverride: random() < probability ? pick(magicalEyeColors, random) : undefined,
-    whiteHairStrand: allowsWhiteStrand && random() < probability
-  };
 }
 
 export function inheritDNA(mother: CharacterDNA, father: CharacterDNA, random: () => number = Math.random): CharacterDNA {

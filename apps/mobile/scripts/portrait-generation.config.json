@@ -14,13 +14,8 @@
     "deep-cities": "pale European facial structure with cool, underground-city pallor"
   },
   "sexes": ["female", "male"],
-  "visualBloodlines": ["generic", "atlantis"],
+  "visualBloodlines": ["generic"],
   "identitiesPerGroup": 5,
-  "atlantis": {
-    "description": "subtle magical glow only; optional bright blue, light purple, or grey eyes; optional hairstyle-compatible white hair strand; never add a crown",
-    "eyeOverrides": ["bright-blue", "light-purple", "grey"],
-    "whiteStrandExcludedHairColors": ["platinum-blonde", "ash-white"]
-  },
   "ageRules": {
     "0": "baby wrapped in a neutral highborn or lowborn swaddle; no defined hairstyle, clothing style, crown, beard, scar, burn, or blind-eye layer",
     "12": "recognizable child version of the same identity",

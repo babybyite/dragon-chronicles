@@ -29,7 +29,7 @@ for (const sex of config.sexes) {
             originDescription,
             config.ageRules[String(age)],
             "This image belongs to a six-image ageing chain. Preserve the same facial identity, bone structure, eye spacing, nose, mouth, and distinguishing features across every age.",
-            visualBloodline === "atlantis" ? config.atlantis.description : "No magical glow or supernatural visual effects.",
+            "No magical glow or supernatural visual effects.",
             `Identity seed label: ${chainId}.`
           ];
 
