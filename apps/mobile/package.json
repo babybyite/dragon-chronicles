@@ -1,10 +1,11 @@
 {
-  "name": "dragon-chronicles-mobile",
+  "name": "ravenwood-mystery-mobile",
   "version": "0.1.0",
   "private": true,
   "main": "index.js",
   "scripts": {
     "start": "expo start",
+    "ai": "node scripts/ravenwood-ai-server.mjs",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

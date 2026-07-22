@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Dragon Chronicles",
-    "slug": "dragon-chronicles",
+    "name": "Ravenwood Mystery",
+    "slug": "ravenwood-mystery",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "scheme": "dragonchronicles",
+    "scheme": "ravenwoodmystery",
     "platforms": ["ios", "android", "web"],
     "newArchEnabled": true,
     "ios": {
