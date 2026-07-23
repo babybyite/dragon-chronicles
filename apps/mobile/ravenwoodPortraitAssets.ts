@@ -2116,66 +2116,6 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     crop: { x: 0, y: 0, width: 194, height: 352 }
   },
   {
-    key: "rw-guest-player01-r04-a10",
-    source: require("./assets/ravenwood/portraits/guest/guest_female_indian_age10_player01_r04_c01.png"),
-    sourceKind: "guest",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "guest-player01-row-04",
-    age: 10,
-    imageWidth: 194,
-    imageHeight: 353,
-    crop: { x: 0, y: 0, width: 194, height: 353 }
-  },
-  {
-    key: "rw-guest-player01-r04-a16",
-    source: require("./assets/ravenwood/portraits/guest/guest_female_indian_age16_player01_r04_c02.png"),
-    sourceKind: "guest",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "guest-player01-row-04",
-    age: 16,
-    imageWidth: 194,
-    imageHeight: 353,
-    crop: { x: 0, y: 0, width: 194, height: 353 }
-  },
-  {
-    key: "rw-guest-player01-r04-a24",
-    source: require("./assets/ravenwood/portraits/guest/guest_female_indian_age24_player01_r04_c03.png"),
-    sourceKind: "guest",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "guest-player01-row-04",
-    age: 24,
-    imageWidth: 195,
-    imageHeight: 353,
-    crop: { x: 0, y: 0, width: 195, height: 353 }
-  },
-  {
-    key: "rw-guest-player01-r04-a30",
-    source: require("./assets/ravenwood/portraits/guest/guest_female_indian_age30_player01_r04_c04.png"),
-    sourceKind: "guest",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "guest-player01-row-04",
-    age: 30,
-    imageWidth: 194,
-    imageHeight: 353,
-    crop: { x: 0, y: 0, width: 194, height: 353 }
-  },
-  {
-    key: "rw-guest-player01-r04-a50",
-    source: require("./assets/ravenwood/portraits/guest/guest_female_indian_age50_player01_r04_c05.png"),
-    sourceKind: "guest",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "guest-player01-row-04",
-    age: 50,
-    imageWidth: 194,
-    imageHeight: 353,
-    crop: { x: 0, y: 0, width: 194, height: 353 }
-  },
-  {
     key: "rw-guest-sheet11-r01-a10",
     source: require("./assets/ravenwood/portraits/guest/guest_female_fair_age10_sheet11_r01_c01.png"),
     sourceKind: "guest",
