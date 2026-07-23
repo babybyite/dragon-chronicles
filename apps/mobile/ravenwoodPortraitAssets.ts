@@ -1,4 +1,4 @@
-import type { ImageSourcePropType } from "react-native";
+﻿import type { ImageSourcePropType } from "react-native";
 
 export type MysteryVisualRace = "fair" | "indian" | "black" | "eastern";
 export type RavenwoodGuestPortraitAsset = {
@@ -6535,18 +6535,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     crop: { x: 0, y: 0, width: 184, height: 312 }
   },
   {
-    key: "rw-staff-new01-r01-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_indian_age50_new01_r01_c05.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "staff-new01-row-01",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
     key: "rw-staff-new01-r02-a16",
     source: require("./assets/ravenwood/portraits/staff/staff_female_black_age16_new01_r02_c02.png"),
     sourceKind: "staff",
@@ -6643,54 +6631,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     crop: { x: 0, y: 0, width: 184, height: 312 }
   },
   {
-    key: "rw-staff-new01-r04-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age16_new01_r04_c02.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new01-row-04",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new01-r04-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age24_new01_r04_c03.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new01-row-04",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new01-r04-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age30_new01_r04_c04.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new01-row-04",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new01-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age50_new01_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new01-row-04",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
     key: "rw-staff-new02-r01-a16",
     source: require("./assets/ravenwood/portraits/staff/staff_female_indian_age16_new02_r01_c02.png"),
     sourceKind: "staff",
@@ -6763,120 +6703,12 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     crop: { x: 0, y: 0, width: 184, height: 312 }
   },
   {
-    key: "rw-staff-new02-r02-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age30_new02_r02_c04.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "fair",
-    lineage: "staff-new02-row-02",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
     key: "rw-staff-new02-r02-a50",
     source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age50_new02_r02_c05.png"),
     sourceKind: "staff",
     sex: "Male",
     visualRace: "fair",
     lineage: "staff-new02-row-02",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new02-r03-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_black_age16_new02_r03_c02.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "black",
-    lineage: "staff-new02-row-03",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new02-r03-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_black_age24_new02_r03_c03.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "black",
-    lineage: "staff-new02-row-03",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new02-r03-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_black_age30_new02_r03_c04.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "black",
-    lineage: "staff-new02-row-03",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new02-r03-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_black_age50_new02_r03_c05.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "black",
-    lineage: "staff-new02-row-03",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new02-r04-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_eastern_age16_new02_r04_c02.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "eastern",
-    lineage: "staff-new02-row-04",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new02-r04-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_eastern_age24_new02_r04_c03.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "eastern",
-    lineage: "staff-new02-row-04",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new02-r04-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_eastern_age30_new02_r04_c04.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "eastern",
-    lineage: "staff-new02-row-04",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new02-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_eastern_age50_new02_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "eastern",
-    lineage: "staff-new02-row-04",
     age: 50,
     imageWidth: 184,
     imageHeight: 312,
@@ -6973,102 +6805,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     sex: "Female",
     visualRace: "fair",
     lineage: "staff-new03-row-02",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new03-r03-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_indian_age16_new03_r03_c02.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "staff-new03-row-03",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new03-r03-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_indian_age24_new03_r03_c03.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "staff-new03-row-03",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new03-r03-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_indian_age30_new03_r03_c04.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "staff-new03-row-03",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new03-r03-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_indian_age50_new03_r03_c05.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "indian",
-    lineage: "staff-new03-row-03",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new03-r04-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_eastern_age16_new03_r04_c02.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "eastern",
-    lineage: "staff-new03-row-04",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new03-r04-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_eastern_age24_new03_r04_c03.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "eastern",
-    lineage: "staff-new03-row-04",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new03-r04-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_eastern_age30_new03_r04_c04.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "eastern",
-    lineage: "staff-new03-row-04",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new03-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_eastern_age50_new03_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "eastern",
-    lineage: "staff-new03-row-04",
     age: 50,
     imageWidth: 184,
     imageHeight: 312,
@@ -7195,18 +6931,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     crop: { x: 0, y: 0, width: 184, height: 312 }
   },
   {
-    key: "rw-staff-new04-r03-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_fair_age30_new04_r03_c04.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "fair",
-    lineage: "staff-new04-row-03",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
     key: "rw-staff-new04-r03-a50",
     source: require("./assets/ravenwood/portraits/staff/staff_female_fair_age50_new04_r03_c05.png"),
     sourceKind: "staff",
@@ -7226,42 +6950,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "staff-new04-row-04",
     age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new04-r04-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age24_new04_r04_c03.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "fair",
-    lineage: "staff-new04-row-04",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new04-r04-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age30_new04_r04_c04.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "fair",
-    lineage: "staff-new04-row-04",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new04-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age50_new04_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "fair",
-    lineage: "staff-new04-row-04",
-    age: 50,
     imageWidth: 184,
     imageHeight: 312,
     crop: { x: 0, y: 0, width: 184, height: 312 }
@@ -7346,114 +7034,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "eastern",
     lineage: "staff-new05-row-02",
     age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r02-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_eastern_age50_new05_r02_c05.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "eastern",
-    lineage: "staff-new05-row-02",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r03-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_fair_age16_new05_r03_c02.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "fair",
-    lineage: "staff-new05-row-03",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r03-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_fair_age24_new05_r03_c03.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "fair",
-    lineage: "staff-new05-row-03",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r03-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_fair_age30_new05_r03_c04.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "fair",
-    lineage: "staff-new05-row-03",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r03-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_fair_age50_new05_r03_c05.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "fair",
-    lineage: "staff-new05-row-03",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r04-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age16_new05_r04_c02.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new05-row-04",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r04-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age24_new05_r04_c03.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new05-row-04",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r04-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age30_new05_r04_c04.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new05-row-04",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new05-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age50_new05_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new05-row-04",
-    age: 50,
     imageWidth: 184,
     imageHeight: 312,
     crop: { x: 0, y: 0, width: 184, height: 312 }
@@ -7615,42 +7195,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     crop: { x: 0, y: 0, width: 184, height: 312 }
   },
   {
-    key: "rw-staff-new06-r04-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_eastern_age24_new06_r04_c03.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "eastern",
-    lineage: "staff-new06-row-04",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new06-r04-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_eastern_age30_new06_r04_c04.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "eastern",
-    lineage: "staff-new06-row-04",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new06-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_eastern_age50_new06_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "eastern",
-    lineage: "staff-new06-row-04",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
     key: "rw-staff-new07-r01-a16",
     source: require("./assets/ravenwood/portraits/staff/staff_female_black_age16_new07_r01_c02.png"),
     sourceKind: "staff",
@@ -7741,102 +7285,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     sex: "Female",
     visualRace: "eastern",
     lineage: "staff-new07-row-02",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new07-r03-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age16_new07_r03_c02.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "fair",
-    lineage: "staff-new07-row-03",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new07-r03-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age24_new07_r03_c03.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "fair",
-    lineage: "staff-new07-row-03",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new07-r03-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age30_new07_r03_c04.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "fair",
-    lineage: "staff-new07-row-03",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new07-r03-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_fair_age50_new07_r03_c05.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "fair",
-    lineage: "staff-new07-row-03",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new07-r04-a16",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age16_new07_r04_c02.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new07-row-04",
-    age: 16,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new07-r04-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age24_new07_r04_c03.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new07-row-04",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new07-r04-a30",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age30_new07_r04_c04.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new07-row-04",
-    age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new07-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_indian_age50_new07_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "indian",
-    lineage: "staff-new07-row-04",
     age: 50,
     imageWidth: 184,
     imageHeight: 312,
@@ -7999,18 +7447,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     crop: { x: 0, y: 0, width: 184, height: 312 }
   },
   {
-    key: "rw-staff-new08-r04-a24",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_eastern_age24_new08_r04_c03.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "eastern",
-    lineage: "staff-new08-row-04",
-    age: 24,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
     key: "rw-staff-new08-r04-a30",
     source: require("./assets/ravenwood/portraits/staff/staff_male_eastern_age30_new08_r04_c04.png"),
     sourceKind: "staff",
@@ -8018,18 +7454,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "eastern",
     lineage: "staff-new08-row-04",
     age: 30,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  },
-  {
-    key: "rw-staff-new08-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_male_eastern_age50_new08_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Male",
-    visualRace: "eastern",
-    lineage: "staff-new08-row-04",
-    age: 50,
     imageWidth: 184,
     imageHeight: 312,
     crop: { x: 0, y: 0, width: 184, height: 312 }
@@ -8406,18 +7830,6 @@ export const ravenwoodStaffPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     imageHeight: 312,
     crop: { x: 0, y: 0, width: 184, height: 312 }
   },
-  {
-    key: "rw-staff-new10-r04-a50",
-    source: require("./assets/ravenwood/portraits/staff/staff_female_black_age50_new10_r04_c05.png"),
-    sourceKind: "staff",
-    sex: "Female",
-    visualRace: "black",
-    lineage: "staff-new10-row-04",
-    age: 50,
-    imageWidth: 184,
-    imageHeight: 312,
-    crop: { x: 0, y: 0, width: 184, height: 312 }
-  }
 ];
 
 export const ravenwoodPlayerPortraitAssets: RavenwoodGuestPortraitAsset[] = [
