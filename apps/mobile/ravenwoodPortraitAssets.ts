@@ -263,9 +263,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-01",
     age: 10,
-    imageWidth: 177,
-    imageHeight: 387,
-    crop: { x: 0, y: 0, width: 177, height: 387 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r01-a16",
@@ -275,9 +275,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-01",
     age: 16,
-    imageWidth: 178,
-    imageHeight: 387,
-    crop: { x: 0, y: 0, width: 178, height: 387 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r01-a24",
@@ -287,9 +287,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-01",
     age: 24,
-    imageWidth: 177,
-    imageHeight: 387,
-    crop: { x: 0, y: 0, width: 177, height: 387 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r01-a30",
@@ -299,9 +299,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-01",
     age: 30,
-    imageWidth: 178,
-    imageHeight: 387,
-    crop: { x: 0, y: 0, width: 178, height: 387 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r01-a50",
@@ -323,9 +323,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-02",
     age: 10,
-    imageWidth: 177,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 177, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r02-a16",
@@ -335,9 +335,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-02",
     age: 16,
-    imageWidth: 178,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 178, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r02-a24",
@@ -347,9 +347,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-02",
     age: 24,
-    imageWidth: 177,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 177, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r02-a30",
@@ -359,9 +359,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-02",
     age: 30,
-    imageWidth: 178,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 178, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r02-a50",
@@ -383,9 +383,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-03",
     age: 10,
-    imageWidth: 177,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 177, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r03-a16",
@@ -395,9 +395,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-03",
     age: 16,
-    imageWidth: 178,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 178, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r03-a24",
@@ -407,9 +407,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-03",
     age: 24,
-    imageWidth: 177,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 177, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r03-a30",
@@ -419,9 +419,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-03",
     age: 30,
-    imageWidth: 178,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 178, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r03-a50",
@@ -443,9 +443,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-04",
     age: 10,
-    imageWidth: 177,
+    imageWidth: 205,
     imageHeight: 340,
-    crop: { x: 0, y: 0, width: 177, height: 340 }
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r04-a16",
@@ -455,9 +455,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-04",
     age: 16,
-    imageWidth: 178,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 178, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r04-a24",
@@ -467,9 +467,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-04",
     age: 24,
-    imageWidth: 177,
+    imageWidth: 205,
     imageHeight: 340,
-    crop: { x: 0, y: 0, width: 177, height: 340 }
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r04-a30",
@@ -479,9 +479,9 @@ export const ravenwoodGuestPortraitAssets: RavenwoodGuestPortraitAsset[] = [
     visualRace: "fair",
     lineage: "guest-custom02-row-04",
     age: 30,
-    imageWidth: 178,
-    imageHeight: 386,
-    crop: { x: 0, y: 0, width: 178, height: 386 }
+    imageWidth: 205,
+    imageHeight: 340,
+    crop: { x: 0, y: 0, width: 205, height: 340 }
   },
   {
     key: "rw-guest-custom02-r04-a50",
