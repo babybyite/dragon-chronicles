@@ -21,7 +21,7 @@ import {
 import type { MysteryVisualRace, RavenwoodGuestPortraitAsset } from "./ravenwoodPortraitAssets";
 
 type ThemeName = "dark" | "pastel";
-type Screen = "menu" | "load" | "past" | "settings" | "mysteryDetectiveSelect" | "mysteryPortraitSelect" | "mystery" | "mysteryCharacter" | "mysteryRelations" | "mysteryFamilyTree" | "mysteryMap" | "mysteryJournal";
+type Screen = "menu" | "load" | "past" | "settings" | "mysteryBookSelect" | "mysteryDetectiveSelect" | "mysteryPortraitSelect" | "mystery" | "mysteryCharacter" | "mysteryRelations" | "mysteryFamilyTree" | "mysteryMap" | "mysteryJournal";
 type Sex = "Female" | "Male";
 
 type CharacterDraft = {
@@ -127,6 +127,8 @@ type MysteryMurder = {
   proof: string;
   proofs: string[];
   discovered: boolean;
+  solved?: boolean;
+  prevented?: boolean;
 };
 
 type MysteryFindableKind = "Proof" | "Snatchable";
@@ -184,6 +186,7 @@ type MysteryGame = {
   won: boolean;
   summary?: string;
   lossPending?: boolean;
+  murdererAttackPending?: boolean;
 };
 
 const themes = {
@@ -288,49 +291,8 @@ type MysteryAiReply = {
   usedAi?: boolean;
 };
 
-const ravenwoodDarkRoomBackgrounds: Record<string, ImageSourcePropType> = {
-  "grand-hall": require("./assets/ravenwood/room_backgrounds/great_hall.jpg"),
-  "drawing-room": require("./assets/ravenwood/room_backgrounds/drawing_room.jpg"),
-  "dining-room": require("./assets/ravenwood/room_backgrounds/dining_room.jpg"),
-  library: require("./assets/ravenwood/room_backgrounds/library.jpg"),
-  conservatory: require("./assets/ravenwood/room_backgrounds/conservatory.jpg"),
-  "billiards-room": require("./assets/ravenwood/room_backgrounds/billiards_room.jpg"),
-  "smoking-room": require("./assets/ravenwood/room_backgrounds/smoking_room.jpg"),
-  "garden-terrace": require("./assets/ravenwood/room_backgrounds/garden_terrace.jpg"),
-  kitchen: require("./assets/ravenwood/room_backgrounds/kitchen.jpg"),
-  "staff-corridor": require("./assets/ravenwood/room_backgrounds/staff_corridor.jpg"),
-  "servants-hall": require("./assets/ravenwood/room_backgrounds/staff_corridor.jpg"),
-  pantry: require("./assets/ravenwood/room_backgrounds/kitchen.jpg"),
-  laundry: require("./assets/ravenwood/room_backgrounds/staff_corridor.jpg"),
-  "back-stairs": require("./assets/ravenwood/room_backgrounds/staff_corridor.jpg"),
-  "west-gallery": require("./assets/ravenwood/room_backgrounds/great_hall.jpg")
-};
-
-const ravenwoodLightRoomBackgrounds: Record<string, ImageSourcePropType> = {
-  "grand-hall": require("./assets/ravenwood/room_backgrounds/great_hall_light.jpg"),
-  "drawing-room": require("./assets/ravenwood/room_backgrounds/drawing_room_light.jpg"),
-  "dining-room": require("./assets/ravenwood/room_backgrounds/dining_room_light.jpg"),
-  library: require("./assets/ravenwood/room_backgrounds/library_light.jpg"),
-  conservatory: require("./assets/ravenwood/room_backgrounds/conservatory_light.jpg"),
-  "billiards-room": require("./assets/ravenwood/room_backgrounds/billiards_room_light.jpg"),
-  "smoking-room": require("./assets/ravenwood/room_backgrounds/smoking_room_light.jpg"),
-  "garden-terrace": require("./assets/ravenwood/room_backgrounds/garden_terrace_light.jpg"),
-  kitchen: require("./assets/ravenwood/room_backgrounds/kitchen_light.jpg"),
-  "staff-corridor": require("./assets/ravenwood/room_backgrounds/staff_corridor_light.jpg"),
-  "servants-hall": require("./assets/ravenwood/room_backgrounds/staff_corridor_light.jpg"),
-  pantry: require("./assets/ravenwood/room_backgrounds/kitchen_light.jpg"),
-  laundry: require("./assets/ravenwood/room_backgrounds/staff_corridor_light.jpg"),
-  "back-stairs": require("./assets/ravenwood/room_backgrounds/staff_corridor_light.jpg"),
-  "west-gallery": require("./assets/ravenwood/room_backgrounds/great_hall_light.jpg")
-};
-
-function ravenwoodRoomBackgroundFor(mystery: Pick<MysteryGame, "rooms" | "currentRoomId">, themeName: ThemeName): ImageSourcePropType {
-  const backgrounds = themeName === "dark" ? ravenwoodDarkRoomBackgrounds : ravenwoodLightRoomBackgrounds;
-  const currentRoom = mystery.rooms.find((room) => room.id === mystery.currentRoomId);
-  if (backgrounds[mystery.currentRoomId]) return backgrounds[mystery.currentRoomId];
-  if (currentRoom?.kind === "service") return backgrounds.kitchen;
-  if (currentRoom?.kind === "staff") return backgrounds["staff-corridor"];
-  return backgrounds["grand-hall"];
+function ravenwoodRoomBackgroundFor(_mystery: Pick<MysteryGame, "rooms" | "currentRoomId">, _themeName: ThemeName): ImageSourcePropType | undefined {
+  return undefined;
 }
 
 const RAVENWOOD_MIN_NPC_AGE = 9;
@@ -1169,13 +1131,14 @@ function mysteryFindableAvailability(findable: MysteryFindable, day: number, day
 
 function mysteryInventoryIconFor(item: string): IconDumpKey | undefined {
   const lower = item.toLowerCase();
-  if (/\b(vial|vials|medicine vial|medicine vials|drug container|drug containers|empty drug|ampoule|ampoules)\b/.test(lower)) return "vial";
+  if (/\b(vial|vials|medicine|prescription|aspirin|sleeping-pill|sleeping pill|drug container|drug containers|empty drug|ampoule|ampoules|syringe|poison|rat poison|cleaning fluid)\b/.test(lower)) return "vial";
   if (/\b(card|cards|deck)\b/.test(lower)) return "cards";
   if (/\bkey\b/.test(lower)) return "key";
-  if (/\b(letter|letters)\b/.test(lower)) return "letter";
-  if (/\b(money|coin|coins|gold|cash|bill|bills|fund|funds)\b/.test(lower)) return "money";
-  if (/\b(document|documents|paper|papers|ledger|slip|slips|will|id card|receipt|permit|contract|deed|certificate|notebook|note)\b/.test(lower)) return "document";
-  return undefined;
+  if (/\b(letter|letters|envelope|envelopes|apology|threatening)\b/.test(lower)) return "letter";
+  if (/\b(money|coin|coins|gold|cash|bill|bills|fund|funds|currency)\b/.test(lower)) return "money";
+  if (/\b(candle|candlestick|lantern|lighter|matchbook)\b/.test(lower)) return "candle";
+  if (/\b(document|documents|paper|papers|ledger|slip|slips|will|id card|identification|receipt|programme|program|permit|contract|deed|certificate|notebook|note|newspaper|article|catalogue|catalog|map|photo|photograph|drawing|invitation|badge|ticket|statement|list)\b/.test(lower)) return "document";
+  return "bag";
 }
 
 function mysteryPreciseMotiveProof(motive: string, killer: MysteryNpc, victim: MysteryNpc): { name: string; locationNote: string } {
@@ -1361,6 +1324,28 @@ function mysteryNeutralHouseFindablesForScenario(npcs: MysteryNpc[], rooms: Myst
   add("disposable camera", "A disposable camera with a few shots left.", "neutral-disposable-camera", ["garden-terrace", "west-gallery"]);
   add("telephone calling card", "A telephone calling card, useless for outside lines now but valuable to someone who expected to call away.", "neutral-calling-card", ["grand-hall", "staff-corridor"]);
   add("shoe-polishing cloth", "A shoe-polishing cloth with dark polish marks.", "neutral-shoe-cloth", ["servants-hall", "laundry"]);
+  add("diary key", "A tiny diary key with no diary attached yet, useful when searching private desks or bags.", "direct-diary-key", ["library", "west-gallery"]);
+  add("handgun", "A handgun locked in an old case, dangerous as proof, leverage, or a terrible choice.", "direct-handgun", ["billiards-room", "library"]);
+  add("kitchen knife wrapped in cloth", "A kitchen knife wrapped in cloth, suspicious even when it is not connected to the murder.", "direct-wrapped-knife", ["kitchen", "pantry"]);
+  add("latex gloves", "Latex gloves that can keep fingerprints off an item, or make someone look prepared for trouble.", "direct-latex-gloves", ["laundry", "servants-hall"]);
+  add("empty sleeping-pill packet", "An empty sleeping-pill packet that could be medicine, panic, or misdirection.", "direct-sleeping-pills", ["guest-room-1", "guest-room-2", "servants-hall"]);
+  add("torn strip of fabric", "A torn strip of fabric caught on a nail, useful for comparing with clothes or bags.", "direct-fabric-strip", ["back-stairs", "west-gallery"]);
+  add("coil of electrical wire", "A coil of electrical wire from a maintenance shelf.", "direct-electrical-wire", ["staff-corridor", "back-stairs"]);
+  add("heavy brass candlestick", "A heavy brass candlestick from a side table.", "direct-brass-candlestick", ["drawing-room", "library"]);
+  add("bottle labelled poison containing cleaning fluid", "A bottle labelled poison that actually contains cleaning fluid, perfect for panic or a false lead.", "direct-fake-poison", ["laundry", "pantry"]);
+  add("hunting catalogue", "A hunting catalogue with several pages folded down.", "direct-hunting-catalogue", ["billiards-room", "smoking-room"]);
+  add("shovel with fresh soil on it", "A shovel with fresh soil on it, left where it should have been cleaned.", "direct-soil-shovel", ["garden-terrace", "staff-corridor"]);
+  add("damp towel smelling of chemicals", "A damp towel smelling of chemicals.", "direct-chemical-towel", ["laundry", "servants-hall"]);
+  add("blackmail-style note written as a joke", "A blackmail-style note written as a joke, useful mainly for confusing everyone.", "direct-joke-blackmail-note", ["library", "billiards-room"]);
+  add("map with several rooms circled", "A map with several rooms circled, possibly a plan or possibly nervous doodling.", "direct-circled-map", ["grand-hall", "library"]);
+  add("cassette containing a recorded argument", "A cassette that appears to contain a recorded argument.", "direct-recorded-argument", ["billiards-room", "library"]);
+  add("anonymous threatening letter from years ago", "An anonymous threatening letter from years ago, kept for reasons no one wants to explain.", "direct-old-threat", ["library", "guest-room-3"]);
+  add("fishing line", "A length of fishing line, almost invisible when pulled tight.", "direct-fishing-line", ["garden-terrace", "back-stairs"]);
+  add("broken champagne glass", "A broken champagne glass wrapped in a napkin.", "direct-broken-glass", ["dining-room", "drawing-room"]);
+  add("spare master key", "A spare master key that opens every guest room if the player can keep hold of it.", "direct-spare-master-key", ["grand-hall", "staff-corridor"]);
+  add("bottle of rat poison", "A bottle of rat poison from service storage.", "direct-rat-poison", ["pantry", "staff-corridor"]);
+  add("newspaper article about an unsolved murder", "A newspaper article about an unsolved murder with Ravenwood-like details.", "direct-unsolved-murder-article", ["library", "smoking-room"]);
+  add("anonymous hotel complaint", "An anonymous hotel complaint accusing staff of snooping and favoritism.", "direct-hotel-complaint", ["grand-hall", "servants-hall"]);
 
   if (firstAdult) add(`reading glasses in a leather case marked ${mysteryNpcInitials(firstAdult)}`, `Reading glasses in a leather case marked with ${fullName(firstAdult)}'s initials.`, `${firstAdult.id}-glasses`, ["library", "drawing-room"], stableHash(`${firstAdult.id}-glasses-held`) % 100 < 45 ? firstAdult.id : undefined);
   if (firstAdult) add(`handkerchief embroidered ${mysteryNpcInitials(firstAdult)}`, `A handkerchief embroidered with ${fullName(firstAdult)}'s initials.`, `${firstAdult.id}-handkerchief`, ["dining-room", "west-gallery"], stableHash(`${firstAdult.id}-handkerchief-held`) % 100 < 45 ? firstAdult.id : undefined);
@@ -1380,6 +1365,7 @@ function mysteryNeutralHouseFindablesForScenario(npcs: MysteryNpc[], rooms: Myst
   for (const npc of medicalResidents.slice(0, 3)) {
     add(`small bottle of aspirin belonging to ${fullName(npc)}`, `A small bottle of aspirin connected to ${fullName(npc)}.`, `${npc.id}-aspirin`, ["drawing-room", "servants-hall"], stableHash(`${npc.id}-aspirin-held`) % 100 < 50 ? npc.id : undefined);
     add(`prescription bottle belonging to ${fullName(npc)}`, `A prescription bottle belonging to ${fullName(npc)}.`, `${npc.id}-prescription`, ["guest-room-1", "guest-room-2", "servants-hall"], stableHash(`${npc.id}-prescription-held`) % 100 < 65 ? npc.id : undefined);
+    add(`syringe belonging to diabetic guest ${fullName(npc)}`, `A syringe belonging to ${fullName(npc)}, present because of medicine rather than murder by default.`, `${npc.id}-diabetic-syringe`, ["guest-room-1", "guest-room-2"], stableHash(`${npc.id}-syringe-held`) % 100 < 60 ? npc.id : undefined);
   }
   for (const npc of romanceResidents.slice(0, 4)) {
     add(`tiny bottle of perfume belonging to ${fullName(npc)}`, `A tiny bottle of perfume associated with ${fullName(npc)}.`, `${npc.id}-perfume`, ["drawing-room", "west-gallery"], stableHash(`${npc.id}-perfume-held`) % 100 < 45 ? npc.id : undefined);
@@ -1399,6 +1385,9 @@ function mysteryNeutralHouseFindablesForScenario(npcs: MysteryNpc[], rooms: Myst
   for (const npc of drinkers.slice(0, 2)) add(`sobriety token belonging to ${fullName(npc)}`, `A sobriety token belonging to ${fullName(npc)}.`, `${npc.id}-sobriety-token`, ["smoking-room", "garden-terrace"], stableHash(`${npc.id}-sobriety-held`) % 100 < 45 ? npc.id : undefined);
   for (const npc of military.slice(0, 2)) add(`military medal belonging to ${fullName(npc)}`, `A military medal connected to ${fullName(npc)}.`, `${npc.id}-medal`, ["library", "guest-room-1"], stableHash(`${npc.id}-medal-held`) % 100 < 50 ? npc.id : undefined);
   for (const npc of staff.slice(0, 2)) add(`employee badge from another hotel belonging to ${fullName(npc)}`, `An employee badge from another hotel belonging to ${fullName(npc)}, suggesting previous hotel work before Ravenwood.`, `${npc.id}-other-hotel-badge`, ["servants-hall", "staff-corridor"], npc.id);
+  for (const npc of staff.filter((candidate) => /maintenance|porter|cleaner|gardener|security|butler|housekeeper/i.test(candidate.occupation)).slice(0, 2)) {
+    add(`lock-picking tools belonging to maintenance staff ${fullName(npc)}`, `Lock-picking tools belonging to ${fullName(npc)}, difficult to steal cleanly and very hard to explain.`, `${npc.id}-lockpicks`, ["staff-corridor", "servants-hall"], npc.id);
+  }
   for (const npc of students.slice(0, 2)) add(`university identification card for ${fullName(npc)}`, `A university identification card for ${fullName(npc)}.`, `${npc.id}-student-id`, ["library", "grand-hall"], stableHash(`${npc.id}-id-held`) % 100 < 45 ? npc.id : undefined);
   for (const npc of travelers.slice(0, 2)) add(`plane ticket booked under ${npc.familyName}'s false surname`, `A plane ticket booked under a false surname that resembles ${fullName(npc)}'s family name.`, `${npc.id}-plane-ticket`, ["grand-hall", "library"]);
   for (const npc of adults.slice(0, 2)) add(`membership card for a private club issued to ${fullName(npc)}`, `A membership card for a private club issued to ${fullName(npc)}.`, `${npc.id}-club-card`, ["billiards-room", "smoking-room"], stableHash(`${npc.id}-club-held`) % 100 < 40 ? npc.id : undefined);
@@ -1431,14 +1420,66 @@ function mysteryNeutralHouseFindablesForScenario(npcs: MysteryNpc[], rooms: Myst
     add(`foreign currency in ${fullName(npc)}'s pocket`, `Foreign currency connected to ${fullName(npc)}'s travel or private plans.`, `${npc.id}-currency`, ["grand-hall", "dining-room"], stableHash(`${npc.id}-currency-held`) % 100 < 45 ? npc.id : undefined);
     add(`photograph of ${fullName(npc)} with one person scratched out`, `A photograph of ${fullName(npc)} with one person scratched out.`, `${npc.id}-scratched-photo`, ["library", "drawing-room"]);
   }
+  for (const npc of adults.filter((candidate) => /secret|blackmail|journalist|author|police|security/i.test(`${candidate.secret} ${candidate.occupation}`)).slice(0, 1)) {
+    add(`handwritten list of guests' secrets held by ${fullName(npc)}`, `A handwritten list of guests' secrets held by ${fullName(npc)}. It is hard to steal and dangerous to show too early.`, `${npc.id}-secret-list`, ["library", "smoking-room"], npc.id);
+  }
   add("lipstick-stained coffee cup", "A lipstick-stained coffee cup, useful for asking who was drinking here.", "neutral-lipstick-cup", ["drawing-room", "dining-room"]);
   add("crumpled sweet wrapper", "A crumpled sweet wrapper from hotel sweets.", "neutral-sweet-wrapper", ["grand-hall", "garden-terrace"]);
   add("paperback romance novel", "A paperback romance novel with a cracked spine.", "neutral-romance-novel", ["library", "drawing-room"]);
 
   const targetCount = clamp(8 + Math.floor(npcs.length / 4), 10, 18);
-  return findables
-    .sort((left, right) => stableHash(`${left.name}-neutral-order`) - stableHash(`${right.name}-neutral-order`))
-    .slice(0, targetCount);
+  const sorted = findables
+    .sort((left, right) => stableHash(`${left.name}-neutral-order`) - stableHash(`${right.name}-neutral-order`));
+  const directItemNames = new Set([
+    "lantern",
+    "gloves",
+    "hotel stationery and envelopes",
+    "fountain pen",
+    "silver-plated teaspoon",
+    "sewing kit from the hotel",
+    "comb",
+    "folded newspaper",
+    "cheap plastic lighter",
+    "polaroid photo machine",
+    "cassette tape without a label",
+    "spare camera battery",
+    "disposable camera",
+    "telephone calling card",
+    "shoe-polishing cloth",
+    "diary key",
+    "handgun",
+    "kitchen knife wrapped in cloth",
+    "latex gloves",
+    "empty sleeping-pill packet",
+    "torn strip of fabric",
+    "coil of electrical wire",
+    "heavy brass candlestick",
+    "bottle labelled poison containing cleaning fluid",
+    "hunting catalogue",
+    "shovel with fresh soil on it",
+    "damp towel smelling of chemicals",
+    "blackmail-style note written as a joke",
+    "map with several rooms circled",
+    "cassette containing a recorded argument",
+    "anonymous threatening letter from years ago",
+    "fishing line",
+    "broken champagne glass",
+    "spare master key",
+    "bottle of rat poison",
+    "newspaper article about an unsolved murder",
+    "anonymous hotel complaint",
+    "lipstick-stained coffee cup",
+    "crumpled sweet wrapper",
+    "paperback romance novel"
+  ]);
+  const directItems = sorted.filter((item) => directItemNames.has(item.name));
+  const contextualItems = sorted.filter((item) => !directItemNames.has(item.name));
+  const selected = [...directItems.slice(0, 6), ...contextualItems.slice(0, Math.max(4, targetCount - 6))];
+  for (const item of sorted) {
+    if (selected.length >= targetCount) break;
+    if (!selected.includes(item)) selected.push(item);
+  }
+  return selected.slice(0, targetCount);
 }
 
 function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[], rooms: MysteryRoom[], relationships: MysteryNpcRelationship[] = []): MysteryFindable[] {
@@ -2362,6 +2403,65 @@ function normalizeMysteryNpcRelationships(npcs: MysteryNpc[], relationships: Mys
   return normalized;
 }
 
+function repairMysteryNpcProfileConsistency(npcs: MysteryNpc[], relationships: MysteryNpcRelationship[]): string[] {
+  const sanityLines: string[] = [];
+  const guestFamilyLinks = relationships.filter((relationship) => {
+    if (relationship.kind !== "Family" && relationship.kind !== "Marriage") return false;
+    const from = npcs.find((npc) => npc.id === relationship.fromId);
+    const to = npcs.find((npc) => npc.id === relationship.toId);
+    return Boolean(from && to && from.role === "Guest" && to.role === "Guest");
+  });
+  const guestById = new Map(npcs.filter((npc) => npc.role === "Guest").map((npc) => [npc.id, npc]));
+  const visited = new Set<string>();
+  for (const npc of guestById.values()) {
+    if (visited.has(npc.id)) continue;
+    const groupIds = new Set<string>([npc.id]);
+    const pending = [npc.id];
+    visited.add(npc.id);
+    while (pending.length > 0) {
+      const currentId = pending.shift()!;
+      for (const link of guestFamilyLinks) {
+        const nextId = link.fromId === currentId ? link.toId : link.toId === currentId ? link.fromId : null;
+        if (!nextId || !guestById.has(nextId) || visited.has(nextId)) continue;
+        visited.add(nextId);
+        groupIds.add(nextId);
+        pending.push(nextId);
+      }
+    }
+    if (groupIds.size <= 1) continue;
+    const group = Array.from(groupIds).map((id) => guestById.get(id)).filter((item): item is MysteryNpc => Boolean(item));
+    const familyReason = group.find((member) => /family|relative|wedding|engagement|memorial|funeral|anniversary|inheritance/i.test(member.reasonOfStay))?.reasonOfStay ?? "Attending a family reunion";
+    for (const member of group) {
+      if (member.reasonOfStay !== familyReason) {
+        sanityLines.push(`NPC repair: ${fullName(member)} reason of stay changed from "${member.reasonOfStay}" to "${familyReason}" to match their family group.`);
+        member.reasonOfStay = familyReason;
+        const stayHistory = mysteryStayHistoryFor(member.role, member.age, member.reasonOfStay);
+        member.currentStay = stayHistory.currentStay;
+        member.plannedStay = stayHistory.plannedStay;
+        member.previousStay = stayHistory.previousStay;
+      }
+    }
+  }
+
+  const requiredEducation: Record<string, string[]> = {
+    Doctor: ["Medical school", "Medical degree"],
+    Nurse: ["Medical school", "Medical degree", "First aid training"],
+    Barrister: ["Law degree", "Legal training"],
+    Architect: ["Architecture degree", "Technical college"],
+    Accountant: ["Basic bookkeeping training", "Office administration training"],
+    "Bank manager": ["Basic bookkeeping training", "Office administration training"],
+    "Security guard": ["Security guard training", "Police academy training"]
+  };
+  for (const npc of npcs) {
+    const required = requiredEducation[npc.occupation];
+    if (!required || required.includes(npc.education)) continue;
+    const replacement = required[stableHash(`${npc.id}-${npc.occupation}-education-repair`) % required.length];
+    sanityLines.push(`NPC repair: ${fullName(npc)} education changed from "${npc.education}" to "${replacement}" for occupation "${npc.occupation}".`);
+    npc.education = replacement;
+  }
+  return sanityLines;
+}
+
 function mysterySharedHistoryContext(a: MysteryNpc, b: MysteryNpc): "staff" | "guest" | "mixed" {
   if (a.role === "Staff" && b.role === "Staff") return "staff";
   if (a.role === "Guest" && b.role === "Guest") return "guest";
@@ -2914,6 +3014,7 @@ function createMysteryGameFromDraft(
   }
   buildMysteryNpcRelationshipPool(npcs, npcRelationships);
   npcRelationships.splice(0, npcRelationships.length, ...normalizeMysteryNpcRelationships(npcs, npcRelationships));
+  const profileSanityLines = repairMysteryNpcProfileConsistency(npcs, npcRelationships);
   assignMysteryGuestRooms(rooms, npcs, npcRelationships, playerRoom.id);
   const openingServant = npcs.find((npc) => npc.role === "Staff" && ["Butler", "Housekeeper", "Waiter", "Head waiter"].includes(npc.occupation)) ?? npcs.find((npc) => npc.role === "Staff");
   if (openingServant) {
@@ -2977,6 +3078,7 @@ function createMysteryGameFromDraft(
     }
   }
   npcRelationships.splice(0, npcRelationships.length, ...normalizeMysteryNpcRelationships(npcs, npcRelationships));
+  const finalProfileSanityLines = repairMysteryNpcProfileConsistency(npcs, npcRelationships);
   const lockdownReason = pick(mysteryLockdownReasons);
   const mysteryId = uid();
   const inventory = [`key to ${playerRoom.name}`, "travel bag", "notebook", "pencil"];
@@ -3035,7 +3137,7 @@ won: false,
   };
   return {
     ...mystery,
-    sanityLedger: [...buildMysterySanityLedger(mystery), ...scenarioSanityLines].slice(-600)
+    sanityLedger: [...buildMysterySanityLedger(mystery), ...profileSanityLines, ...finalProfileSanityLines, ...scenarioSanityLines].slice(-600)
   };
 }
 
@@ -3055,6 +3157,11 @@ export default function App() {
   const [mysteryAiThinking, setMysteryAiThinking] = useState(false);
   const [expandedMysteryArchiveDays, setExpandedMysteryArchiveDays] = useState<Record<number, boolean>>({});
   const [mysteryTreeViewport, setMysteryTreeViewport] = useState({ width: 0, height: 0 });
+  const [solveMurderIndex, setSolveMurderIndex] = useState<number | null>(null);
+  const [accusationKillerId, setAccusationKillerId] = useState<string | null>(null);
+  const [accusationProofName, setAccusationProofName] = useState<string | null>(null);
+  const [accusationMotiveText, setAccusationMotiveText] = useState("");
+  const [accusationFeedback, setAccusationFeedback] = useState<{ title: string; text: string; mode: "victory" | "warning" | "loss"; triggerDeath?: boolean } | null>(null);
   const mysteryRelationsScrollRef = useRef<ScrollView | null>(null);
   const mysteryRelationsScrollYRef = useRef(0);
   const restoreMysteryRelationsScrollRef = useRef(false);
@@ -3134,6 +3241,52 @@ export default function App() {
   function mysteryNpcName(mystery: MysteryGame, npcId: string): string {
     const npc = mystery.npcs.find((candidate) => candidate.id === npcId);
     return npc ? fullName(npc) : "Unknown";
+  }
+
+  function mysteryPlayerHasKeyForRoom(mystery: MysteryGame, room: MysteryRoom): boolean {
+    if (room.accessible || room.kind === "public" || room.id === mystery.playerRoomId) return true;
+    const roomNameText = room.name.toLowerCase();
+    const roomIdText = room.id.replace(/-/g, " ");
+    return mystery.inventory.some((item) => {
+      const lower = item.toLowerCase();
+      if ((lower.includes("master key") || lower.includes("master room key")) && room.kind === "guest") return true;
+      if (!lower.includes("key")) return false;
+      return lower.includes(roomNameText) || lower.includes(roomIdText);
+    });
+  }
+
+  function mysteryPlayerCanAccessRoom(mystery: MysteryGame, room: MysteryRoom): boolean {
+    return mysteryPlayerHasKeyForRoom(mystery, room);
+  }
+
+  function mysteryAccessInviteAvailable(mystery: MysteryGame, room: MysteryRoom): { byTrust: boolean; byRomance: boolean; npc?: MysteryNpc } {
+    const people = mystery.npcs.filter((npc) => npc.alive && currentMysteryNpcRoomId(mystery, npc) === room.id);
+    const trusted = people.find((npc) => effectiveMysteryTrust(npc) >= 70);
+    const romantic = people.find((npc) => npc.romanceRevealed && npc.romance >= 65);
+    return { byTrust: Boolean(trusted), byRomance: Boolean(romantic), npc: trusted ?? romantic };
+  }
+
+  function mysteryResolveRoomAccessAttempt(text: string, mystery: MysteryGame, room: MysteryRoom, rollResult?: MysteryRollOutcome): { allowed: boolean; room: MysteryRoom; message?: StoryMessage; ledger: string } {
+    if (mysteryPlayerHasKeyForRoom(mystery, room)) {
+      const opened = { ...room, accessible: true };
+      return { allowed: true, room: opened, ledger: `Access granted to ${room.name}: player has a matching key.` };
+    }
+    const lower = text.toLowerCase();
+    const invite = mysteryAccessInviteAvailable(mystery, room);
+    if (invite.byTrust || invite.byRomance) {
+      const reason = invite.byRomance ? "romance" : "trust";
+      const line = `${invite.npc ? fullName(invite.npc) : "Someone nearby"} quietly helps you into ${room.name} because ${reason} is high enough.`;
+      return { allowed: true, room: { ...room, accessible: true }, message: { id: uid(), speaker: "GM", text: line }, ledger: `Access granted to ${room.name} by high ${reason}.` };
+    }
+    if (lower.match(/\b(lockpick|pick the lock|unlock|force the lock)\b/)) {
+      if (mysteryRollMeets(rollResult, "hard")) return { allowed: true, room: { ...room, accessible: true }, message: { id: uid(), speaker: "GM", text: `The lock gives after careful work. ${room.name} is open to you for now.`, roll: mysteryRollText(rollResult) }, ledger: `Access granted to ${room.name} by lockpick.` };
+      return { allowed: false, room, message: { id: uid(), speaker: "GM", text: `${room.name} stays locked. The lock needs a clean Sleight of Hand result.`, roll: mysteryRollText(rollResult) }, ledger: `Access denied to ${room.name}: lockpick failed.` };
+    }
+    if (lower.match(/\b(sneak|slip in|wait for .*leave|wait until .*leaves|follow .*inside|tail .*inside)\b/)) {
+      if (mysteryRollMeets(rollResult, "medium")) return { allowed: true, room: { ...room, accessible: true }, message: { id: uid(), speaker: "GM", text: `You wait for the right footstep and slip into ${room.name} without making an announcement.`, roll: mysteryRollText(rollResult) }, ledger: `Access granted to ${room.name} by sneak.` };
+      return { allowed: false, room, message: { id: uid(), speaker: "GM", text: `The timing is wrong. Someone would see you enter ${room.name}.`, roll: mysteryRollText(rollResult) }, ledger: `Access denied to ${room.name}: sneak failed.` };
+    }
+    return { allowed: false, room, message: { id: uid(), speaker: "GM", text: `${room.name} is locked. You need a key, a quiet entry, lockpicking, or help from someone who trusts you enough.` }, ledger: `Access denied to ${room.name}: no key or successful access route.` };
   }
 
   function effectiveMysteryTrust(npc: MysteryNpc): number {
@@ -3389,10 +3542,16 @@ export default function App() {
     const witnessCount = roomPeople.filter((person) => person.id !== npc.id).length;
     const targetAlert = npc.substanceState === "drunk" || npc.substanceState === "high" ? -1 : effectiveMysteryTrust(npc) < 18 ? 1 : 0;
     const roomPressure = mystery.daytime === "Night" || mystery.daytime === "Midnight" ? -1 : witnessCount >= 3 ? 1 : 0;
-    const itemPressure = requested.includes("key") || requested.includes("ledger") || requested.includes("letter") ? 1 : 0;
+    const itemPressure = requested.includes("guests' secrets") || requested.includes("lock-picking tools")
+      ? 2
+      : requested.includes("key") || requested.includes("ledger") || requested.includes("letter")
+        ? 1
+        : 0;
     const difficultyScore = targetAlert + roomPressure + itemPressure;
     const tier = difficultyScore >= 2 ? "hard" : difficultyScore >= 1 ? "medium" : "easy";
-    const reason = witnessCount > 0
+    const reason = requested.includes("guests' secrets")
+      ? "it is guarded like a roll 10 secret, and being caught would turn the house against you"
+      : witnessCount > 0
       ? `${witnessCount} resident${witnessCount === 1 ? "" : "s"} could notice`
       : npc.substanceState === "drunk" || npc.substanceState === "high"
         ? `${fullName(npc)} is less steady than usual`
@@ -3651,7 +3810,6 @@ export default function App() {
     const lower = text.toLowerCase();
     if (!lower.match(/\b(go|walk|move|head|enter|leave|return|visit|switch|travel)\b/)) return undefined;
     return mystery.rooms
-      .filter((room) => room.accessible)
       .sort((a, b) => b.name.length - a.name.length)
       .find((room) => lower.includes(room.name.toLowerCase()) || lower.includes(room.id.replace(/-/g, " ")));
   }
@@ -3840,11 +3998,12 @@ export default function App() {
       const rollResult = turnRollResult;
       const rollText = mysteryRollText(rollResult);
       const movementRoom = detectMysteryRoomIntent(text, mystery);
-      let currentRoom = movementRoom?.id ?? mystery.currentRoomId;
+      let currentRoom = mystery.currentRoomId;
       const messages: StoryMessage[] = [
         { id: uid(), speaker: "Player", text }
       ];
       let journal = [...mystery.journal];
+      let rooms = mystery.rooms;
       let npcs = refreshMysteryNpcStates(mystery, mystery.npcs, nextTime);
       let murders = mystery.murders;
       let inventory = [...mystery.inventory];
@@ -3857,7 +4016,7 @@ export default function App() {
       let won = false;
       let summary = mystery.summary;
       let lossPending = mystery.lossPending;
-      const workingMystery = () => ({ ...mystery, currentRoomId: currentRoom, npcs, murders, findables, discoveredProof });
+      const workingMystery = () => ({ ...mystery, rooms, currentRoomId: currentRoom, npcs, murders, findables, discoveredProof });
       const ledgerLines = [
         `Turn: Day ${mystery.day} ${mystery.daytime}, ${mysteryRoomName(mystery, mystery.currentRoomId)}. Player wrote: "${text}". Next clock: Day ${nextTime.day} ${nextTime.daytime}.`
       ];
@@ -3865,12 +4024,21 @@ export default function App() {
       findables = abandonedPickups.findables;
       ledgerLines.push(...abandonedPickups.ledgerLines);
       if (movementRoom && movementRoom.id !== mystery.currentRoomId) {
-        messages.push(mysteryRoomDescription(workingMystery(), currentRoom));
-        ledgerLines.push(`Typed movement: ${mystery.player.firstName} moved from ${mysteryRoomName(mystery, mystery.currentRoomId)} to ${movementRoom.name}.`);
+        const access = mysteryResolveRoomAccessAttempt(text, { ...mystery, rooms, npcs }, movementRoom, rollResult);
+        rooms = rooms.map((room) => room.id === movementRoom.id ? access.room : room);
+        if (access.allowed) {
+          currentRoom = movementRoom.id;
+          if (access.message) messages.push(access.message);
+          messages.push(mysteryRoomDescription(workingMystery(), currentRoom));
+          ledgerLines.push(`Typed movement: ${mystery.player.firstName} moved from ${mysteryRoomName(mystery, mystery.currentRoomId)} to ${movementRoom.name}. ${access.ledger}`);
+        } else {
+          if (access.message) messages.push(access.message);
+          ledgerLines.push(access.ledger);
+        }
       }
 
       let bodyDiscoveryHappened = false;
-      const dueMurders = murders.filter((murder) => !murder.discovered && (murder.day < nextTime.day || (murder.day === nextTime.day && daytimes.indexOf(murder.daytime) <= daytimes.indexOf(nextTime.daytime))));
+      const dueMurders = murders.filter((murder) => !murder.discovered && !murder.solved && !murder.prevented && (murder.day < nextTime.day || (murder.day === nextTime.day && daytimes.indexOf(murder.daytime) <= daytimes.indexOf(nextTime.daytime))));
       if (dueMurders.length > 0) {
         const dueVictimIds = new Set(dueMurders.map((murder) => murder.victimId));
         npcs = npcs.map((npc) => dueVictimIds.has(npc.id) ? { ...npc, alive: false } : npc);
@@ -4038,6 +4206,7 @@ export default function App() {
         journal,
         sanityLedger: [...(mystery.sanityLedger ?? []), ...ledgerLines].slice(-600),
         npcs,
+        rooms,
         murders,
         discoveredProof,
         findables,
@@ -4053,13 +4222,14 @@ export default function App() {
   function visitMysteryRoom(roomId: string) {
     if (!activeMystery || activeMystery.finished) return;
     const room = activeMystery.rooms.find((candidate) => candidate.id === roomId);
-    if (!room?.accessible) return;
+    if (!room || !mysteryPlayerCanAccessRoom(activeMystery, room)) return;
     patchMystery((mystery) => {
+      const rooms = mystery.rooms.map((candidate) => candidate.id === roomId ? { ...candidate, accessible: true } : candidate);
       const stampedMessages = stampMysteryMessages(
         [
           ...mystery.messages,
           mysteryRoomDescription(
-            { ...mystery, currentRoomId: roomId },
+            { ...mystery, rooms, currentRoomId: roomId },
             roomId
           )
         ],
@@ -4070,6 +4240,7 @@ export default function App() {
       const splitMessages = splitMysteryMessages(stampedMessages);
       return {
         ...mystery,
+        rooms,
         currentRoomId: roomId,
         messages: splitMessages.visible,
         journal: appendMysteryJournal(mystery.journal, splitMessages.archived),
@@ -4082,6 +4253,164 @@ export default function App() {
     if (!activeMystery) return;
     patchMystery((mystery) => ({ ...mystery, lossPending: false }));
     setScreen("menu");
+  }
+
+  function mysterySolveCandidateNpcs(mystery: MysteryGame, murderIndex: number): MysteryNpc[] {
+    const murder = mystery.murders[murderIndex];
+    if (!murder) return [];
+    const murderTime = mysteryTimeSortValue(murder.day, murder.daytime);
+    return mystery.npcs.filter((npc) => {
+      if (npc.id === murder.victimId) return false;
+      const earlierDeath = mystery.murders.find((candidate) =>
+        candidate.victimId === npc.id &&
+        mysteryTimeSortValue(candidate.day, candidate.daytime) < murderTime
+      );
+      return !earlierDeath;
+    });
+  }
+
+  function mysteryMurderTookPlace(mystery: MysteryGame, murder: MysteryMurder): boolean {
+    return mysteryTimeHasArrived(mystery.day, mystery.daytime, murder.day, murder.daytime);
+  }
+
+  function openMysterySolve(murderIndex: number) {
+    if (!activeMystery) return;
+    const candidates = mysterySolveCandidateNpcs(activeMystery, murderIndex);
+    setSolveMurderIndex(murderIndex);
+    setAccusationKillerId(candidates[0]?.id ?? null);
+    setAccusationProofName(activeMystery.inventory[0] ?? null);
+    setAccusationMotiveText("");
+  }
+
+  function cycleMysteryAccusationKiller() {
+    if (!activeMystery || solveMurderIndex === null) return;
+    const candidates = mysterySolveCandidateNpcs(activeMystery, solveMurderIndex);
+    if (candidates.length === 0) return;
+    const currentIndex = candidates.findIndex((npc) => npc.id === accusationKillerId);
+    setAccusationKillerId(candidates[(currentIndex + 1 + candidates.length) % candidates.length].id);
+  }
+
+  function cycleMysteryAccusationProof() {
+    if (!activeMystery || activeMystery.inventory.length === 0) return;
+    const currentIndex = activeMystery.inventory.findIndex((item) => item === accusationProofName);
+    setAccusationProofName(activeMystery.inventory[(currentIndex + 1 + activeMystery.inventory.length) % activeMystery.inventory.length]);
+  }
+
+  function mysteryMotiveGuessMatches(actual: string, guess: string): boolean {
+    const stopWords = new Set(["about", "after", "again", "because", "being", "could", "everyone", "from", "have", "that", "their", "them", "they", "this", "with", "would", "stop", "keep", "silence"]);
+    const actualWords = actual.toLowerCase().match(/[a-z]+/g)?.filter((word) => word.length >= 5 && !stopWords.has(word)) ?? [];
+    const guessWords = new Set(guess.toLowerCase().match(/[a-z]+/g) ?? []);
+    const matches = Array.from(new Set(actualWords)).filter((word) => guessWords.has(word));
+    return matches.length >= 2 || (actual.toLowerCase().includes("relationship") && /relationship|romance|dating|affair|lover|secret/i.test(guess)) || (actual.toLowerCase().includes("police") && /police|report|tell|confess/i.test(guess));
+  }
+
+  function mysteryProofGuessMatches(mystery: MysteryGame, murderIndex: number, proofName: string | null): boolean {
+    if (!proofName) return false;
+    const lower = proofName.toLowerCase();
+    return (mystery.findables ?? []).some((findable) =>
+      findable.kind === "Proof" &&
+      findable.relatedMurderIndex === murderIndex &&
+      mystery.inventory.includes(findable.name) &&
+      (findable.name.toLowerCase() === lower || Boolean(findable.proofText?.toLowerCase().includes(lower)))
+    );
+  }
+
+  function mysteryNoActiveMurdersRemain(murders: MysteryMurder[]): boolean {
+    return murders.every((murder) => murder.solved || murder.prevented);
+  }
+
+  function submitMysteryAccusation() {
+    if (!activeMystery || solveMurderIndex === null || !accusationKillerId) return;
+    const murderIndex = solveMurderIndex;
+    const accusedId = accusationKillerId;
+    const proofName = accusationProofName;
+    const motiveText = accusationMotiveText;
+    const murder = activeMystery.murders[murderIndex];
+    if (!murder) return;
+    setSolveMurderIndex(null);
+    patchMystery((mystery) => {
+      const targetMurder = mystery.murders[murderIndex];
+      if (!targetMurder) return mystery;
+      const killerCorrect = accusedId === targetMurder.killerId;
+      const proofCorrect = mysteryProofGuessMatches(mystery, murderIndex, proofName);
+      const motiveCorrect = mysteryMotiveGuessMatches(targetMurder.motive, motiveText);
+      const accusedName = mysteryNpcName(mystery, accusedId);
+      const victimName = mysteryNpcName(mystery, targetMurder.victimId);
+      const nowTime = mysteryTimeSortValue(mystery.day, mystery.daytime);
+      let murders = mystery.murders;
+      let npcs = mystery.npcs;
+      let finished = mystery.finished;
+      let won = mystery.won;
+      let summary = mystery.summary;
+      let lossPending = mystery.lossPending;
+      let murdererAttackPending = mystery.murdererAttackPending;
+      const messages: StoryMessage[] = [];
+      const ledgerLines: string[] = [];
+
+      if (killerCorrect && (proofCorrect || motiveCorrect)) {
+        murders = murders.map((candidate, index) => {
+          if (index === murderIndex) return { ...candidate, solved: true, discovered: true };
+          const future = mysteryTimeSortValue(candidate.day, candidate.daytime) > nowTime;
+          if (future && (candidate.killerId === accusedId || candidate.victimId === accusedId)) return { ...candidate, prevented: true, discovered: true };
+          return candidate;
+        });
+        const finalDay = mystery.day >= 13;
+        const line = finalDay
+          ? `${accusedName} is believed. The police take them away before Ravenwood can hide the truth again.`
+          : `${accusedName} is believed. Staff lock them safely in a closet while the investigation continues.`;
+        messages.push({ id: uid(), speaker: "GM", text: line });
+        ledgerLines.push(`Murder ${murderIndex + 1} solved: killer correct=${killerCorrect}, proof correct=${proofCorrect}, motive correct=${motiveCorrect}.`);
+        if (mysteryNoActiveMurdersRemain(murders)) {
+          finished = true;
+          won = true;
+          summary = `${mystery.player.firstName} solved the Ravenwood case. ${accusedName} was stopped and the remaining danger in the house ended.`;
+        }
+        setAccusationFeedback({ title: "Victory", text: line, mode: "victory" });
+      } else if (killerCorrect) {
+        npcs = applyMysteryTrustDelta(npcs, npcs.filter((npc) => npc.alive).map((npc) => npc.id), -12);
+        murdererAttackPending = true;
+        const line = `You named ${accusedName}, and you were right, but without proof or a clear motive nobody believes you. Everyone leaves the room.`;
+        messages.push({ id: uid(), speaker: "GM", text: line });
+        ledgerLines.push(`Unbelieved true accusation for murder ${murderIndex + 1}; death pending.`);
+        setAccusationFeedback({ title: "Nobody Believes You", text: `${line} The next click gives the killer an opening.`, mode: "loss", triggerDeath: true });
+      } else {
+        npcs = applyMysteryTrustDelta(npcs, npcs.filter((npc) => npc.alive).map((npc) => npc.id), -9);
+        const line = `You accuse ${accusedName} of killing ${victimName}, but the accusation is wrong. Nobody believes you, and trust drops across the house.`;
+        messages.push({ id: uid(), speaker: "GM", text: line });
+        ledgerLines.push(`Wrong accusation for murder ${murderIndex + 1}: accused ${accusedName}; actual killer ${mysteryNpcName(mystery, targetMurder.killerId)}.`);
+        setAccusationFeedback({ title: "Wrong Accusation", text: line, mode: "warning" });
+      }
+
+      const stampedMessages = stampMysteryMessages([...mystery.messages, ...messages], mystery.day, mystery.daytime);
+      const splitMessages = splitMysteryMessages(stampedMessages);
+      return {
+        ...mystery,
+        npcs,
+        murders,
+        messages: splitMessages.visible,
+        journal: appendMysteryJournal(mystery.journal, splitMessages.archived),
+        sanityLedger: [...(mystery.sanityLedger ?? []), ...ledgerLines].slice(-600),
+        finished,
+        won,
+        summary,
+        lossPending,
+        murdererAttackPending
+      };
+    });
+  }
+
+  function closeAccusationFeedback() {
+    const feedback = accusationFeedback;
+    setAccusationFeedback(null);
+    if (feedback?.triggerDeath && activeMystery) {
+      patchMystery((mystery) => ({
+        ...mystery,
+        finished: true,
+        won: false,
+        murdererAttackPending: false,
+        summary: `${mystery.player.firstName} accused the true killer without enough proof. The murderer used the empty room after the accusation to kill them.`
+      }));
+    }
   }
 
   function focusMysteryNpc(npcId: string) {
@@ -4554,8 +4883,8 @@ export default function App() {
           : isMap
             ? styles.portraitMapFrame
             : styles.portraitThumbFrame;
-    const frameWidth = isHero ? 114 : isLarge ? 72 : isResident ? 92 : isMap ? 40 : 36;
-    const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 156 : isMap ? 68 : 62;
+    const frameWidth = isHero ? 114 : isLarge ? 72 : isResident ? 92 : isMap ? 42 : 36;
+    const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 156 : isMap ? 72 : 62;
     if (ravenwoodPortrait) {
       const isStaffPortrait = ravenwoodPortrait.sourceKind === "staff";
       const sourceWidth = ravenwoodPortrait.imageWidth;
@@ -4776,15 +5105,101 @@ export default function App() {
     );
   }
 
+  function MysterySolveButtons({ mystery }: { mystery: MysteryGame }) {
+    const availableMurders = mystery.murders
+      .map((murder, index) => ({ murder, index }))
+      .filter(({ murder }) => mysteryMurderTookPlace(mystery, murder) && !murder.solved && !murder.prevented);
+    if (availableMurders.length === 0 || mystery.finished) return null;
+    return (
+      <View style={styles.solveButtonRow}>
+        {availableMurders.map(({ murder, index }) => (
+          <Pressable key={`solve-${index}`} onPress={() => openMysterySolve(index)} style={styles.solveButton}>
+            <Text style={styles.solveButtonText}>MURDER {index + 1} SOLVE</Text>
+            <Text style={styles.solveButtonSub}>{mysteryNpcName(mystery, murder.victimId)}</Text>
+          </Pressable>
+        ))}
+      </View>
+    );
+  }
+
+  function MysteryAccusationModal({ mystery }: { mystery: MysteryGame }) {
+    const murder = solveMurderIndex === null ? undefined : mystery.murders[solveMurderIndex];
+    const candidates = solveMurderIndex === null ? [] : mysterySolveCandidateNpcs(mystery, solveMurderIndex);
+    const accused = candidates.find((npc) => npc.id === accusationKillerId);
+    const backdrop = appBackgroundForScreen(themeName, "mystery");
+    return (
+      <Modal visible={Boolean(murder)} transparent animationType="fade">
+        <ImageBackground source={backdrop} resizeMode="cover" style={styles.modalShade}>
+          <View style={[styles.modalCard, { backgroundColor: C.panel, borderColor: C.line }]}>
+            <Text style={[styles.heading, { color: C.warning }]}>Solve Murder {solveMurderIndex !== null ? solveMurderIndex + 1 : ""}</Text>
+            {murder ? <Text style={[styles.body, { color: C.text }]}>Victim: {mysteryNpcName(mystery, murder.victimId)}</Text> : null}
+            <Pressable onPress={cycleMysteryAccusationKiller} style={[styles.selectorRow, { borderColor: C.line, backgroundColor: C.panel2 }]}>
+              <Text style={[styles.rollText, { color: C.dim }]}>Killer</Text>
+              <Text style={[styles.body, { color: C.text }]}>{accused ? fullName(accused) : "No valid suspect"}</Text>
+            </Pressable>
+            <Pressable onPress={cycleMysteryAccusationProof} style={[styles.selectorRow, { borderColor: C.line, backgroundColor: C.panel2 }]}>
+              <Text style={[styles.rollText, { color: C.dim }]}>Proof From Inventory</Text>
+              <Text style={[styles.body, { color: C.text }]}>{accusationProofName ?? "No inventory item"}</Text>
+            </Pressable>
+            <TextInput
+              value={accusationMotiveText}
+              onChangeText={(value) => setAccusationMotiveText(value.slice(0, 280))}
+              placeholder="Write the motive in your own words..."
+              placeholderTextColor={C.dim}
+              multiline
+              maxLength={280}
+              style={[styles.input, styles.accusationMotiveInput, { backgroundColor: C.panel2, borderColor: C.line, color: C.text }]}
+            />
+            <View style={styles.wrapRow}>
+              <Button small label="Submit" onPress={submitMysteryAccusation} disabled={!accused} />
+              <Button small label="Cancel" onPress={() => setSolveMurderIndex(null)} variant="neutral" />
+            </View>
+          </View>
+        </ImageBackground>
+      </Modal>
+    );
+  }
+
+  function MysteryAccusationFeedbackModal() {
+    const backdrop = appBackgroundForScreen(themeName, "mystery");
+    return (
+      <Modal visible={Boolean(accusationFeedback)} transparent animationType="fade">
+        <ImageBackground source={backdrop} resizeMode="cover" style={styles.modalShade}>
+          <View style={[styles.modalCard, { backgroundColor: C.panel, borderColor: C.line }]}>
+            <Text style={[styles.heading, { color: accusationFeedback?.mode === "victory" ? C.good : C.warning }]}>{accusationFeedback?.title ?? ""}</Text>
+            <Text style={[styles.body, { color: C.text }]}>{accusationFeedback?.text ?? ""}</Text>
+            <Button label="Continue" onPress={closeAccusationFeedback} />
+          </View>
+        </ImageBackground>
+      </Modal>
+    );
+  }
+
   if (screen === "menu") {
     return (
       <Shell menuBackground>
         <Text style={[styles.title, styles.menuTextShadow, { color: C.text }]}>Ravenwood Mystery</Text>
         <Text style={[styles.subtitle, styles.menuTextShadow, { color: themeName === "dark" ? "#e7e1dc" : C.text }]}>Choose your charachter and investigate freely in your style.</Text>
-        <Button label="Start New Mystery" onPress={() => setScreen("mysteryDetectiveSelect")} />
+        <Button label="Start New Mystery" onPress={() => setScreen("mysteryBookSelect")} />
         <Button label="Load Game" onPress={() => setScreen("load")} />
         <Button label="Finished Games" onPress={() => setScreen("past")} />
         <Button label="Settings" onPress={() => setScreen("settings")} />
+      </Shell>
+    );
+  }
+
+  if (screen === "mysteryBookSelect") {
+    return (
+      <Shell>
+        <View style={styles.rowBetween}>
+          <Text style={[styles.titleSmall, { color: C.text }]}>Choose Book</Text>
+          <Button small label="Back" onPress={() => setScreen("menu")} />
+        </View>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Ravenwood Murder Mystery</Text>
+          <Text style={[styles.body, { color: C.text }]}>A sealed hotel, tangled residents, and a case that changes every run.</Text>
+          <Button label="Choose Detective" onPress={() => setScreen("mysteryDetectiveSelect")} />
+        </Card>
       </Shell>
     );
   }
@@ -4880,6 +5295,8 @@ export default function App() {
         <>
           {MysteryHeader({ mystery: activeMystery })}
 
+          {MysterySolveButtons({ mystery: activeMystery })}
+
           {MysteryStoryWindow({ mystery: activeMystery })}
 
           {Card({
@@ -4899,19 +5316,22 @@ export default function App() {
                     </Text>
 
                     <View style={styles.wrapRow}>
-                      {rooms.map((room) => (
-                        <Chip
-                          key={room.id}
-                          label={room.name}
-                          selected={
-                            activeMystery.currentRoomId === room.id
-                          }
-                          disabled={
-                            !room.accessible || activeMystery.finished
-                          }
-                          onPress={() => visitMysteryRoom(room.id)}
-                        />
-                      ))}
+                      {rooms.map((room) => {
+                        const accessible = mysteryPlayerCanAccessRoom(activeMystery, room);
+                        return (
+                          <Chip
+                            key={room.id}
+                            label={room.name}
+                            selected={
+                              activeMystery.currentRoomId === room.id
+                            }
+                            disabled={
+                              !accessible || activeMystery.finished
+                            }
+                            onPress={() => visitMysteryRoom(room.id)}
+                          />
+                        );
+                      })}
                     </View>
                   </View>
                 ))}
@@ -4993,6 +5413,8 @@ export default function App() {
               </View>
             </View>
           </Modal>
+          {MysteryAccusationModal({ mystery: activeMystery })}
+          {MysteryAccusationFeedbackModal()}
         </>
       )
     });
@@ -5425,11 +5847,12 @@ export default function App() {
             <View style={styles.mysteryMapGrid}>
               {activeMystery.rooms.filter((room) => room.floor === floor).map((room) => {
                 const people = mysteryPeopleInRoom(activeMystery, room.id);
+                const accessible = mysteryPlayerCanAccessRoom(activeMystery, room);
                 return (
-                  <View key={room.id} style={[styles.mysteryRoomTile, { borderColor: room.accessible ? C.accent : C.line, backgroundColor: room.accessible ? C.panel2 : "rgba(100, 100, 105, 0.15)" }]}>
+                  <View key={room.id} style={[styles.mysteryRoomTile, { borderColor: accessible ? C.accent : C.line, backgroundColor: accessible ? C.panel2 : "rgba(100, 100, 105, 0.15)" }]}>
                     <Text style={[styles.mysteryRoomName, { color: C.text }]}>{room.name}</Text>
                     {room.bedSetup ? <Text style={[styles.rollText, { color: C.dim }]}>{titleCase(room.bedSetup)}</Text> : null}
-                    <Text style={[styles.rollText, { color: room.accessible ? C.good : C.dim }]}>{room.accessible ? "Accessible" : "Locked"}</Text>
+                    <Text style={[styles.rollText, { color: accessible ? C.good : C.dim }]}>{accessible ? "Accessible" : "Locked"}</Text>
                     <View style={styles.row}>
                       {people.slice(0, 5).map((person) => (
                         <Pressable key={person.id} onPress={() => focusMysteryNpc(person.id)} style={styles.mapPortraitButton}>
@@ -5815,7 +6238,7 @@ const styles = StyleSheet.create({
   portraitImage: { width: "100%", height: "100%" },
   ravenwoodPortraitSheet: { position: "absolute" },
   portraitResidentFrame: { width: 92, height: 156, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
-  portraitMapFrame: { width: 40, height: 68, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitMapFrame: { width: 42, height: 72, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitThumbFrame: { width: 36, height: 62, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitThumb: { width: "100%", height: "100%" },
   picturelessPortrait: { alignItems: "center", justifyContent: "center", gap: 4 },
@@ -5890,8 +6313,14 @@ const styles = StyleSheet.create({
   mysteryFloorBlock: { gap: 8, marginTop: 8 },
   mysteryFloorTitle: { fontSize: 15, fontWeight: "800", textTransform: "uppercase" },
   mysteryDossierGrid: { gap: 4 },
-  residentPortraitTools: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16 },
+  residentPortraitTools: { flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 },
   mysteryPortraitMagnifierButton: { width: 74, height: 74, borderWidth: 1, borderRadius: 8, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  solveButtonRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  solveButton: { minWidth: 138, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "#b5122b", borderWidth: 1, borderColor: "#f0c45c" },
+  solveButtonText: { color: "#fff4ec", fontSize: 12, lineHeight: 15, fontWeight: "900" },
+  solveButtonSub: { color: "#f6d7c7", fontSize: 10, lineHeight: 13, marginTop: 2 },
+  selectorRow: { borderWidth: 1, borderRadius: 8, padding: 10, gap: 4 },
+  accusationMotiveInput: { minHeight: 92, textAlignVertical: "top" },
   substanceBubbleRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 2 },
   substanceBubble: { overflow: "hidden", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#ff2222", color: "#fff", fontSize: 10, lineHeight: 13, fontWeight: "900", textTransform: "uppercase" },
   relationshipLedgerBox: { borderWidth: 1, borderRadius: 8, padding: 10, gap: 4 },
