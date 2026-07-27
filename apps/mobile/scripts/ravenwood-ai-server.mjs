@@ -22,9 +22,19 @@ const responseSchema = {
     revealRomance: {
       type: "boolean",
       description: "Whether the interaction should reveal the romance meter."
+    },
+    summary: {
+      type: "string",
+      description: "One short private summary of this exchange for future memory."
+    },
+    memoryWrites: {
+      type: "array",
+      description: "Zero to three durable memory notes the game may keep.",
+      items: { type: "string" },
+      maxItems: 3
     }
   },
-  required: ["text", "trustDelta", "romanceDelta", "revealRomance"]
+  required: ["text", "trustDelta", "romanceDelta", "revealRomance", "summary", "memoryWrites"]
 };
 
 function readBody(request) {
@@ -72,7 +82,11 @@ function normalizeReply(raw) {
     text: String(parsed.text ?? "").trim().slice(0, 900),
     trustDelta: Math.max(-10, Math.min(10, Math.round(Number(parsed.trustDelta ?? 0)))),
     romanceDelta: Math.max(-8, Math.min(8, Math.round(Number(parsed.romanceDelta ?? 0)))),
-    revealRomance: Boolean(parsed.revealRomance)
+    revealRomance: Boolean(parsed.revealRomance),
+    summary: String(parsed.summary ?? "").trim().slice(0, 300),
+    memoryWrites: Array.isArray(parsed.memoryWrites)
+      ? parsed.memoryWrites.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean).slice(0, 3)
+      : []
   };
 }
 
@@ -93,6 +107,7 @@ async function generateRavenwoodReply(packet) {
     "Do not recite Ravenwood's premise, founding date, or generic hotel description unless the player directly asks about the mansion.",
     "Use hiddenTruthForConsistency only to stay consistent. Do not reveal undiscovered killer/proof unless the knownCaseState plus trust makes it plausible as a hint.",
     "Keep the answer playable: one to three sentences, clear, atmospheric, and specific.",
+    "Include one short summary and only durable memoryWrites that could matter later.",
     "Return only JSON matching the schema."
   ].join("\n");
 

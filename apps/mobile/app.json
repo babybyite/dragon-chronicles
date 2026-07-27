@@ -8,6 +8,27 @@
     "scheme": "ravenwoodmystery",
     "platforms": ["ios", "android", "web"],
     "newArchEnabled": true,
+    "plugins": [
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          },
+          "ios": {}
+        }
+      ],
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": true,
+          "entitlementsProfile": "production",
+          "forceCxx20": true,
+          "enableOpenCL": true
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true
     },

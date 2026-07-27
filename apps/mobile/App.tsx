@@ -14,6 +14,14 @@ import {
 } from "react-native";
 import type { ImageSourcePropType, StyleProp, ViewStyle } from "react-native";
 import {
+  downloadRavenwoodModel,
+  generateRavenwoodOfflineReply,
+  getRavenwoodModelStatus,
+  loadRavenwoodModel,
+  validateRavenwoodAiReply
+} from "./ravenwoodAiEngine";
+import type { RavenwoodModelStatus, RavenwoodValidatedAiReply } from "./ravenwoodAiEngine";
+import {
   ravenwoodGuestPortraitAssets,
   ravenwoodPlayerPortraitAssets,
   ravenwoodStaffPortraitAssets
@@ -122,10 +130,13 @@ type MysteryMurder = {
   day: number;
   daytime: Daytime;
   roomId: string;
+  alternateRoomId?: string;
   method: string;
   motive: string;
   proof: string;
   proofs: string[];
+  witnessId?: string;
+  witnessSummary?: string;
   discovered: boolean;
   solved?: boolean;
   prevented?: boolean;
@@ -145,6 +156,9 @@ type MysteryFindable = {
   availableDaytime: Daytime;
   relatedMurderIndex?: number;
   proofText?: string;
+  searchDifficulty?: MysteryRollOutcome["tier"];
+  rollFailures?: Partial<Record<MysteryCheckKind, number>>;
+  lockedChecks?: MysteryCheckKind[];
   collected?: boolean;
 };
 
@@ -180,6 +194,8 @@ type MysteryGame = {
   journal: StoryMessage[];
   journalNotes: string;
   sanityLedger: string[];
+  aiMemory: string[];
+  aiConversationSummaries: string[];
   discoveredProof: string[];
   inventory: string[];
   finished: boolean;
@@ -187,6 +203,8 @@ type MysteryGame = {
   summary?: string;
   lossPending?: boolean;
   murdererAttackPending?: boolean;
+  hiddenInRoomId?: string;
+  hiddenFromNpcIds?: string[];
 };
 
 const themes = {
@@ -219,24 +237,24 @@ const themes = {
 };
 
 const menuBackgrounds = {
-  dark: require("./assets/backgrounds/main-menu-dark.png"),
-  pastel: require("./assets/backgrounds/main-menu-pastel.png")
+  dark: require("./assets/backgrounds/optimized/main-menu-dark.jpg"),
+  pastel: require("./assets/backgrounds/optimized/main-menu-pastel.jpg")
 };
 
 const appBackgrounds: Record<ThemeName, ImageSourcePropType[]> = {
   dark: [
-    require("./assets/backgrounds/app-dark-ink.png"),
-    require("./assets/backgrounds/app-dark-slate.png"),
-    require("./assets/backgrounds/app-dark-burgundy.png"),
-    require("./assets/backgrounds/app-dark-purple.png"),
-    require("./assets/backgrounds/app-dark-red.png")
+    require("./assets/backgrounds/optimized/app-dark-ink.jpg"),
+    require("./assets/backgrounds/optimized/app-dark-slate.jpg"),
+    require("./assets/backgrounds/optimized/app-dark-burgundy.jpg"),
+    require("./assets/backgrounds/optimized/app-dark-purple.jpg"),
+    require("./assets/backgrounds/optimized/app-dark-red.jpg")
   ],
   pastel: [
-    require("./assets/backgrounds/app-light-silver.png"),
-    require("./assets/backgrounds/app-light-parchment.png"),
-    require("./assets/backgrounds/app-light-green.png"),
-    require("./assets/backgrounds/app-light-peach.png"),
-    require("./assets/backgrounds/app-light-lavender.png")
+    require("./assets/backgrounds/optimized/app-light-silver.jpg"),
+    require("./assets/backgrounds/optimized/app-light-parchment.jpg"),
+    require("./assets/backgrounds/optimized/app-light-green.jpg"),
+    require("./assets/backgrounds/optimized/app-light-peach.jpg"),
+    require("./assets/backgrounds/optimized/app-light-lavender.jpg")
   ]
 };
 
@@ -288,7 +306,10 @@ type MysteryAiReply = {
   trustDelta?: number;
   romanceDelta?: number;
   revealRomance?: boolean;
+  summary?: string;
+  memoryWrites?: string[];
   usedAi?: boolean;
+  mode?: "offline" | "remote" | "scripted";
 };
 
 function ravenwoodRoomBackgroundFor(_mystery: Pick<MysteryGame, "rooms" | "currentRoomId">, _themeName: ThemeName): ImageSourcePropType | undefined {
@@ -987,6 +1008,27 @@ function mysteryRoomsForMethod(method: string, rooms: MysteryRoom[], playerRoomI
   return candidates;
 }
 
+function mysteryRollTargetNumber(tier: MysteryRollOutcome["tier"] | undefined): number {
+  if (tier === "hard") return 10;
+  if (tier === "medium") return 6;
+  return 3;
+}
+
+function mysteryIncreaseDifficulty(tier: MysteryRollOutcome["tier"] | undefined): MysteryRollOutcome["tier"] {
+  if (tier === "hard") return "hard";
+  if (tier === "medium") return "hard";
+  return "medium";
+}
+
+function mysteryFallbackRoomForMurder(method: string, rooms: MysteryRoom[], mainRoomId: string, playerRoomId: string): MysteryRoom | undefined {
+  const methodRooms = mysteryRoomsForMethod(method, rooms, playerRoomId).filter((room) => room.id !== mainRoomId);
+  const publicMethodRooms = methodRooms.filter((room) => room.kind === "public");
+  if (publicMethodRooms.length > 0) return publicMethodRooms[stableHash(`${method}-${mainRoomId}-fallback`) % publicMethodRooms.length];
+  const publicRooms = rooms.filter((room) => room.id !== mainRoomId && room.id !== playerRoomId && room.kind === "public");
+  if (publicRooms.length > 0) return publicRooms[stableHash(`${method}-${mainRoomId}-public-fallback`) % publicRooms.length];
+  return methodRooms[0];
+}
+
 function mysteryMethodClues(method: string): string[] {
   const kind = mysteryMethodKind(method);
   if (kind === "drink") return [
@@ -1141,72 +1183,101 @@ function mysteryInventoryIconFor(item: string): IconDumpKey | undefined {
   return "bag";
 }
 
-function mysteryPreciseMotiveProof(motive: string, killer: MysteryNpc, victim: MysteryNpc): { name: string; locationNote: string } {
+type MysteryPreciseProof = {
+  name: string;
+  description: string;
+  locationNote: string;
+  searchDifficulty: MysteryRollOutcome["tier"];
+};
+
+function mysteryPreciseMotiveProof(motive: string, killer: MysteryNpc, victim: MysteryNpc): MysteryPreciseProof {
   const lower = motive.toLowerCase();
   if (lower.includes("police") || lower.includes("earlier killing") || lower.includes("previous murder") || lower.includes("had killed")) {
     return {
       name: `Unsent statement by ${fullName(victim)} accusing ${fullName(killer)} of an earlier murder`,
-      locationNote: `hidden inside ${fullName(victim)}'s writing case`
+      description: `Unsent statement by ${fullName(victim)} accusing ${fullName(killer)} of an earlier murder and naming the earlier victim.`,
+      locationNote: `hidden inside ${fullName(victim)}'s writing case`,
+      searchDifficulty: "medium"
     };
   }
   if (lower.includes("forged") || lower.includes("document")) {
     return {
       name: `Forged ID card with ${fullName(killer)}'s photo on it`,
-      locationNote: `under the bed in ${fullName(killer)}'s room`
+      description: `Forged ID card with ${fullName(killer)}'s photo on it, proving the identity lie ${fullName(victim)} was ready to expose.`,
+      locationNote: `under the bed in ${fullName(killer)}'s room`,
+      searchDifficulty: "medium"
     };
   }
   if (lower.includes("debt") || lower.includes("gambling") || lower.includes("money")) {
     return {
-      name: `Debt ledger page listing ${fullName(killer)} beside ${fullName(victim)}'s deadline`,
-      locationNote: `inside the locked writing case in ${fullName(killer)}'s room`
+      name: `Debt ledger page listing ${fullName(killer)} owed ${fullName(victim)} money`,
+      description: `Debt ledger page listing ${fullName(killer)} owed ${fullName(victim)} a large sum of money, and the payback deadline was the day of the murder.`,
+      locationNote: `inside the locked writing case in ${fullName(killer)}'s room`,
+      searchDifficulty: "medium"
     };
   }
   if (lower.includes("inheritance") || lower.includes("will")) {
     return {
       name: `Altered inheritance letter naming ${fullName(killer)} and ${fullName(victim)}`,
-      locationNote: `folded into the lining of ${fullName(killer)}'s travel bag`
+      description: `Altered inheritance letter naming ${fullName(killer)} and showing why ${fullName(victim)} could ruin the inheritance plan.`,
+      locationNote: `folded into the lining of ${fullName(killer)}'s travel bag`,
+      searchDifficulty: "medium"
     };
   }
   if (lower.includes("relationship") || lower.includes("dating") || lower.includes("engagement") || lower.includes("affair")) {
     return {
       name: `Private letter proving ${fullName(victim)} knew about ${fullName(killer)}'s hidden relationship`,
-      locationNote: `inside a book on ${fullName(killer)}'s bedside table`
+      description: `Private letter proving ${fullName(victim)} knew about ${fullName(killer)}'s hidden relationship and planned to make it public.`,
+      locationNote: `inside a book on ${fullName(killer)}'s bedside table`,
+      searchDifficulty: "medium"
     };
   }
   if (lower.includes("blackmail")) {
     return {
       name: `Blackmail note naming ${fullName(killer)} with ${fullName(victim)}'s deadline`,
-      locationNote: `behind a loose drawer in ${fullName(victim)}'s room`
+      description: `Blackmail note naming ${fullName(killer)} with ${fullName(victim)}'s deadline, proving the pressure was immediate.`,
+      locationNote: `behind a loose drawer in ${fullName(victim)}'s room`,
+      searchDifficulty: "hard"
     };
   }
   if (lower.includes("stolen") || lower.includes("theft") || lower.includes("brib")) {
     return {
       name: `Marked cash envelope tied to ${fullName(killer)}'s theft`,
-      locationNote: `behind folded linen in ${fullName(killer)}'s room`
+      description: `Marked cash envelope tied to ${fullName(killer)}'s theft, matching money ${fullName(victim)} had noticed missing.`,
+      locationNote: `behind folded linen in ${fullName(killer)}'s room`,
+      searchDifficulty: "medium"
     };
   }
   return {
     name: `Torn note explaining why ${fullName(victim)} threatened ${fullName(killer)}`,
-    locationNote: `under the writing blotter in ${fullName(killer)}'s room`
+    description: `Torn note explaining why ${fullName(victim)} threatened ${fullName(killer)} on the day they died.`,
+    locationNote: `under the writing blotter in ${fullName(killer)}'s room`,
+    searchDifficulty: "medium"
   };
 }
 
-function mysteryPreciseMethodProof(method: string, killer: MysteryNpc, victim: MysteryNpc, roomName: string): string {
+function mysteryPreciseMethodProof(method: string, killer: MysteryNpc, victim: MysteryNpc, roomName: string): MysteryPreciseProof {
   const kind = mysteryMethodKind(method);
-  if (kind === "drink") return `Poisoned glass from ${fullName(victim)}'s place setting with ${fullName(killer)}'s fingerprint on the stem`;
-  if (kind === "food") return `Serving plate from ${fullName(victim)}'s setting with residue from ${fullName(killer)}'s private packet`;
-  if (kind === "allergen") return `Kitchen allergy card altered in ${fullName(killer)}'s handwriting`;
-  if (kind === "drug") return `Medicine vial with missing dose and ${fullName(killer)}'s initials scratched into the label`;
-  if (kind === "strangulation" || kind === "smother") return `Torn fabric strip matching ${fullName(killer)}'s scarf and marks on ${fullName(victim)}`;
-  if (kind === "blade") return `Bloodied letter opener from ${roomName} wrapped in ${fullName(killer)}'s handkerchief`;
-  if (kind === "fire") return `Matchbook from ${fullName(killer)}'s room found at the first burn point`;
-  if (kind === "gas") return `Gas valve wrench with fresh marks matching ${fullName(killer)}'s service access`;
-  if (kind === "water") return `Damp towel from ${fullName(killer)}'s room hidden after ${fullName(victim)} drowned`;
-  if (kind === "electric") return `Screwdriver with copper residue from the tampered wire near ${fullName(victim)}`;
-  if (kind === "fall") return `Cuff link belonging to ${fullName(killer)} found on the nearest door`;
-  if (kind === "vehicle") return `Garage key with fresh oil from the cut brake line`;
-  if (kind === "concealment") return `Dusty sheet used to drag ${fullName(victim)} from ${roomName}`;
-  return `Heavy room ornament with wiped blood trace and fibers from ${fullName(killer)}'s cuff`;
+  const proof = (name: string, description: string, searchDifficulty: MysteryRollOutcome["tier"] = "hard"): MysteryPreciseProof => ({
+    name,
+    description,
+    locationNote: `in ${roomName} after ${fullName(victim)}'s dead body is found`,
+    searchDifficulty
+  });
+  if (kind === "drink") return proof(`Poisoned glass from ${fullName(victim)}'s place setting`, `Poisoned glass from ${fullName(victim)}'s place setting with ${fullName(killer)}'s fingerprint on the stem.`);
+  if (kind === "food") return proof(`Serving plate from ${fullName(victim)}'s setting`, `Serving plate from ${fullName(victim)}'s setting with residue from ${fullName(killer)}'s private packet.`);
+  if (kind === "allergen") return proof(`Kitchen allergy card altered in ${fullName(killer)}'s handwriting`, `Kitchen allergy card altered in ${fullName(killer)}'s handwriting, showing the allergen was introduced deliberately.`);
+  if (kind === "drug") return proof(`Medicine vial with missing dose`, `Medicine vial with missing dose and ${fullName(killer)}'s initials scratched into the label.`);
+  if (kind === "strangulation" || kind === "smother") return proof(`Torn fabric strip matching ${fullName(killer)}'s scarf`, `Torn fabric strip matching ${fullName(killer)}'s scarf and marks on ${fullName(victim)}.`);
+  if (kind === "blade") return proof(`Bloodied letter opener wrapped in ${fullName(killer)}'s handkerchief`, `Bloodied letter opener wrapped in ${fullName(killer)}'s handkerchief.`);
+  if (kind === "fire") return proof(`Matchbook from ${fullName(killer)}'s room`, `Matchbook from ${fullName(killer)}'s room found at the first burn point.`, "medium");
+  if (kind === "gas") return proof(`Gas valve wrench with fresh marks`, `Gas valve wrench with fresh marks matching ${fullName(killer)}'s service access.`);
+  if (kind === "water") return proof(`Damp towel from ${fullName(killer)}'s room`, `Damp towel from ${fullName(killer)}'s room hidden after ${fullName(victim)} drowned.`);
+  if (kind === "electric") return proof(`Screwdriver with copper residue`, `Screwdriver with copper residue from the tampered wire near ${fullName(victim)}.`);
+  if (kind === "fall") return proof(`Cuff link belonging to ${fullName(killer)}`, `Cuff link belonging to ${fullName(killer)} found at the top of the staircase or nearest fall point.`, "medium");
+  if (kind === "vehicle") return proof(`Garage key with fresh oil`, `Garage key with fresh oil from the cut brake line.`);
+  if (kind === "concealment") return proof(`Dusty sheet used to drag ${fullName(victim)} from ${roomName}`, `Dusty sheet used to drag ${fullName(victim)} from ${roomName}.`);
+  return proof(`Heavy room ornament with wiped blood trace`, `Heavy room ornament with wiped blood trace and fibers from ${fullName(killer)}'s cuff.`);
 }
 
 function mysteryDramaFindableForNpc(npc: MysteryNpc, rooms: MysteryRoom[]): MysteryFindable {
@@ -1521,9 +1592,9 @@ function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[
     const victim = npcs.find((npc) => npc.id === murder.victimId);
     if (!killer || !victim) return;
     const motiveProof = mysteryPreciseMotiveProof(murder.motive, killer, victim);
-    const motiveText = `${motiveProof.name}; can be found ${motiveProof.locationNote}.`;
-    const methodName = mysteryPreciseMethodProof(murder.method, killer, victim, roomName(murder.roomId));
-    const methodText = `${methodName}; can be found in ${roomName(murder.roomId)} after ${fullName(victim)} is found.`;
+    const motiveText = `${motiveProof.description} Can be found ${motiveProof.locationNote} with search roll ${mysteryRollTargetNumber(motiveProof.searchDifficulty)}.`;
+    const methodProof = mysteryPreciseMethodProof(murder.method, killer, victim, roomName(murder.roomId));
+    const methodText = `${methodProof.description} Can be found ${methodProof.locationNote} with search roll ${mysteryRollTargetNumber(methodProof.searchDifficulty)}.`;
     findables.push(
       {
         id: uid(),
@@ -1536,19 +1607,21 @@ function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[
         availableDay: 1,
         availableDaytime: "Morning",
         relatedMurderIndex: index,
-        proofText: motiveText
+        proofText: motiveText,
+        searchDifficulty: motiveProof.searchDifficulty
       },
       {
         id: uid(),
         kind: "Proof",
         origin: "Crime",
-        name: methodName,
+        name: methodProof.name,
         description: methodText,
         roomId: murder.roomId,
         availableDay: murder.day,
         availableDaytime: murder.daytime,
         relatedMurderIndex: index,
-        proofText: methodText
+        proofText: methodText,
+        searchDifficulty: methodProof.searchDifficulty
       }
     );
   });
@@ -1576,16 +1649,36 @@ function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[
   return findables;
 }
 
-function mysteryProofsFor(method: string, motive: string, killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], availableDay: number, availableDaytime: Daytime): string[] {
+function mysteryWitnessSummaryFor(killer: MysteryNpc, victim: MysteryNpc, witness: MysteryNpc, roomName: string, method: string): string {
+  const variants = [
+    `${fullName(witness)} saw ${fullName(killer)} flee from ${roomName} after the murder`,
+    `${fullName(witness)} heard ${fullName(victim)} threaten ${fullName(killer)} shortly before the murder`,
+    `${fullName(witness)} saw ${fullName(killer)} hiding evidence connected to ${fullName(victim)}'s death`,
+    `${fullName(witness)} noticed ${fullName(killer)} changing clothes after the estimated time of the murder`,
+    `${fullName(witness)} saw ${fullName(killer)} take the service route away from ${roomName}`
+  ];
+  const methodLower = method.toLowerCase();
+  if (methodLower.includes("shot")) return `${fullName(witness)} heard the shot and saw ${fullName(killer)} leave ${roomName} before anyone else arrived`;
+  if (methodLower.includes("staircase") || methodLower.includes("balcony") || methodLower.includes("window")) return `${fullName(witness)} saw ${fullName(killer)} near the fall point moments before ${fullName(victim)} died`;
+  return variants[stableHash(`${killer.id}-${victim.id}-${witness.id}-witness`) % variants.length];
+}
+
+function mysteryWitnessAccessText(witness: MysteryNpc): string {
+  return `${fullName(witness)} won't tell the player unless trust or romance is very high (above 75), or Charisma/Persuasion roll 6 succeeds, or Deception/Rizz roll 10 succeeds`;
+}
+
+function mysteryProofsFor(method: string, motive: string, killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], availableDay: number, availableDaytime: Daytime, roomName = "the murder room"): { proofs: string[]; witnessId?: string; witnessSummary?: string } {
   const witnessPool = npcs.filter((npc) => npc.id !== killer.id && npc.id !== victim.id && npc.alive !== false);
   const witness = pick(witnessPool.length > 0 ? witnessPool : [killer]);
+  let witnessSummary: string | undefined;
   if (witness.id !== killer.id) {
+    witnessSummary = mysteryWitnessSummaryFor(killer, victim, witness, roomName, method);
     addMysteryNpcRelationship(
       relationships,
       witness,
       killer,
       "Witness",
-      `${fullName(witness)} may connect ${fullName(killer)} to ${fullName(victim)}'s death if trusted enough.`,
+      `${witnessSummary}, but ${mysteryWitnessAccessText(witness)}.`,
       { hidden: true, trustImpact: 5, motiveRisk: 11, availableDay, availableDaytime }
     );
   }
@@ -1595,10 +1688,11 @@ function mysteryProofsFor(method: string, motive: string, killer: MysteryNpc, vi
     pick(mysteryMotiveClues(motive)),
     pick(mysteryExtraClues(method))
   ];
-  return proofTemplates
+  const proofs = proofTemplates
     .map((proof) => fillMysteryTemplate(proof, killer, victim, npcs, witness))
     .filter((proof, index, list) => list.indexOf(proof) === index)
     .slice(0, 4);
+  return { proofs, witnessId: witness.id !== killer.id ? witness.id : undefined, witnessSummary };
 }
 
 function cleanSentenceEnd(text: string): string {
@@ -3042,6 +3136,7 @@ function createMysteryGameFromDraft(
     const method = pick(mysteryMethods);
     const methodRooms = mysteryRoomsForMethod(method, rooms, playerRoom.id);
     const room = pick(methodRooms.length > 0 ? methodRooms : rooms.filter((candidate) => candidate.id !== playerRoom.id && (candidate.kind !== "guest" || candidate.accessible)));
+    const alternateRoom = mysteryFallbackRoomForMurder(method, rooms, room.id, playerRoom.id);
     const motive = mysteryMotiveFor(killer, victim, npcs, npcRelationships, murderDay, daytime, murders);
     murders.push({
       victimId: victim.id,
@@ -3049,6 +3144,7 @@ function createMysteryGameFromDraft(
       day: murderDay,
       daytime,
       roomId: room.id,
+      alternateRoomId: alternateRoom?.id,
       method,
       motive,
       proof: "",
@@ -3063,9 +3159,12 @@ function createMysteryGameFromDraft(
     const killer = npcs.find((npc) => npc.id === murder.killerId);
     const victim = npcs.find((npc) => npc.id === murder.victimId);
     if (!killer || !victim) continue;
-    const proofs = mysteryProofsFor(murder.method, murder.motive, killer, victim, npcs, npcRelationships, murder.day, murder.daytime);
-    murder.proofs = proofs;
-    murder.proof = proofs[0] ?? `Proof linking ${fullName(killer)} to ${fullName(victim)}'s death`;
+    const murderRoomName = rooms.find((room) => room.id === murder.roomId)?.name ?? "the murder room";
+    const proofResult = mysteryProofsFor(murder.method, murder.motive, killer, victim, npcs, npcRelationships, murder.day, murder.daytime, murderRoomName);
+    murder.proofs = proofResult.proofs;
+    murder.proof = proofResult.proofs[0] ?? `Proof linking ${fullName(killer)} to ${fullName(victim)}'s death`;
+    murder.witnessId = proofResult.witnessId;
+    murder.witnessSummary = proofResult.witnessSummary;
   }
   const findables = mysteryFindablesForScenario(murders, npcs, rooms, npcRelationships);
   for (const [index, murder] of murders.entries()) {
@@ -3073,7 +3172,9 @@ function createMysteryGameFromDraft(
       .filter((findable) => findable.kind === "Proof" && findable.relatedMurderIndex === index && findable.proofText)
       .map((findable) => findable.proofText as string);
     if (exactProofs.length > 0) {
-      murder.proofs = exactProofs;
+      const witness = murder.witnessId ? npcs.find((npc) => npc.id === murder.witnessId) : undefined;
+      const witnessLine = murder.witnessSummary && witness ? `${murder.witnessSummary}, but ${mysteryWitnessAccessText(witness)}.` : undefined;
+      murder.proofs = witnessLine ? [...exactProofs, witnessLine] : exactProofs;
       murder.proof = exactProofs[0];
     }
   }
@@ -3130,6 +3231,8 @@ messages: [
 journal: [],
 journalNotes: "",
 sanityLedger: [],
+aiMemory: [],
+aiConversationSummaries: [],
 discoveredProof: [],
 inventory,
 finished: false,
@@ -3155,6 +3258,9 @@ export default function App() {
   const [draggingMysteryNpcId, setDraggingMysteryNpcId] = useState<string | null>(null);
   const [mysteryInput, setMysteryInput] = useState("");
   const [mysteryAiThinking, setMysteryAiThinking] = useState(false);
+  const [ravenwoodAiStatus, setRavenwoodAiStatus] = useState<RavenwoodModelStatus | null>(null);
+  const [ravenwoodAiTestInput, setRavenwoodAiTestInput] = useState("Ask Nadine what she noticed after dinner.");
+  const [ravenwoodAiTestOutput, setRavenwoodAiTestOutput] = useState("");
   const [expandedMysteryArchiveDays, setExpandedMysteryArchiveDays] = useState<Record<number, boolean>>({});
   const [mysteryTreeViewport, setMysteryTreeViewport] = useState({ width: 0, height: 0 });
   const [solveMurderIndex, setSolveMurderIndex] = useState<number | null>(null);
@@ -3178,6 +3284,17 @@ export default function App() {
     () => ravenwoodDetectiveProfiles.find((profile) => profile.id === selectedMysteryDetectiveId) ?? ravenwoodDetectiveProfiles[0],
     [selectedMysteryDetectiveId]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (screen !== "mystery") return;
+    getRavenwoodModelStatus().then((status) => {
+      if (!cancelled) setRavenwoodAiStatus(status);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [screen]);
 
   useEffect(() => {
     if (screen !== "mysteryFamilyTree" || !activeMystery || mysteryTreeViewport.width <= 0 || mysteryTreeViewport.height <= 0) return;
@@ -3315,6 +3432,24 @@ export default function App() {
     return npc.role === "Guest" ? npc.roomId : npc.stationRoomId;
   }
 
+  function mysteryMurderRoomComposureDifficulty(mystery: MysteryGame, murder: MysteryMurder): MysteryRollOutcome["tier"] {
+    if (mystery.daytime === "Night" || mystery.daytime === "Midnight") return "hard";
+    if (!murder.discovered) return "hard";
+    return "medium";
+  }
+
+  function mysteryPrivateRoomOccupantsAt(mystery: MysteryGame, roomId: string): MysteryNpc[] {
+    return mystery.npcs.filter((npc) => {
+      if (!npc.alive) return false;
+      const privateRoomId = npc.role === "Guest" ? npc.roomId : npc.stationRoomId;
+      return privateRoomId === roomId && currentMysteryNpcRoomId(mystery, npc) === roomId;
+    });
+  }
+
+  function mysteryIsWaitOrHideText(text: string): boolean {
+    return /\b(wait|stay still|keep still|hide|remain hidden|hold breath|cupboard|wardrobe|closet)\b/i.test(text);
+  }
+
   function mysteryPeopleInRoom(mystery: MysteryGame, roomId: string) {
     const mealTime = mystery.daytime === "Breakfast" || mystery.daytime === "Lunch";
     const people = [];
@@ -3373,6 +3508,14 @@ export default function App() {
   function mysteryRollOutcome(text: string, mystery: MysteryGame): MysteryRollOutcome | undefined {
     const check = mysteryCheckKindForText(text);
     if (!check) return undefined;
+    const die = rand(1, 12);
+    const quirkModifier = mysteryQuirkModifierFor(mystery.player.detectiveQuirks, check);
+    const result = die + quirkModifier;
+    const tier = result >= 10 ? "hard" : result >= 6 ? "medium" : result >= 3 ? "easy" : "failed";
+    return { check, die, modifier: quirkModifier, total: result, tier };
+  }
+
+  function mysterySpecificRollOutcome(check: MysteryCheckKind, mystery: MysteryGame): MysteryRollOutcome {
     const die = rand(1, 12);
     const quirkModifier = mysteryQuirkModifierFor(mystery.player.detectiveQuirks, check);
     const result = die + quirkModifier;
@@ -3472,10 +3615,33 @@ export default function App() {
     return "neutral";
   }
 
+  function mysteryIsPositiveSocialRoll(rollResult: MysteryRollOutcome | undefined): boolean {
+    return Boolean(rollResult && ["Charisma", "Rizz", "Persuasion", "Deception"].includes(rollResult.check) && rollResult.tier !== "failed");
+  }
+
+  function mysteryPositiveSocialRollTrustDelta(rollResult: MysteryRollOutcome): number {
+    if (rollResult.tier === "hard") return 10;
+    if (rollResult.tier === "medium") return 7;
+    return 5;
+  }
+
+  function mysteryNoRollTrustGesture(text: string, npc: MysteryNpc): boolean {
+    const lower = text.toLowerCase();
+    if (lower.match(/\b(threat|threaten|blackmail|force|intimidate|accuse|murderer|killer|liar|guilty|stupid|idiot|worthless|seduce|kiss)\b/)) return false;
+    const appearanceCompliment = lower.match(/\b(compliment|praise|nice|kind|elegant|well dressed|good coat|good dress|fine suit|smart outfit|pretty hair|handsome)\b/);
+    if (appearanceCompliment && npc.age < 18 && lower.match(/\b(handsome|beautiful|pretty)\b/)) return false;
+    return Boolean(appearanceCompliment || lower.match(/\b(take interest|show interest|ask about yourself|tell me about yourself|how are you|are you okay|what do you like|your interests|your hobby|your hobbies|listen to you|hear you out)\b/));
+  }
+
   function mysteryToneTrustDelta(text: string, rollResult: MysteryRollOutcome | undefined, npc: MysteryNpc): number {
     const tone = mysteryToneForText(text);
     const tierDelta = rollResult?.tier === "hard" ? 5 : rollResult?.tier === "medium" ? 3 : rollResult?.tier === "easy" ? 1 : -2;
     const alteredModifier = npc.substanceState === "drunk" || npc.substanceState === "high" ? rand(-2, 3) : 0;
+    if (!rollResult && mysteryNoRollTrustGesture(text, npc)) return 1 + (stableHash(`${npc.id}-${text}-trust-gesture`) % 3);
+    if (rollResult && mysteryIsPositiveSocialRoll(rollResult) && tone !== "threat" && tone !== "rude") {
+      if (tone === "flirt" && npc.age < 18) return -6;
+      return clamp(mysteryPositiveSocialRollTrustDelta(rollResult) + alteredModifier, 5, 10);
+    }
     if (tone === "kind") return Math.max(1, tierDelta + alteredModifier);
     if (tone === "flirt") return npc.age >= 18 ? clamp(tierDelta + alteredModifier, -4, 6) : -6;
     if (tone === "threat") return rollResult?.tier === "hard" ? -2 : -8;
@@ -3692,7 +3858,10 @@ export default function App() {
     } else if (relationship && trust >= 42) {
       answer = `Ravenwood makes every private tie feel like evidence. Mine is ${relationship}, and I hate that you can use that.`;
     } else {
-      answer = `${ravenwoodHotelPremise.identity} People come here to be private. Privacy curdles quickly when the roads close.`;
+      const personalTopic = npc.interests[stableHash(`${npc.id}-${mystery.day}-${mystery.daytime}-smalltalk`) % Math.max(1, npc.interests.length)] ?? "quiet rooms";
+      answer = trust > 24
+        ? `I would rather talk about ${personalTopic.toLowerCase()} than repeat hotel gossip. Ask me something specific and I may risk a real answer.`
+        : "I am not here to perform for strangers. Say what you want, plainly.";
     }
     const behavior = substance ? `${substance} ` : "";
     const crimeContext = trust >= 50 || rollResult?.tier === "hard" ? ` ${fullName(npc)} seems ${mysteryCrimeContextForNpc(npc, mystery)}.` : "";
@@ -3816,6 +3985,7 @@ export default function App() {
 
   function mysterySpeechIntent(text: string): boolean {
     return /\b(i|he|she|they|we)\s+(say|says|ask|asks|tell|tells|reply|replies|whisper|whispers|shout|shouts)\b/i.test(text)
+      || /\b(compliment|praise|take interest|show interest|chat with|speak with|talk to|listen to|hear out)\b/i.test(text)
       || /["â€śâ€ť]/.test(text);
   }
 
@@ -3879,7 +4049,12 @@ export default function App() {
       : [];
     return {
       playerAction: text,
-      setting: ravenwoodHotelPremise,
+      settingMood: {
+        mood: ravenwoodHotelPremise.mood,
+        daytime: ravenwoodHotelPremise.daytime,
+        night: ravenwoodHotelPremise.night,
+        isolation: ravenwoodHotelPremise.isolation
+      },
       time: { day: mystery.day, daytime: mystery.daytime },
       room: {
         id: mystery.currentRoomId,
@@ -3950,11 +4125,32 @@ export default function App() {
           discovered: murder.discovered
         }))
       },
+      conversationMemory: (mystery.aiMemory ?? []).slice(-12),
+      conversationSummaries: (mystery.aiConversationSummaries ?? []).slice(-6),
       recentConversation: mystery.messages.slice(-4).map((message) => ({ speaker: message.speaker, text: message.text }))
     };
   }
 
+  function mysteryAiReplyFromValidated(reply: RavenwoodValidatedAiReply): MysteryAiReply {
+    return {
+      text: reply.text,
+      trustDelta: reply.trustDelta,
+      romanceDelta: reply.romanceDelta,
+      revealRomance: reply.revealRomance,
+      summary: reply.summary,
+      memoryWrites: reply.memoryWrites,
+      usedAi: reply.mode !== "scripted",
+      mode: reply.mode
+    };
+  }
+
   async function requestMysteryAiReply(text: string, mystery: MysteryGame, rollResult?: MysteryRollOutcome): Promise<MysteryAiReply | null> {
+    const packet = mysteryAiPacket(text, mystery, rollResult);
+    const offlineStatus = await getRavenwoodModelStatus();
+    if (offlineStatus.nativeCapable && offlineStatus.modelExists) {
+      const offlineReply = await generateRavenwoodOfflineReply(packet);
+      if (offlineReply) return mysteryAiReplyFromValidated(offlineReply);
+    }
     if (typeof fetch !== "function") return null;
     const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
     const timeout = controller ? setTimeout(() => controller.abort(), 2500) : null;
@@ -3962,24 +4158,67 @@ export default function App() {
       const response = await fetch(ravenwoodAiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mysteryAiPacket(text, mystery, rollResult)),
+        body: JSON.stringify(packet),
         signal: controller?.signal
       });
       if (!response.ok) return null;
       const data = await response.json();
-      if (!data || typeof data.text !== "string" || data.text.trim().length < 2) return null;
-      return {
-        text: data.text.trim().slice(0, 900),
-        trustDelta: typeof data.trustDelta === "number" ? clamp(Math.round(data.trustDelta), -10, 10) : undefined,
-        romanceDelta: typeof data.romanceDelta === "number" ? clamp(Math.round(data.romanceDelta), -8, 8) : undefined,
-        revealRomance: Boolean(data.revealRomance),
-        usedAi: true
-      };
+      const validated = validateRavenwoodAiReply(data, "remote");
+      return validated ? mysteryAiReplyFromValidated(validated) : null;
     } catch (_error) {
       return null;
     } finally {
       if (timeout) clearTimeout(timeout);
     }
+  }
+
+  async function refreshRavenwoodAiStatus() {
+    setRavenwoodAiStatus(await getRavenwoodModelStatus());
+  }
+
+  async function downloadRavenwoodAiModel() {
+    setMysteryAiThinking(true);
+    setRavenwoodAiTestOutput("Downloading Ravenwood test model. Keep the app open.");
+    const status = await downloadRavenwoodModel();
+    setRavenwoodAiStatus(status);
+    setRavenwoodAiTestOutput(status.error ? `Download status: ${status.error}` : `Model ready at ${status.modelPath ?? "device storage"}.`);
+    setMysteryAiThinking(false);
+  }
+
+  async function loadRavenwoodAiModel() {
+    setMysteryAiThinking(true);
+    setRavenwoodAiTestOutput("Loading Ravenwood model into memory.");
+    const status = await loadRavenwoodModel();
+    setRavenwoodAiStatus(status);
+    setRavenwoodAiTestOutput(status.loaded ? "Offline model loaded. Try a test line." : `Model not loaded: ${status.error ?? "download it first."}`);
+    setMysteryAiThinking(false);
+  }
+
+  async function testRavenwoodAiModel() {
+    const text = ravenwoodAiTestInput.trim();
+    if (!text) return;
+    setMysteryAiThinking(true);
+    const packet = activeMystery
+      ? mysteryAiPacket(text, activeMystery, mysteryRollOutcome(text, activeMystery))
+      : {
+        playerAction: text,
+        time: { day: 1, daytime: "Evening" },
+        room: { name: "Smoking Room", mood: "lamplight, smoke, closed doors" },
+        targetResident: {
+          name: "Nadine Woodmere",
+          role: "Guest",
+          trustWithPlayer: 28,
+          substanceState: "sober",
+          relationships: []
+        },
+        knownCaseState: { discoveredProof: [], inventory: ["notebook", "pencil"] },
+        conversationMemory: [],
+        hiddenTruthForConsistency: { murders: [] }
+      };
+    const reply = await generateRavenwoodOfflineReply(packet);
+    setRavenwoodAiTestOutput(reply ? `${reply.text}\n\nJSON accepted. trust ${reply.trustDelta}, romance ${reply.romanceDelta}.` : "Offline AI unavailable or response failed validation. Use Download + Load in a development build, or the game will use scripted fallback.");
+    setRavenwoodAiStatus(await getRavenwoodModelStatus());
+    setMysteryAiThinking(false);
   }
 
   async function submitMysteryInput() {
@@ -4003,6 +4242,8 @@ export default function App() {
         { id: uid(), speaker: "Player", text }
       ];
       let journal = [...mystery.journal];
+      let aiMemory = [...(mystery.aiMemory ?? [])];
+      let aiConversationSummaries = [...(mystery.aiConversationSummaries ?? [])];
       let rooms = mystery.rooms;
       let npcs = refreshMysteryNpcStates(mystery, mystery.npcs, nextTime);
       let murders = mystery.murders;
@@ -4016,6 +4257,8 @@ export default function App() {
       let won = false;
       let summary = mystery.summary;
       let lossPending = mystery.lossPending;
+      let hiddenInRoomId = mystery.hiddenInRoomId;
+      let hiddenFromNpcIds = [...(mystery.hiddenFromNpcIds ?? [])];
       const workingMystery = () => ({ ...mystery, rooms, currentRoomId: currentRoom, npcs, murders, findables, discoveredProof });
       const ledgerLines = [
         `Turn: Day ${mystery.day} ${mystery.daytime}, ${mysteryRoomName(mystery, mystery.currentRoomId)}. Player wrote: "${text}". Next clock: Day ${nextTime.day} ${nextTime.daytime}.`
@@ -4028,6 +4271,8 @@ export default function App() {
         rooms = rooms.map((room) => room.id === movementRoom.id ? access.room : room);
         if (access.allowed) {
           currentRoom = movementRoom.id;
+          hiddenInRoomId = undefined;
+          hiddenFromNpcIds = [];
           if (access.message) messages.push(access.message);
           messages.push(mysteryRoomDescription(workingMystery(), currentRoom));
           ledgerLines.push(`Typed movement: ${mystery.player.firstName} moved from ${mysteryRoomName(mystery, mystery.currentRoomId)} to ${movementRoom.name}. ${access.ledger}`);
@@ -4038,6 +4283,31 @@ export default function App() {
       }
 
       let bodyDiscoveryHappened = false;
+      const dueTimeReached = (murder: MysteryMurder) => murder.day < nextTime.day || (murder.day === nextTime.day && daytimes.indexOf(murder.daytime) <= daytimes.indexOf(nextTime.daytime));
+      const roomFallbacks = new Map<number, { fromId: string; toId: string; fromName: string; toName: string }>();
+      murders = murders.map((murder, index) => {
+        if (murder.discovered || murder.solved || murder.prevented || !murder.alternateRoomId || !dueTimeReached(murder) || murder.roomId !== currentRoom) return murder;
+        const fromName = mysteryRoomName(mystery, murder.roomId);
+        const toName = mysteryRoomName(mystery, murder.alternateRoomId);
+        roomFallbacks.set(index, { fromId: murder.roomId, toId: murder.alternateRoomId, fromName, toName });
+        return { ...murder, roomId: murder.alternateRoomId };
+      });
+      if (roomFallbacks.size > 0) {
+        findables = findables.map((findable) => {
+          if (findable.relatedMurderIndex === undefined) return findable;
+          const fallback = roomFallbacks.get(findable.relatedMurderIndex);
+          if (!fallback || findable.roomId !== fallback.fromId) return findable;
+          return {
+            ...findable,
+            roomId: fallback.toId,
+            description: findable.description.replaceAll(fallback.fromName, fallback.toName),
+            proofText: findable.proofText?.replaceAll(fallback.fromName, fallback.toName)
+          };
+        });
+        roomFallbacks.forEach((fallback, index) => {
+          ledgerLines.push(`Murder ${index + 1} room fallback: moved from ${fallback.fromName} to ${fallback.toName} because the player occupied ${fallback.fromName}.`);
+        });
+      }
       const dueMurders = murders.filter((murder) => !murder.discovered && !murder.solved && !murder.prevented && (murder.day < nextTime.day || (murder.day === nextTime.day && daytimes.indexOf(murder.daytime) <= daytimes.indexOf(nextTime.daytime))));
       if (dueMurders.length > 0) {
         const dueVictimIds = new Set(dueMurders.map((murder) => murder.victimId));
@@ -4104,19 +4374,62 @@ export default function App() {
         const matchingMurder = foundFindable?.relatedMurderIndex !== undefined ? murders[foundFindable.relatedMurderIndex] : undefined;
         const foundProof = foundFindable?.proofText ?? foundFindable?.description;
         const roomPeople = mysteryPeopleInRoom(workingMystery(), currentRoom).filter((person) => person.id !== mystery.player.id) as MysteryNpc[];
-        const searchDifficulty: MysteryRollOutcome["tier"] = matchingMurder?.method.toLowerCase().includes("poison") || roomPeople.length > 2 ? "medium" : mystery.daytime === "Night" || mystery.daytime === "Midnight" ? "hard" : "easy";
-        if (foundFindable && foundProof && mysteryRollMeets(rollResult, searchDifficulty)) {
+        const baseSearchDifficulty: MysteryRollOutcome["tier"] = foundFindable?.searchDifficulty ?? (matchingMurder?.method.toLowerCase().includes("poison") || roomPeople.length > 2 ? "medium" : mystery.daytime === "Night" || mystery.daytime === "Midnight" ? "hard" : "easy");
+        const searchCheck = rollResult?.check ?? "Search";
+        const searchFailureCount = foundFindable?.rollFailures?.[searchCheck] ?? 0;
+        const searchDifficulty = searchFailureCount > 0 ? mysteryIncreaseDifficulty(baseSearchDifficulty) : baseSearchDifficulty;
+        const murderInSearchedRoom = murders.find((murder) => murder.roomId === currentRoom && (murder.discovered || dueTimeReached(murder)));
+        const baseComposureDifficulty = murderInSearchedRoom ? mysteryMurderRoomComposureDifficulty(workingMystery(), murderInSearchedRoom) : undefined;
+        const composureFailureCount = foundFindable?.rollFailures?.Composure ?? 0;
+        const composureDifficulty = baseComposureDifficulty ? (composureFailureCount > 0 ? mysteryIncreaseDifficulty(baseComposureDifficulty) : baseComposureDifficulty) : undefined;
+        const searchLocked = Boolean(foundFindable?.lockedChecks?.includes(searchCheck));
+        const composureLocked = Boolean(composureDifficulty && foundFindable?.lockedChecks?.includes("Composure"));
+        const composureRoll = foundFindable && foundProof && composureDifficulty && !searchLocked && !composureLocked ? mysterySpecificRollOutcome("Composure", workingMystery()) : undefined;
+        const composureRollText = mysteryRollText(composureRoll);
+        const combinedRollText = [rollText, composureRollText].filter(Boolean).join(" | ") || undefined;
+        const searchPassed = mysteryRollMeets(rollResult, searchDifficulty);
+        const composurePassed = !composureDifficulty || mysteryRollMeets(composureRoll, composureDifficulty);
+        if (foundFindable && foundProof && (searchLocked || composureLocked)) {
+          const lockedNames = [searchLocked ? searchCheck : null, composureLocked ? "Composure" : null].filter(Boolean).join(" and ");
+          const line = `You already pushed ${lockedNames} twice for ${foundFindable.name}. That approach is closed now, but a different kind of action might still uncover something.`;
+          messages.push({ id: uid(), speaker: "GM", text: line, roll: combinedRollText });
+          ledgerLines.push(`Search locked out for ${foundFindable.name} using ${lockedNames}. Other checks remain possible.`);
+        } else if (foundFindable && foundProof && searchPassed && composurePassed) {
           if (foundFindable.kind === "Proof") discoveredProof.push(foundProof);
           inventory = inventory.includes(foundFindable.name) ? inventory : [...inventory, foundFindable.name];
           findables = findables.map((findable) => findable.id === foundFindable.id ? { ...findable, collected: true } : findable);
           const killerHint = matchingMurder ? ` It points toward ${mysteryNpcName(mystery, matchingMurder.killerId)} if you can connect it cleanly.` : "";
+          const composureNote = composureDifficulty ? " You keep steady despite the murder-room pressure." : "";
           const findLabel = foundFindable.kind === "Proof" ? "You find proof" : "You find an item";
-          messages.push({ id: uid(), speaker: "GM", text: `${findLabel}: ${foundFindable.name}. ${foundFindable.description}${killerHint}`, roll: rollText });
-          ledgerLines.push(`${foundFindable.kind} discovered in ${mysteryRoomName(mystery, currentRoom)}: ${foundProof}. Difficulty ${searchDifficulty}.`);
+          messages.push({ id: uid(), speaker: "GM", text: `${findLabel}: ${foundFindable.name}. ${foundFindable.description}${killerHint}${composureNote}`, roll: combinedRollText });
+          ledgerLines.push(`${foundFindable.kind} discovered in ${mysteryRoomName(mystery, currentRoom)}: ${foundProof}. Difficulty ${searchDifficulty}; check ${searchCheck}${composureDifficulty ? `; composure difficulty ${composureDifficulty}` : ""}.`);
         } else {
-          const failReason = matchingMurder && foundProof ? `The clue is here, but this needs a ${searchDifficulty} success and the house keeps it hidden for now.` : "No fresh proof is ready to reveal here.";
-          messages.push({ id: uid(), speaker: "GM", text: `${mysteryReactiveRoomLine(workingMystery(), currentRoom)} ${failReason}`, roll: rollText, rich: mysteryNpcSegments(mysteryReactiveRoomLine(workingMystery(), currentRoom), workingMystery()) });
-          ledgerLines.push(`Search/investigation found no new proof in ${mysteryRoomName(mystery, currentRoom)}. Difficulty ${searchDifficulty}.${rollText ? ` ${rollText}.` : ""}`);
+          if (foundFindable && foundProof) {
+            const failedChecks = Array.from(new Set([
+              !searchPassed ? searchCheck : null,
+              composureDifficulty && !composurePassed ? "Composure" : null
+            ].filter(Boolean))) as MysteryCheckKind[];
+            const rollFailures = { ...(foundFindable.rollFailures ?? {}) };
+            let lockedChecks = foundFindable.lockedChecks ?? [];
+            failedChecks.forEach((check) => {
+              const nextFailures = (rollFailures[check] ?? 0) + 1;
+              rollFailures[check] = nextFailures;
+              if (nextFailures >= 2) lockedChecks = Array.from(new Set([...lockedChecks, check]));
+            });
+            findables = findables.map((findable) => findable.id === foundFindable.id ? { ...findable, rollFailures, lockedChecks } : findable);
+            if (roomPeople.length > 0) npcs = applyMysteryTrustDelta(npcs, roomPeople.map((person) => person.id), failedChecks.some((check) => (rollFailures[check] ?? 0) >= 2) ? -4 : -2);
+          }
+          const failedSearchText = !searchPassed ? `Search needs ${mysteryRollTargetNumber(searchDifficulty)}` : null;
+          const failedComposureText = composureDifficulty && !composurePassed ? `Composure needs ${mysteryRollTargetNumber(composureDifficulty)}` : null;
+          const failureNeeds = [failedSearchText, failedComposureText].filter(Boolean).join("; ");
+          const retryText = foundFindable && foundProof
+            ? [searchFailureCount >= 1 && !searchPassed ? `The ${searchCheck} approach for ${foundFindable.name} is spent now.` : !searchPassed ? `You can try ${searchCheck} for this same thing one more time, but the difficulty will rise.` : null, composureFailureCount >= 1 && composureDifficulty && !composurePassed ? "Composure is spent for this attempt." : composureDifficulty && !composurePassed ? "You can try to steady yourself one more time, but Composure difficulty will rise." : null]
+              .filter(Boolean)
+              .join(" ")
+            : "";
+          const failReason = matchingMurder && foundProof ? `The clue is here, but ${failureNeeds || `this needs a ${searchDifficulty} success`} and the house keeps it hidden for now. ${retryText}` : "No fresh proof is ready to reveal here.";
+          messages.push({ id: uid(), speaker: "GM", text: `${mysteryReactiveRoomLine(workingMystery(), currentRoom)} ${failReason}`, roll: combinedRollText, rich: mysteryNpcSegments(mysteryReactiveRoomLine(workingMystery(), currentRoom), workingMystery()) });
+          ledgerLines.push(`Search/investigation found no new proof in ${mysteryRoomName(mystery, currentRoom)}. Difficulty ${searchDifficulty}; check ${searchCheck}; failure ${foundFindable && foundProof && !searchPassed ? searchFailureCount + 1 : searchFailureCount}${composureDifficulty ? `; composure difficulty ${composureDifficulty}; composure failure ${!composurePassed ? composureFailureCount + 1 : composureFailureCount}` : ""}.${combinedRollText ? ` ${combinedRollText}.` : ""}`);
         }
       } else if ((lower.includes("accuse") || lower.includes("arrest")) && namedSuspect && suspectMurders.length > 0) {
         if (discoveredProof.some((proof) => suspectProofs.includes(proof))) {
@@ -4149,7 +4462,12 @@ export default function App() {
         const target = mysteryTargetNpc(text, workingMystery(), currentRoom);
         if (target) {
           const dialogue = mysteryResidentReply(text, workingMystery(), target, rollResult);
-          const trustDelta = aiReply?.usedAi && typeof aiReply.trustDelta === "number" ? aiReply.trustDelta : dialogue.trustDelta;
+          const aiTrustDelta = aiReply?.usedAi && typeof aiReply.trustDelta === "number" ? aiReply.trustDelta : undefined;
+          const trustDelta = aiTrustDelta === undefined
+            ? dialogue.trustDelta
+            : dialogue.trustDelta > 0
+              ? Math.max(dialogue.trustDelta, aiTrustDelta)
+              : clamp(dialogue.trustDelta + aiTrustDelta, -12, 10);
           const romanceDelta = aiReply?.usedAi && typeof aiReply.romanceDelta === "number" ? aiReply.romanceDelta : dialogue.romanceDelta;
           const responseText = aiReply?.usedAi ? aiReply.text : dialogue.message.text;
           npcs = npcs.map((npc) => npc.id === target.id ? { ...npc, trust: clamp(npc.trust + trustDelta, 0, 100), romance: clamp(npc.romance + romanceDelta, 0, 100), romanceRevealed: npc.romanceRevealed || romanceDelta !== 0 || Boolean(aiReply?.revealRomance) || mysteryToneForText(text) === "flirt" } : npc);
@@ -4188,6 +4506,74 @@ export default function App() {
         ledgerLines.push(`${nextTime.daytime} gathering triggered; dining room attendance recalculated by deterministic hash.`);
       }
 
+      const currentRoomModel = rooms.find((room) => room.id === currentRoom);
+      if (!finished && currentRoomModel && currentRoom !== mystery.playerRoomId && (currentRoomModel.kind === "guest" || currentRoomModel.kind === "staff" || currentRoomModel.kind === "service")) {
+        const currentPrivateOccupants = mysteryPrivateRoomOccupantsAt(workingMystery(), currentRoom);
+        const nextPrivateMystery = { ...workingMystery(), day: nextTime.day, daytime: nextTime.daytime };
+        const nextPrivateOccupants = mysteryPrivateRoomOccupantsAt(nextPrivateMystery, currentRoom);
+        const returningOccupants = nextPrivateOccupants.filter((npc) => !currentPrivateOccupants.some((currentNpc) => currentNpc.id === npc.id));
+        const caughtBy = (occupants: MysteryNpc[], rollTextForCatch?: string) => {
+          const occupantIds = new Set(occupants.map((npc) => npc.id));
+          npcs = npcs.map((npc) => {
+            if (occupantIds.has(npc.id)) return { ...npc, trust: clamp(npc.trust - 22, 0, 100) };
+            if (npc.role === "Staff") return { ...npc, trust: clamp(npc.trust - 14, 0, 100) };
+            return npc;
+          });
+          hiddenInRoomId = undefined;
+          hiddenFromNpcIds = [];
+          const occupantNames = occupants.slice(0, 3).map(fullName).join(", ");
+          messages.push({
+            id: uid(),
+            speaker: "GM",
+            text: `${occupantNames || "Someone"} catches you trespassing in ${mysteryRoomName(mystery, currentRoom)}. Trust with the room occupants collapses, and staff trust drops sharply once word spreads.`,
+            roll: rollTextForCatch
+          });
+          ledgerLines.push(`Trespass discovered in ${mysteryRoomName(mystery, currentRoom)} by ${occupantNames || "private occupants"}; occupant trust -22, staff trust -14.${rollTextForCatch ? ` ${rollTextForCatch}.` : ""}`);
+        };
+        if (hiddenInRoomId === currentRoom && nextPrivateOccupants.length === 0) {
+          messages.push({ id: uid(), speaker: "GM", text: `You wait until the footsteps leave ${mysteryRoomName(mystery, currentRoom)}. No one discovers you were hidden there.` });
+          ledgerLines.push(`Hidden state cleared safely in ${mysteryRoomName(mystery, currentRoom)} after occupants left.`);
+          hiddenInRoomId = undefined;
+          hiddenFromNpcIds = [];
+        } else if (hiddenInRoomId === currentRoom && nextPrivateOccupants.length > 0 && mysteryIsWaitOrHideText(text)) {
+          messages.push({ id: uid(), speaker: "GM", text: `You stay hidden in ${mysteryRoomName(mystery, currentRoom)} while ${nextPrivateOccupants.slice(0, 2).map(fullName).join(", ")} remains nearby. If you wait until they leave, you will not be discovered.` });
+          ledgerLines.push(`Player remained hidden in ${mysteryRoomName(mystery, currentRoom)} from ${nextPrivateOccupants.map(fullName).join(", ")}.`);
+        } else if (hiddenInRoomId === currentRoom && nextPrivateOccupants.length > 0) {
+          const hideRoll = mysterySpecificRollOutcome("Composure", workingMystery());
+          const hideRollText = mysteryRollText(hideRoll);
+          if (mysteryRollMeets(hideRoll, "hard")) {
+            messages.push({ id: uid(), speaker: "GM", text: `You almost give yourself away, but hold still inside the cupboard. ${nextPrivateOccupants[0] ? fullName(nextPrivateOccupants[0]) : "The room's occupant"} does not notice you.`, roll: hideRollText });
+            ledgerLines.push(`Hidden-room activity survived by hard Composure in ${mysteryRoomName(mystery, currentRoom)}.${hideRollText ? ` ${hideRollText}.` : ""}`);
+          } else {
+            caughtBy(nextPrivateOccupants, hideRollText);
+          }
+        } else if (returningOccupants.length > 0) {
+          const hideRoll = mysterySpecificRollOutcome("Composure", workingMystery());
+          const hideRollText = mysteryRollText(hideRoll);
+          if (mysteryRollMeets(hideRoll, "medium")) {
+            hiddenInRoomId = currentRoom;
+            hiddenFromNpcIds = returningOccupants.map((npc) => npc.id);
+            messages.push({ id: uid(), speaker: "GM", text: `A key turns in the door. Composure holds: you slip into a cupboard before ${returningOccupants.slice(0, 2).map(fullName).join(", ")} can see you. If you wait until they leave, you will not be discovered.`, roll: hideRollText });
+            ledgerLines.push(`Private-room return survived by Composure in ${mysteryRoomName(mystery, currentRoom)}; hidden from ${returningOccupants.map(fullName).join(", ")}.${hideRollText ? ` ${hideRollText}.` : ""}`);
+          } else {
+            caughtBy(returningOccupants, hideRollText);
+          }
+        }
+      }
+
+      if (aiReply?.summary) {
+        aiConversationSummaries = [...aiConversationSummaries, aiReply.summary].slice(-80);
+      }
+      if (aiReply?.memoryWrites?.length) {
+        const existingMemory = new Set(aiMemory);
+        aiMemory = [...aiMemory, ...aiReply.memoryWrites.filter((item) => !existingMemory.has(item))].slice(-120);
+      }
+      if (aiReply?.mode) {
+        ledgerLines.push(`AI reply accepted from ${aiReply.mode}; summary=${Boolean(aiReply.summary)}; memory writes=${aiReply.memoryWrites?.length ?? 0}.`);
+      } else if (!aiReply) {
+        ledgerLines.push("AI reply unavailable or rejected by validation; scripted fallback used.");
+      }
+
       const stampedMessages = stampMysteryMessages(
         [...mystery.messages, ...messages],
         mystery.day,
@@ -4204,6 +4590,10 @@ export default function App() {
         currentRoomId: currentRoom,
         messages: splitMessages.visible,
         journal,
+        aiMemory,
+        aiConversationSummaries,
+        hiddenInRoomId,
+        hiddenFromNpcIds,
         sanityLedger: [...(mystery.sanityLedger ?? []), ...ledgerLines].slice(-600),
         npcs,
         rooms,
@@ -4348,22 +4738,27 @@ export default function App() {
       const ledgerLines: string[] = [];
 
       if (killerCorrect && (proofCorrect || motiveCorrect)) {
+        const previouslyPrevented = new Set(murders.map((candidate, index) => candidate.prevented ? index : -1).filter((index) => index >= 0));
         murders = murders.map((candidate, index) => {
           if (index === murderIndex) return { ...candidate, solved: true, discovered: true };
           const future = mysteryTimeSortValue(candidate.day, candidate.daytime) > nowTime;
           if (future && (candidate.killerId === accusedId || candidate.victimId === accusedId)) return { ...candidate, prevented: true, discovered: true };
           return candidate;
         });
+        const newlyPreventedCount = murders.filter((candidate, index) => candidate.prevented && !previouslyPrevented.has(index)).length;
         const finalDay = mystery.day >= 13;
+        const savedLine = newlyPreventedCount > 0 ? ` You saved ${newlyPreventedCount} ${newlyPreventedCount === 1 ? "life" : "lives"} in this mystery.` : "";
         const line = finalDay
-          ? `${accusedName} is believed. The police take them away before Ravenwood can hide the truth again.`
-          : `${accusedName} is believed. Staff lock them safely in a closet while the investigation continues.`;
+          ? `${accusedName} is believed. The police take them away before Ravenwood can hide the truth again.${savedLine}`
+          : `${accusedName} is believed. Staff lock them safely in a closet while the investigation continues.${savedLine}`;
         messages.push({ id: uid(), speaker: "GM", text: line });
-        ledgerLines.push(`Murder ${murderIndex + 1} solved: killer correct=${killerCorrect}, proof correct=${proofCorrect}, motive correct=${motiveCorrect}.`);
+        ledgerLines.push(`Murder ${murderIndex + 1} solved: killer correct=${killerCorrect}, proof correct=${proofCorrect}, motive correct=${motiveCorrect}; future murders prevented=${newlyPreventedCount}.`);
         if (mysteryNoActiveMurdersRemain(murders)) {
           finished = true;
           won = true;
-          summary = `${mystery.player.firstName} solved the Ravenwood case. ${accusedName} was stopped and the remaining danger in the house ended.`;
+          summary = newlyPreventedCount > 0
+            ? `${mystery.player.firstName} solved the Ravenwood case early and saved ${newlyPreventedCount} ${newlyPreventedCount === 1 ? "life" : "lives"} in a single mystery. ${accusedName} was stopped before the remaining murders could happen.`
+            : `${mystery.player.firstName} solved the Ravenwood case. ${accusedName} was stopped and the remaining danger in the house ended.`;
         }
         setAccusationFeedback({ title: "Victory", text: line, mode: "victory" });
       } else if (killerCorrect) {
@@ -4978,7 +5373,7 @@ export default function App() {
     return (
       <View style={[styles.bottomMenu, { backgroundColor: C.panel, borderColor: C.line }]}>
         <Pressable onPress={() => setScreen("mysteryCharacter")} style={[styles.bottomMenuItem, { borderColor: C.line }]}>
-          <BottomMenuLabel icon="bag" label="Character" />
+          <BottomMenuLabel icon="bag" label="Inventory" />
         </Pressable>
         <Pressable onPress={() => setScreen("mysteryRelations")} style={[styles.bottomMenuItem, { borderColor: C.line }]}>
           <BottomMenuLabel icon="shadowPortrait" label="Residents" />
@@ -5043,6 +5438,11 @@ export default function App() {
     const sceneHeaderStyle = [styles.mysterySceneHeader, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(20, 18, 23, 0.76)" : "rgba(239, 232, 220, 0.74)", borderColor: "rgba(240, 196, 92, 0.28)" }];
     const storyPanelStyle = [styles.storyTextPanel, styles.mysteryTextPanelWide, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.82)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }];
     const inputPanelStyle = [styles.storyInputPanel, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(10, 9, 10, 0.78)" : "rgba(255, 250, 242, 0.82)", borderColor: C.line }];
+    const aiStatus = ravenwoodAiStatus;
+    const aiStatusLine = aiStatus
+      ? `${aiStatus.platform} | ${aiStatus.modelExists ? "model saved" : "no model"} | ${aiStatus.loaded ? "loaded" : "not loaded"}`
+      : "AI status not checked";
+    const aiStatusColor = aiStatus?.loaded ? C.good : aiStatus?.nativeCapable ? C.dim : C.warning;
     const sceneHeaderContent = (
       <>
         <PortraitImage subject={mysteryPlayerPortraitSubject(mystery.player)} size="large" highlight />
@@ -5087,11 +5487,39 @@ export default function App() {
         <Text style={[styles.rollText, styles.storyCount, { color: C.dim }]}>{mysteryInput.length}/500</Text>
       </>
     );
+    const aiTestPanelContent = (
+      <View style={[styles.chatAiTestPanel, styles.ravenwoodBubbleBackdrop, { backgroundColor: themeName === "dark" ? "rgba(16, 14, 18, 0.82)" : "rgba(255, 250, 242, 0.86)", borderColor: C.line }]}>
+        <View style={styles.rowBetween}>
+          <View>
+            <Text style={[styles.storySpeaker, { color: C.gold }]}>AI TEST</Text>
+            <Text style={[styles.rollText, { color: aiStatusColor }]}>{aiStatusLine}</Text>
+          </View>
+          <Button small label="Refresh" onPress={refreshRavenwoodAiStatus} variant="neutral" />
+        </View>
+        {aiStatus?.error ? <Text style={[styles.rollText, { color: C.warning }]}>{aiStatus.error}</Text> : null}
+        <TextInput
+          value={ravenwoodAiTestInput}
+          onChangeText={(value) => setRavenwoodAiTestInput(value.slice(0, 220))}
+          placeholder="Test AI using this mystery context..."
+          placeholderTextColor={C.dim}
+          multiline
+          maxLength={220}
+          style={[styles.chatAiTestInput, { color: C.text, borderColor: C.line, backgroundColor: C.panel2 }]}
+        />
+        <View style={styles.wrapRow}>
+          <Button small label="Download" onPress={downloadRavenwoodAiModel} disabled={mysteryAiThinking} />
+          <Button small label="Load" onPress={loadRavenwoodAiModel} disabled={mysteryAiThinking} />
+          <Button small label={mysteryAiThinking ? "Testing" : "Test Here"} onPress={testRavenwoodAiModel} disabled={mysteryAiThinking || ravenwoodAiTestInput.trim().length === 0} />
+        </View>
+        {ravenwoodAiTestOutput ? <Text style={[styles.rollText, { color: C.text }]}>{ravenwoodAiTestOutput}</Text> : null}
+      </View>
+    );
     const frameContent = (
       <>
         <View style={sceneHeaderStyle}>{sceneHeaderContent}</View>
         <View style={storyPanelStyle}>{storyPanelContent}</View>
         <View style={inputPanelStyle}>{inputPanelContent}</View>
+        {aiTestPanelContent}
       </>
     );
     return (
@@ -5889,7 +6317,24 @@ export default function App() {
       .map(Number)
       .sort((a, b) => b - a);
 
-    const blueprint = activeMystery.murders.map((murder, index) => `Murder ${index + 1}: ${mysteryNpcName(activeMystery, murder.victimId)} by ${mysteryNpcName(activeMystery, murder.killerId)} on day ${murder.day} ${murder.daytime}, ${murder.method}. Motive: ${cleanSentenceEnd(murder.motive)}. Clues/proof: ${(murder.proofs?.length ? murder.proofs : [murder.proof]).join(", ")}.`);
+    const blueprint = activeMystery.murders.map((murder, index) => {
+      const victimName = mysteryNpcName(activeMystery, murder.victimId);
+      const killerName = mysteryNpcName(activeMystery, murder.killerId);
+      const roomName = mysteryRoomName(activeMystery, murder.roomId);
+      const fallbackRoom = murder.alternateRoomId ? mysteryRoomName(activeMystery, murder.alternateRoomId) : null;
+      const proofLines = (activeMystery.findables ?? [])
+        .filter((findable) => findable.kind === "Proof" && findable.relatedMurderIndex === index)
+        .map((findable) => {
+          const proofText = findable.proofText ?? findable.description;
+          const rollNote = /search roll|roll above|roll \d+/i.test(proofText) ? "" : `; search roll ${mysteryRollTargetNumber(findable.searchDifficulty)}`;
+          const timeNote = `available from ${mysteryAvailabilityLabel(findable.availableDay, findable.availableDaytime)}`;
+          return `${proofText} ${timeNote}${rollNote}`;
+        });
+      const witness = murder.witnessId ? activeMystery.npcs.find((npc) => npc.id === murder.witnessId) : undefined;
+      const witnessLine = murder.witnessSummary && witness ? `${murder.witnessSummary}, but ${mysteryWitnessAccessText(witness)}.` : undefined;
+      const clues = [...(proofLines.length > 0 ? proofLines : (murder.proofs?.length ? murder.proofs : [murder.proof])), ...(witnessLine ? [witnessLine] : [])];
+      return `Murder ${index + 1}: ${victimName} by ${killerName} on day ${murder.day} ${murder.daytime} in ${roomName}${fallbackRoom ? ` (if occupied by player at murder time, fallback: ${fallbackRoom})` : ""}, ${murder.method}. Motive: ${cleanSentenceEnd(murder.motive)}. Clues/proof: ${clues.join(", ")}.`;
+    });
     const findableBlueprint = (activeMystery.findables ?? []).map((findable) => {
       const room = findable.roomId ? mysteryRoomName(activeMystery, findable.roomId) : "no fixed room";
       const holder = findable.holderNpcId ? mysteryNpcName(activeMystery, findable.holderNpcId) : "no holder";
@@ -6296,6 +6741,8 @@ const styles = StyleSheet.create({
   detectiveAgeCard: { width: 148, borderWidth: 1, borderRadius: 8, padding: 12, alignItems: "center", gap: 8 },
   detectiveAgeLabel: { fontSize: 18, lineHeight: 22 },
   mysteryStoryFrame: { minHeight: 0 },
+  chatAiTestPanel: { borderWidth: 1, borderRadius: 8, padding: 10, gap: 8 },
+  chatAiTestInput: { minHeight: 54, maxHeight: 90, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, textAlignVertical: "top" },
   mysteryMessageIconRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   mysteryMessageIconBubble: { width: 54, height: 54, borderWidth: 1, borderRadius: 8, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   mysteryMessageIconText: { flex: 1, minWidth: 0 },
