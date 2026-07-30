@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Image,
   ImageBackground,
   Modal,
@@ -12,7 +13,7 @@ import {
   Pressable,
   View
 } from "react-native";
-import type { ImageSourcePropType, StyleProp, ViewStyle } from "react-native";
+import type { ImageSourcePropType, LayoutChangeEvent, StyleProp, ViewStyle } from "react-native";
 import {
   downloadRavenwoodModel,
   generateRavenwoodOfflineReply,
@@ -177,6 +178,25 @@ type MysteryNpcRelationship = {
   availableDaytime?: Daytime;
 };
 
+type MysteryFamilyGraph = {
+  parentChild: { parentId: string; childId: string }[];
+  siblings: { aId: string; bId: string }[];
+  spouses: { aId: string; bId: string }[];
+  partners: { aId: string; bId: string }[];
+  lovers: { aId: string; bId: string }[];
+  cousins: { aId: string; bId: string }[];
+  auntUncleNibling: { auntUncleId: string; niblingId: string }[];
+};
+
+type MysteryFamilyTreeEdgeKind = "parentChild" | "sibling" | "spouse" | "partner" | "lover" | "cousin" | "auntUncleNibling";
+
+type MysteryFamilyTreeEdge = {
+  id: string;
+  fromId: string;
+  toId: string;
+  kind: MysteryFamilyTreeEdgeKind;
+};
+
 type MysteryGame = {
   id: string;
   title: string;
@@ -186,11 +206,13 @@ type MysteryGame = {
   rooms: MysteryRoom[];
   npcs: MysteryNpc[];
   npcRelationships: MysteryNpcRelationship[];
+  familyGraph?: MysteryFamilyGraph;
   murders: MysteryMurder[];
   findables: MysteryFindable[];
   currentRoomId: string;
   playerRoomId: string;
   messages: StoryMessage[];
+  storyFocusMessageId?: string;
   journal: StoryMessage[];
   journalNotes: string;
   sanityLedger: string[];
@@ -198,13 +220,18 @@ type MysteryGame = {
   aiConversationSummaries: string[];
   discoveredProof: string[];
   inventory: string[];
+  rollAttemptLedger?: Record<string, number>;
+  seriousCatchCount?: number;
   finished: boolean;
   won: boolean;
   summary?: string;
   lossPending?: boolean;
   murdererAttackPending?: boolean;
+  pendingBodyDiscoveryPopup?: { title: string; text: string };
   hiddenInRoomId?: string;
   hiddenFromNpcIds?: string[];
+  witnessInvitationNpcIds?: string[];
+  witnessKnowledgeDeliveredNpcIds?: string[];
 };
 
 const themes = {
@@ -277,7 +304,7 @@ function appBackgroundForScreen(themeName: ThemeName, screen: Screen): ImageSour
   return backgrounds[index % backgrounds.length];
 }
 
-type IconDumpKey = "magnifier" | "book" | "candle" | "shadowPortrait" | "bag" | "key" | "letter" | "document" | "money" | "death" | "cards" | "vial";
+type IconDumpKey = "magnifier" | "book" | "candle" | "shadowPortrait" | "bag" | "key" | "letter" | "document" | "money" | "death" | "cards" | "vial" | "bettingSlip" | "childrenToy" | "cuffLink" | "lipstick" | "matchBox" | "newspaper" | "weddingInvitation" | "funeralProgramme" | "cigarettes" | "handgun";
 const iconAssets: Record<IconDumpKey, { source: ImageSourcePropType; width: number; height: number; scale?: number; offsetX?: number; offsetY?: number }> = {
   magnifier: { source: require("./assets/ravenwood/icons/magnifier.png"), width: 138, height: 158, scale: 0.96, offsetX: -1, offsetY: 1 },
   book: { source: require("./assets/ravenwood/icons/book.png"), width: 158, height: 168, scale: 0.96, offsetX: -1, offsetY: 2 },
@@ -290,8 +317,19 @@ const iconAssets: Record<IconDumpKey, { source: ImageSourcePropType; width: numb
   money: { source: require("./assets/ravenwood/icons/money.png"), width: 158, height: 177, scale: 0.96 },
   death: { source: require("./assets/ravenwood/icons/death.png"), width: 178, height: 170, scale: 0.96 },
   cards: { source: require("./assets/ravenwood/icons/cards.png"), width: 198, height: 218, scale: 0.96 },
-  vial: { source: require("./assets/ravenwood/icons/vial.png"), width: 178, height: 182, scale: 0.96 }
+  vial: { source: require("./assets/ravenwood/icons/vial.png"), width: 178, height: 182, scale: 0.96 },
+  bettingSlip: { source: require("./assets/ravenwood/icons/optimized/betting_slip.png"), width: 320, height: 213, scale: 1.02 },
+  childrenToy: { source: require("./assets/ravenwood/icons/optimized/children_toy.png"), width: 213, height: 320, scale: 1.03 },
+  cuffLink: { source: require("./assets/ravenwood/icons/optimized/cuff_link.png"), width: 320, height: 320, scale: 1.02 },
+  lipstick: { source: require("./assets/ravenwood/icons/optimized/lipstick.png"), width: 213, height: 320, scale: 1.03 },
+  matchBox: { source: require("./assets/ravenwood/icons/optimized/match_box.png"), width: 320, height: 320, scale: 1.02 },
+  newspaper: { source: require("./assets/ravenwood/icons/optimized/newspaper.png"), width: 320, height: 320, scale: 1.02 },
+  weddingInvitation: { source: require("./assets/ravenwood/icons/optimized/wedding_invitation.png"), width: 320, height: 320, scale: 1.02 },
+  funeralProgramme: { source: require("./assets/ravenwood/icons/optimized/funeral_programme.png"), width: 213, height: 320, scale: 1.03 },
+  cigarettes: { source: require("./assets/ravenwood/icons/optimized/cigarettes.png"), width: 320, height: 320, scale: 1.02 },
+  handgun: { source: require("./assets/ravenwood/icons/optimized/hanggun.png"), width: 320, height: 213, scale: 1.02 }
 };
+const ravenwoodCompassIcon = require("./assets/ravenwood/icons/optimized/compass.png");
 
 type MysteryRollOutcome = {
   check: MysteryCheckKind;
@@ -600,6 +638,38 @@ const ravenwoodDetectiveProfiles: MysteryDetectiveProfile[] = ravenwoodPlayerPor
     return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
   });
 
+const ravenwoodAge12ComposureLabels = [
+  "Still sleeps with a night-light on",
+  "Afraid of the dark",
+  "Afraid of monsters",
+  "Scared of vampires",
+  "Scared of blood and pain",
+  "Scared of being hurt by a bad man"
+];
+
+function mysteryAutomaticDetectiveQuirks(profile: Pick<MysteryDetectiveProfile, "id" | "sex">, age: number): MysteryDetectiveQuirk[] {
+  const quirks: MysteryDetectiveQuirk[] = [];
+  if (age === 12) {
+    const composureLabel = ravenwoodAge12ComposureLabels[stableHash(`${profile.id}-age-12-composure`) % ravenwoodAge12ComposureLabels.length];
+    quirks.push(
+      { id: "age-12-stealth", label: "Small enough to slip through the house quietly", check: "Stealth", modifier: 2 },
+      { id: "age-12-composure", label: composureLabel, check: "Composure", modifier: -2 }
+    );
+  }
+  if (age === 50 && profile.sex === "Female") {
+    quirks.push(
+      { id: "female-50-charisma", label: "Carries herself with practiced authority", check: "Charisma", modifier: 2 },
+      { id: "female-50-athletics", label: "Less eager to climb, sprint, or force things", check: "Athletics", modifier: -2 }
+    );
+  }
+  return quirks;
+}
+
+function mysteryDetectiveQuirksFor(profile: MysteryDetectiveProfile, age: number): MysteryDetectiveQuirk[] {
+  const automaticQuirks = mysteryAutomaticDetectiveQuirks(profile, age);
+  return [...profile.quirks, ...automaticQuirks];
+}
+
 const initialDraft: CharacterDraft = {
   firstName: "",
   familyName: "",
@@ -675,6 +745,17 @@ function mysteryPlayerAge(player: Pick<MysteryGame["player"], "age">): number {
   return player.age ?? 30;
 }
 
+function mysteryNpcUsesAge10Portrait(npc: MysteryNpc): boolean {
+  const portraitAge = npc.ravenwoodPortraitKey ? ravenwoodPortraitByKey[npc.ravenwoodPortraitKey]?.age : undefined;
+  return (portraitAge ?? ravenwoodPortraitAge(npc.age)) === 10;
+}
+
+function mysteryCanPlayerHaveRomanceWithNpc(player: Pick<MysteryGame["player"], "age">, npc: MysteryNpc): boolean {
+  const playerAge = mysteryPlayerAge(player);
+  const npcUsesAge10Portrait = mysteryNpcUsesAge10Portrait(npc);
+  return playerAge === 12 ? npcUsesAge10Portrait : !npcUsesAge10Portrait;
+}
+
 function mysteryPlayerPortraitSubject(player: MysteryGame["player"]): PortraitSubject {
   const fallback = player.ravenwoodPortraitKey ? null : fallbackRavenwoodPlayerPortrait(player);
   return {
@@ -723,16 +804,21 @@ function mysteryTimeFromSortValue(value: number): { day: number; daytime: Daytim
 
 function mysteryGeneratedMurderSchedule(count: number): { day: number; daytime: Daytime }[] {
   const firstAllowed = mysteryTimeSortValue(2, "Afternoon");
-  const lastAllowed = mysteryTimeSortValue(13, "Evening");
+  const firstDeadline = mysteryTimeSortValue(5, "Night");
+  const lastAllowed = mysteryTimeSortValue(11, "Midnight");
   const candidates: number[] = [];
-  for (let day = 2; day <= 13; day += 1) {
+  for (let day = 2; day <= 11; day += 1) {
     for (const daytime of ravenwoodMurderDaytimes) {
       const value = mysteryTimeSortValue(day, daytime);
       if (value >= firstAllowed && value <= lastAllowed) candidates.push(value);
     }
   }
+  const firstPool = candidates.filter((value) => value <= firstDeadline);
   const selected: number[] = [];
-  const pool = [...candidates];
+  if (count > 0 && firstPool.length > 0) {
+    selected.push(pick(firstPool));
+  }
+  const pool = candidates.filter((value) => !selected.includes(value) && value > (selected[0] ?? firstAllowed - 1));
   while (selected.length < count && pool.length > 0) {
     const value = pick(pool);
     selected.push(value);
@@ -794,7 +880,7 @@ const mysteryWitnessClues = [
   "Witness: {witness} saw {killer} near the crime scene at an unusual hour and is frightened to say it openly.",
   "Witness: {witness} noticed {killer} changing clothes after the esitimated time of the murder, but will only speak after trust is gained.",
   "Witness: {witness} overheard {killer} and {victim} arguing about something, but will only speak after trust is gained.",
-  "Witness: {witness} saw {killer} pass by a service route that does not match their public alibi and is frightened to say it openly."
+  "Witness: {witness} saw {killer} pass by a service route shortly after {victim} died that does not match their public alibi and is frightened to say it openly."
 ];
 const mysteryMotiveTemplates = [
   "To prevent {victim} from exposing {killer}'s affair with {linked_character}.",
@@ -818,7 +904,7 @@ const mysteryMinorMotiveTemplates = [
   "To prevent {victim} from blaming {killer}'s family for the trouble."
 ];
 const mysteryFamilyStatuses = ["Divorced", "Married", "Widowed", "Single", "In a relationship", "Engaged", "Secretly dating", "Secretly engaged", "In an open relationship", "On a break from a relationship", "Unsure", "Open to explore"];
-const mysteryEducations = ["No formal education", "Some elementary school", "Completed elementary school", "Some secondary school", "Secondary school diploma", "Home-schooled through secondary level", "General education diploma", "Basic literacy training", "Customer service training", "Office administration training", "First aid training", "Food hygiene training", "Security guard training", "Basic bookkeeping training", "Legal secretary training", "Medical secretary training", "Receptionist training", "Executive assistant training", "Travel agent training", "Tour guide training", "Drama school training", "Police academy training", "Primary teacher training", "Trade apprenticeship"];
+const mysteryEducations = ["No formal education", "Home-schooled", "Primary school certificate", "Secondary school certificate", "High school diploma", "Vocational training certificate", "Technical college diploma", "Associate degree", "BA — Bachelor of Arts", "BSc — Bachelor of Science", "BEd — Bachelor of Education", "BEng — Bachelor of Engineering", "BFA — Bachelor of Fine Arts", "LLB — Bachelor of Laws", "MA — Master of Arts", "MSc — Master of Science", "MEd — Master of Education", "MBA — Master of Business Administration", "MEng — Master of Engineering", "MFA — Master of Fine Arts", "LLM — Master of Laws", "MD — Doctor of Medicine", "DDS/DMD — Doctor of Dental Surgery/Medicine", "DVM — Doctor of Veterinary Medicine", "PharmD — Doctor of Pharmacy", "PsyD — Doctor of Psychology", "EdD — Doctor of Education", "PhD in Medicine", "PhD in Chemistry", "PhD in Mathematics", "PhD in Biology", "PhD in Physics", "PhD in Engineering", "PhD in Computer Science", "PhD in Psychology", "PhD in Sociology", "PhD in History", "PhD in Literature", "PhD in Economics", "PhD in Political Science", "PhD in Philosophy", "Postdoctoral research qualification", "University professor qualification", "Honorary doctorate", "Customer service training", "Office administration training", "First aid training", "Food hygiene training", "Security guard training", "Basic book-keeping training", "Legal secretary training", "Medical secretary training", "Receptionist training", "Executive assistant training", "Travel agent training", "Tour guide training", "Drama school training", "Police academy training", "Primary teacher training", "Trade apprenticeship", "Completed compulsory schooling", "Law degree", "Legal training"];
 const mysteryInterests = ["Loves football", "Loves watching football", "Loves basketball", "Loves tennis", "Loves running", "Loves swimming", "Loves hiking", "Loves cooking", "Loves baking", "Loves gardening", "Loves reading mysteries", "Loves old films", "Loves opera", "Loves cards", "Loves antiques", "Loves photography", "Loves local history", "Loves cocktail recipes", "Loves chess", "Loves scandal columns"];
 const mysterySecrets = [
   "Is deeply in debt.",
@@ -916,44 +1002,38 @@ function mysteryUniqueQuirkFor(age: number, usedQuirks: Set<string>): string {
   return quirk;
 }
 const mysteryChildInterests = ["Loves football", "Loves basketball", "Loves tennis", "Loves running", "Loves swimming", "Loves hiking", "Loves baking", "Loves gardening", "Loves reading mysteries", "Loves old films", "Loves cards", "Loves local history", "Loves chess"];
-const mysteryReasonsOfStay = ["Attending a family reunion", "Attending a wedding", "Attending an engagement party", "Attending a memorial service", "Celebrating an anniversary", "Taking a weekend break", "Taking a romantic getaway", "Meeting a business partner", "Attending a work conference", "Visiting a relative", "Visiting an old friend", "Meeting a secret romantic partner", "Recovering after an illness", "Escaping unwanted media attention", "Following an anonymous invitation", "Searching for a missing person", "Tracing their family history", "Researching a local story", "Reviewing the hotel", "Meeting a lawyer about an inheritance"];
-const mysteryGuestOccupations = ["Retired", "Student", "Stay-at-home parent", "Accountant", "Actor", "Antique dealer", "Architect", "Archivist", "Art appraiser", "Art dealer", "Auctioneer", "Author", "Bank manager", "Barrister", "Bookbinder", "Boutique owner", "Cellist", "Doctor", "Journalist", "Poet", "Stage actress", "Tour guide"];
-const mysteryStaffOccupations = ["Butler", "Cleaner", "Cook", "Gardener", "Head waiter", "Housekeeper", "Kitchen porter", "Laundry worker", "Night porter", "Nurse", "Security guard", "Waiter", "Chauffeur", "Estate cleaner"];
+const mysteryReasonsOfStay = ["Attending a family reunion", "Attending a wedding", "Attending an engagement party", "Attending a memorial service", "Taking a summer vacation", "On their honeymoon", "Celebrating an anniversary", "Taking a weekend break", "Taking a romantic getaway", "Meeting a business partner", "Attending a work conference", "Visiting a relative", "Visiting an old friend", "Meeting a secret romantic partner", "Recovering after an illness", "Escaping unwanted media attention", "Following an anonymous invitation", "Searching for a missing person", "Tracing their family history", "Researching a local story", "Reviewing the hotel", "Meeting a lawyer about an inheritance"];
+const mysteryGuestOccupations = ["Retired", "Student", "Stay-at-home parent", "Accountant", "Actor", "Antique dealer", "Architect", "Art dealer", "Auctioneer", "Author", "Bank manager", "Boutique owner", "Cellist", "Doctor", "Journalist", "Poet", "Tour guide", "Young heir", "Companion in training", "Junior clerk", "Shop assistant", "Receptionist", "Tour assistant", "None"];
+const mysteryStaffOccupations = ["Butler", "Cleaner", "Cook", "Gardener", "Head waiter", "Housekeeper", "Kitchen porter", "Laundry worker", "Night porter", "Nurse", "Security guard", "Waiter", "Chauffeur", "Estate cleaner", "Kitchen helper", "Laundry helper", "Poolboy"];
 const mysteryGuestCareerProfiles: { minAge: number; occupation: string; educations: string[] }[] = [
-  { minAge: 18, occupation: "Student", educations: ["Some secondary school", "Secondary school diploma", "Home-schooled through secondary level", "Drama school training"] },
-  { minAge: 18, occupation: "Young heir", educations: ["Home-schooled through secondary level", "Secondary school diploma", "General education diploma"] },
-  { minAge: 18, occupation: "Companion in training", educations: ["Home-schooled through secondary level", "Customer service training", "Office administration training"] },
-  { minAge: 18, occupation: "Junior clerk", educations: ["Secondary school diploma", "Office administration training", "Basic bookkeeping training"] },
-  { minAge: 18, occupation: "Shop assistant", educations: ["Secondary school diploma", "Customer service training", "Receptionist training"] },
+  { minAge: 18, occupation: "Student", educations: ["High school diploma", "Secondary school certificate", "Home-schooled", "Drama school training"] },
+  { minAge: 18, occupation: "Young heir", educations: ["Home-schooled", "High school diploma", "Secondary school certificate"] },
+  { minAge: 18, occupation: "Companion in training", educations: ["Home-schooled", "Customer service training", "Office administration training"] },
+  { minAge: 18, occupation: "Junior clerk", educations: ["High school diploma", "Office administration training", "Basic book-keeping training"] },
+  { minAge: 18, occupation: "Shop assistant", educations: ["High school diploma", "Customer service training", "Receptionist training"] },
   { minAge: 18, occupation: "Receptionist", educations: ["Receptionist training", "Office administration training", "Customer service training"] },
-  { minAge: 18, occupation: "Stage student", educations: ["Drama school training", "Secondary school diploma"] },
-  { minAge: 18, occupation: "Tour assistant", educations: ["Tour guide training", "Customer service training", "Secondary school diploma"] },
-  { minAge: 21, occupation: "Bookbinder", educations: ["Trade apprenticeship", "Secondary school diploma"] },
-  { minAge: 21, occupation: "Poet", educations: ["Secondary school diploma", "General education diploma", "Drama school training"] },
-  { minAge: 21, occupation: "Actor", educations: ["Drama school training", "Secondary school diploma"] },
-  { minAge: 22, occupation: "Journalist", educations: ["Secondary school diploma", "Office administration training", "General education diploma"] },
-  { minAge: 22, occupation: "Tour guide", educations: ["Tour guide training", "Customer service training", "General education diploma"] },
-  { minAge: 23, occupation: "Accountant", educations: ["Basic bookkeeping training", "Office administration training", "General education diploma"] },
-  { minAge: 24, occupation: "Author", educations: ["General education diploma", "Secondary school diploma", "Home-schooled through secondary level"] },
-  { minAge: 24, occupation: "Cellist", educations: ["Drama school training", "General education diploma", "Home-schooled through secondary level"] },
-  { minAge: 25, occupation: "Archivist", educations: ["Office administration training", "General education diploma", "Legal secretary training"] },
-  { minAge: 25, occupation: "Boutique owner", educations: ["Customer service training", "Basic bookkeeping training", "Office administration training"] },
-  { minAge: 26, occupation: "Barrister", educations: ["Law degree", "Legal training", "General education diploma"] },
-  { minAge: 26, occupation: "Stage actress", educations: ["Drama school training", "General education diploma"] },
-  { minAge: 27, occupation: "Architect", educations: ["Architecture degree", "Technical college", "General education diploma"] },
-  { minAge: 28, occupation: "Doctor", educations: ["Medical school", "Medical degree", "First aid training"] },
-  { minAge: 28, occupation: "Antique dealer", educations: ["Basic bookkeeping training", "Customer service training", "General education diploma"] },
-  { minAge: 28, occupation: "Art dealer", educations: ["Customer service training", "Basic bookkeeping training", "General education diploma"] },
-  { minAge: 30, occupation: "Art appraiser", educations: ["General education diploma", "Office administration training"] },
-  { minAge: 30, occupation: "Auctioneer", educations: ["Customer service training", "Basic bookkeeping training", "General education diploma"] },
-  { minAge: 32, occupation: "Stay-at-home parent", educations: ["Secondary school diploma", "General education diploma", "Home-schooled through secondary level"] },
-  { minAge: 35, occupation: "Bank manager", educations: ["Basic bookkeeping training", "Office administration training", "General education diploma"] },
-  { minAge: 55, occupation: "Retired", educations: ["Secondary school diploma", "General education diploma", "Trade apprenticeship", "Office administration training"] }
+  { minAge: 18, occupation: "Tour assistant", educations: ["Tour guide training", "Customer service training", "High school diploma"] },
+  { minAge: 21, occupation: "Poet", educations: ["BA — Bachelor of Arts", "High school diploma", "Drama school training"] },
+  { minAge: 21, occupation: "Actor", educations: ["Drama school training", "BFA — Bachelor of Fine Arts", "High school diploma"] },
+  { minAge: 22, occupation: "Journalist", educations: ["BA — Bachelor of Arts", "Office administration training", "High school diploma"] },
+  { minAge: 22, occupation: "Tour guide", educations: ["Tour guide training", "Customer service training", "High school diploma"] },
+  { minAge: 23, occupation: "Accountant", educations: ["Basic book-keeping training", "Office administration training", "Associate degree", "BSc — Bachelor of Science"] },
+  { minAge: 24, occupation: "Author", educations: ["BA — Bachelor of Arts", "MA — Master of Arts", "High school diploma", "Home-schooled"] },
+  { minAge: 24, occupation: "Cellist", educations: ["Drama school training", "BFA — Bachelor of Fine Arts", "Home-schooled"] },
+  { minAge: 25, occupation: "Boutique owner", educations: ["Customer service training", "Basic book-keeping training", "Office administration training"] },
+  { minAge: 27, occupation: "Architect", educations: ["BEng — Bachelor of Engineering", "MEng — Master of Engineering", "Technical college diploma"] },
+  { minAge: 28, occupation: "Doctor", educations: ["MD — Doctor of Medicine", "PhD in Medicine", "First aid training"] },
+  { minAge: 28, occupation: "Antique dealer", educations: ["Basic book-keeping training", "Customer service training", "BA — Bachelor of Arts"] },
+  { minAge: 28, occupation: "Art dealer", educations: ["Customer service training", "Basic book-keeping training", "BA — Bachelor of Arts"] },
+  { minAge: 30, occupation: "Auctioneer", educations: ["Customer service training", "Basic book-keeping training", "BA — Bachelor of Arts"] },
+  { minAge: 32, occupation: "Stay-at-home parent", educations: ["High school diploma", "Secondary school certificate", "Home-schooled"] },
+  { minAge: 35, occupation: "Bank manager", educations: ["Basic book-keeping training", "Office administration training", "MBA — Master of Business Administration"] },
+  { minAge: 55, occupation: "Retired", educations: ["High school diploma", "Trade apprenticeship", "Office administration training"] }
 ];
 const staffStations = ["kitchen", "staff-corridor", "servants-hall", "laundry", "pantry", "garden-terrace", "back-stairs"];
 const ravenwoodMaleNames = ["Theodore", "Asher", "Cedric", "Soraaro", "Adrian", "Alaric", "Ambrose", "Arthur", "Bastian", "Benedict", "Blaise", "Caspian", "Dorian", "Edgar", "Edmund", "Elias", "Felix", "Florian", "Gabriel", "Gideon", "Hugo", "Jasper", "Julian", "Laurent", "Leander", "Leon", "Lucian", "Magnus", "Marcel", "Marius", "Oliver", "Percival", "Raphael", "Remy", "Rowan", "Sebastian", "Silas", "Soren", "Tristan", "Victor", "Vincent", "Xavier", "Elio", "Mael", "Noel", "Rafael", "Thierry", "Alejandro", "Alonso", "Cruz", "Diego", "Esteban", "Javier", "Leandro", "Lorenzo", "Mateo", "Santiago", "Dimitri", "Ilya", "Nikolai", "Stefan", "Akira", "Daichi", "Haru", "Hiro", "Itsuki", "Kaoru", "Kenji", "Ren", "Riku", "Sora", "Taejin", "Jun", "Minho", "Seojun", "Yichen", "Jian", "Lian", "Ming", "Renji", "Toma", "Alden", "Arden", "August", "Claude", "Corvin", "Elian", "Emil", "Evander", "Hadrian", "Hector", "Isidore", "Matthias", "Nicolas", "Octavian", "Orion", "Roman", "Sylvain", "Valentin", "Aurel", "Cassiel", "Lucien", "NicolĂˇs", "Aleksi", "Emilian", "Kasimir", "Lev", "Mikhail", "Emiliaric", "Laurenvin", "Sorenan", "Jasperric", "Hiroien", "Soraair", "Ilyaas", "Alaricien", "Rafaelien", "Yichenvren", "Kenjiar", "Junen", "Valesian", "Asheran", "Emilia", "Javierian", "Matthiasas", "Alaricrel", "Felixric", "Thierren", "Itsukiric", "Oliveris", "Silasis", "Mariusor", "Aurelar", "Rikuric", "Mikhaiiel", "Gabrievar", "Sylvairiel", "Isideo", "Sebastiaian", "Marcelvon", "Abel", "Abraham", "Achilles", "Adam", "Adelard", "Adrianus", "Aeneas", "Aidan", "Alban", "Albert", "Albin", "Albrecht", "Alessio", "Alfonso", "Alfred", "Alistair", "Alonzo", "Amadeo", "Ansel", "Anselm", "Anton", "Antonio", "Archer", "Armand", "Armin", "Arnold", "Arsen", "Arturo", "Auberon", "Augustin", "Aurelio", "Baptiste", "Barnaby", "Barrett", "Bartholomew", "Beau", "Bellamy", "Berenger", "Bernard", "Bertrand", "Blaine", "Boris", "Bowen", "Bram", "Brendan", "Briar", "Broderick", "Byron", "Caelan", "Caesar", "Caius", "Callum", "Calvin", "Cassian", "Cato", "Cillian", "Cyril", "Damian", "Dante", "Darius", "Dashiell", "Declan", "Desmond", "Dominic", "Donovan", "Drake", "Eamon", "Easton", "Edric", "Edwin", "Elric", "Emmanuel", "Enzo", "Eric", "Ernest", "Eryk", "Ethan", "Eugene", "Fabian", "Fabio", "Ferdinand", "Finn", "Finnian", "Francis", "Frederick", "Gareth", "Gaston", "Gael", "Geoffrey", "George", "Gerard", "Godric", "Grayson", "Gregor", "Griffin", "Hamish", "Harold", "Harlan", "Harvey", "Henrik", "Ignatius", "Isaac", "Ivan", "Jace", "James", "Jerome", "Joel", "Jonah", "Jonathan", "Jordan", "Kai", "Kieran", "Killian", "Kristian", "Lachlan", "Lars", "Lawrence", "Lazar", "Lennox", "Liam", "Linus", "Lionel", "Lorcan", "Louis", "Luca", "Lukas", "Luther", "Malachi", "Malcolm", "Manuel", "Marco", "Marcus", "Maxim", "Maximilian", "Micah", "Milan", "Miles", "Milo", "Morgan", "Nathaniel", "Neil", "Nero", "Neville", "Oscar", "Osric", "Owen", "Pascal", "Patrick", "Philip", "Pierce", "Quentin", "Quill", "Raoul", "Raymond", "Reece", "Reid", "Rhys", "Roderick", "Roland", "Ronan", "Rory", "Ruben", "Rufus", "Rupert", "Samson", "Samuel", "Saul", "Scott", "Shae", "Sheridan", "Simon", "Stellan", "Sullivan", "Tobias", "Ulric", "Ulysses", "Vaughn", "Viggo", "Walter", "Warren", "Wilfred", "William", "Wolfgang", "Wyatt", "Yannick", "Yorick", "Zachary", "Zane", "Zephyr", "Aldric", "Cassien", "Darien", "Elarion", "Lucarien", "Valeric", "Soravian", "Raphaelor", "Mikhailen", "Dorianis", "Cassianor", "Alarien", "Renjior", "Sylveric", "Leandros", "Evandriel", "Hadrien", "Lucanor", "Aurelios", "Theodren", "Kaelian", "Renvar", "Tavian", "Asterion", "Corvian", "Elianor", "Magnor", "Valerian", "Julorien", "Bastior", "Emilien"];
-const ravenwoodFemaleNames = ["Adeline", "Aurelia", "Beatrice", "Belladonna", "Camille", "Cassandra", "Celeste", "Celine", "Clara", "Cordelia", "Dahlia", "Delphine", "Eleanor", "Elise", "Elodie", "Emmeline", "Estelle", "Evangeline", "Flora", "Genevieve", "Giselle", "Helena", "Isadora", "Ivy", "Josephine", "Juliette", "Lenore", "Lilian", "Lorelei", "Lucille", "Madeleine", "Margot", "Marielle", "Mireille", "Nadine", "Noelle", "Odette", "Ophelia", "Rosalie", "Sabine", "Selene", "Seraphine", "Sylvie", "Theodora", "Valentina", "Vesper", "Victoria", "Vivienne", "Willow", "Amara", "AnaĂŻs", "Aveline", "Cressida", "Elara", "Fleur", "Isabeau", "Lavinia", "Melisande", "Ondine", "Alba", "Amalia", "Catalina", "Elena", "Esmeralda", "InĂ©s", "Isabella", "Lucia", "Marisol", "Paloma", "Anastasia", "Danica", "Irina", "Katya", "Milena", "Nadia", "Oksana", "Svetlana", "Tatiana", "Zoya", "Aiko", "Akari", "Emi", "Hana", "Haruka", "Kaede", "Mei", "Miyu", "Reina", "Yuna", "Chaewon", "Haeun", "Jisoo", "Nari", "Sora", "Xia", "Yue", "Lian", "Meilin", "Rin", "InĂ©syne", "Jisooa", "Sabineina", "Josephinora", "Reinaalia", "Isada", "Willowyne", "Irinaia", "Valentinis", "Isadorira", "Katyais", "Seraphi", "Aikois", "Marieuna", "Seleneuna", "Palomarea", "Elenaenne", "Helenaa", "InĂ©selle", "Naria", "Chaewira", "Xiaea", "Sabineora", "Evangelineora", "Meiis", "Rinea", "Hanaette", "Kaedeenne", "Harukaina", "Danicaia", "Emiora", "Giselleline", "Briaris", "Akariyne", "AnaĂŻsina", "Emieria", "Irinavenne", "Loreleiia", "Reinaina", "Aikoira", "Abigail", "Adelaide", "Adelina", "Adriana", "Agatha", "Agnes", "Alessandra", "Alessia", "Alexandra", "Alice", "Alicia", "Alina", "Althea", "Amanda", "Amber", "Amelia", "Amelie", "Anastasie", "Angelique", "Annabelle", "Annalise", "Annika", "Antonia", "Arabella", "Ariadne", "Ariella", "Astrid", "Athena", "Audrey", "Autumn", "Avelina", "Azalea", "Bianca", "Blair", "Blythe", "Briony", "Calista", "Calliope", "Camellia", "Carina", "Caroline", "Catriona", "Cecelia", "Cecilia", "Cerise", "Charlotte", "Chiara", "Chloe", "Clarissa", "Clementine", "Colette", "Cosette", "Cynthia", "Daphne", "Delia", "Diana", "Dominique", "Edith", "Eileen", "Eleanora", "Eliana", "Elina", "Elisa", "Eliska", "Elliana", "Eloisa", "Elowen", "Elsa", "Emilia", "Emilie", "Enya", "Erika", "Esme", "Eulalia", "Eulalie", "Euphemia", "Evelyn", "Faith", "Felicia", "Felicity", "Fern", "Fiorella", "Florence", "Francesca", "Freya", "Gabriella", "Gemma", "Georgiana", "Gwendolyn", "Gwyneth", "Hazel", "Heidi", "Honora", "Imogen", "Iona", "Iris", "Isabelle", "Isolde", "Jacinta", "Jade", "Jessamine", "Joanna", "Jocelyn", "June", "Karina", "Katarina", "Laurel", "Leona", "Leontine", "Letitia", "Liora", "Lisette", "Loretta", "Louisa", "Louise", "Lucinda", "Lydia", "Lyra", "Mabel", "Maeve", "Magnolia", "Marceline", "Marina", "Matilda", "Meredith", "Minerva", "Mirabel", "Miranda", "Monica", "Morgana", "Nerissa", "Nina", "Oriana", "Ottilie", "Pandora", "Penelope", "Petra", "Philippa", "Phoebe", "Primrose", "Regina", "Renata", "Rosalind", "Rosemary", "Roxanne", "Ruby", "Sabrina", "Samantha", "Scarlett", "Serena", "Simone", "Sofia", "Sophie", "Stella", "Susanna", "Tabitha", "Thalia", "Theresa", "Tiffany", "Ursula", "Vanessa", "Vera", "Veronica", "Violet", "Virginia", "Willa", "Winifred", "Winter", "Yvette", "Zara", "Zinnia", "Altheia", "Araminta", "Belinda", "Bernadette", "Capucine", "Carlotta", "Celestine", "Clarimond", "Corinne", "Desiree", "Dominiquea", "Dorothea", "Eleanore", "Elisabetta", "Ernestine", "Euphrasie", "Florentine", "Geraldine", "Henrietta", "Hestia", "Isaline", "Jessamyn", "Leonie", "Lilou", "Liselotte", "Maelle", "Magdalene", "Maribelle", "Marigold", "Melina", "Mirabelle", "Noemi", "Ottavia", "Prisca", "Romilly", "Solene", "Tatienne", "Valencia", "Verena", "Yolande", "ZĂ©lie"];
-const ravenwoodSurnames = ["Ash", "Black", "Briar", "Crow", "Dusk", "Elder", "Ember", "Ever", "Fair", "Fallow", "Fern", "Frost", "Glen", "Grey", "Hallow", "Hawke", "Hazel", "Hollow", "Iron", "Ivory", "Lark", "Marlowe", "Mist", "Moon", "Night", "Oak", "Raven", "Rose", "Rowan", "Sable", "Shadow", "Silver", "Snow", "Star", "Stone", "Storm", "Thorn", "Vale", "Vane", "Winter", "Wren", "Wilde", "Wood", "Bell", "Blake", "Byron", "Carrow", "Dacre", "Darcy", "Devereux", "Fairfax", "Graves", "Hale", "Harrow", "Hart", "Huxley", "Locke", "March", "Morrow", "Poe", "Quill", "Reeve", "Sinclair", "Sterling", "Thorne", "Voss", "Whitlock", "Wycliffe", "Arden", "Beaumont", "Bellefleur", "Clairmont", "Delacroix", "Desmarais", "Duval", "Fontaine", "Laurent", "Lenoir", "Moreau", "Rochefort", "Valmont", "Villiers", "AlarcĂłn", "Delgado", "Montoya", "Navarro", "Salazar", "Serrano", "ValdĂ©s", "Vega", "Volkov", "Morozov", "Orlov", "Petrov", "Romanov", "Sokolov", "Vasiliev", "Dragomir", "Takeda", "Kuroda", "Mori", "Akiyama", "Hayashi", "Ishikawa", "Han", "Seo", "Kang", "Jin", "Lin", "Shen", "Wei", "Zhao", "Crowbyron", "La Zhaofield", "Von Crowhurst", "La Salazarvane", "La Duvalclair", "Della Mistmere", "La Thornewick", "St. Lockebridge", "Del Fernember", "Du Thornridge", "Bellbridge", "St. Zhaowood", "Von Irondell", "St. Fallowclair", "Delgadoquill", "Villiersstone", "Du Wycliffehart", "Le Wood", "Von Seostorm", "Hayashihayashi", "Du Seomont", "Blakefield", "Le Fontainemoor", "De Fernwell", "Larkmist", "Le Halerose", "De Jinsokolov", "Le Snowfield", "Shadowwinter", "Van Fairfaxthorne", "MoreaualarcĂłn", "La Stonestar", "Della Morozovstone", "Von Vasilievwood", "Ravenwinter", "Van Elderhurst", "Vasilievshade", "Du Ravenshade", "Du Darcy", "Evercliff", "Von Duvalmont", "Le Jinhurst", "Del Starsterling", "De Hallow", "De Thornerose", "La Ravenarden", "De Ardenbrook", "Della Fallowwood", "La Fallowclair", "La Fontainecourt", "La Beaumontbridge", "Silverwinter", "Glenhart", "St. Hazelzhao", "De Huxleyrose", "St. Clairmontromanov", "Devereuxhurst", "Roseshade", "Del Vasilievgrave", "Van Romanovwick", "Du Fairthorne","Ashcroft", "Ashbourne", "Ashfield", "Ashmere", "Ashford", "Ashwell", "Blackthorn", "Blackwood", "Blackwell", "Blackridge", "Blackmoor", "Blackstone", "Briarwood", "Briarfield", "Briarwell", "Crowhurst", "Crowley", "Crowmere", "Crowfield", "Crowstone", "Duskridge", "Duskmere", "Duskwood", "Elderwood", "Eldermere", "Elderbrook", "Elderfield", "Emberstone", "Emberwood", "Emberfield", "Everbrook", "Everfield", "Evermere", "Fairbrook", "Fairmont", "Fairfield", "Fallowmere", "Fallowbrook", "Fernbrook", "Fernfield", "Fernwick", "Frostmere", "Frostfield", "Frostwick", "Glenbrook", "Glenmere", "Greybrook", "Greyfield", "Greywick", "Greyhaven", "Greymoor", "Hallowmere", "Hallowbrook", "Hawkridge", "Hawkstone", "Hazelbrook", "Hazelfield", "Hazelwick", "Hollowbrook", "Hollowmere", "Ironbrook", "Ironfield", "Ivorybrook", "Ivoryfield", "Larkfield", "Larkwood", "Mistbrook", "Mistfield", "Mistmere", "Moonbrook", "Moonridge", "Nightbrook", "Nightfield", "Oakridge", "Oakmere", "Oakfield", "Ravenhurst", "Ravenwood", "Ravenmere", "Rosebrook", "Rosefield", "Rowanbrook", "Sablewood", "Sablemere", "Shadowbrook", "Shadowmere", "Silverbrook", "Silvermere", "Snowbrook", "Snowmere", "Starbrook", "Starfield", "Stonebrook", "Stonefield", "Stormbrook", "Stormfield", "Thornbrook", "Thornfield", "Thornmere", "Valebrook", "Valefield", "Winterbrook", "Wintermere", "Wrenfield", "Wildemere", "Woodcroft", "Woodmere"];
+const ravenwoodFemaleNames = ["Adeline", "Aurelia", "Beatrice", "Belladonna", "Camille", "Cassandra", "Celeste", "Celine", "Clara", "Cordelia", "Dahlia", "Delphine", "Eleanor", "Elise", "Elodie", "Emmeline", "Estelle", "Evangeline", "Flora", "Genevieve", "Giselle", "Helena", "Isadora", "Ivy", "Josephine", "Juliette", "Lenore", "Lilian", "Lorelei", "Lucille", "Madeleine", "Margot", "Marielle", "Mireille", "Nadine", "Noelle", "Odette", "Ophelia", "Rosalie", "Sabine", "Selene", "Seraphine", "Sylvie", "Theodora", "Valentina", "Vesper", "Victoria", "Vivienne", "Willow", "Amara", "Aveline", "Cressida", "Elara", "Fleur", "Isabeau", "Lavinia", "Melisande", "Ondine", "Alba", "Amalia", "Catalina", "Elena", "Esmeralda", "InĂ©s", "Isabella", "Lucia", "Marisol", "Paloma", "Anastasia", "Danica", "Irina", "Katya", "Milena", "Nadia", "Oksana", "Svetlana", "Tatiana", "Zoya", "Aiko", "Akari", "Emi", "Hana", "Haruka", "Kaede", "Mei", "Miyu", "Reina", "Yuna", "Chaewon", "Haeun", "Jisoo", "Nari", "Sora", "Xia", "Yue", "Lian", "Meilin", "Rin", "InĂ©syne", "Jisooa", "Sabineina", "Josephinora", "Reinaalia", "Isada", "Willowyne", "Irinaia", "Valentinis", "Isadorira", "Katyais", "Seraphi", "Aikois", "Marieuna", "Seleneuna", "Palomarea", "Elenaenne", "Helenaa", "InĂ©selle", "Naria", "Chaewira", "Xiaea", "Sabineora", "Evangelineora", "Meiis", "Rinea", "Hanaette", "Kaedeenne", "Harukaina", "Danicaia", "Emiora", "Giselleline", "Briaris", "Akariyne", "Emieria", "Irinavenne", "Loreleiia", "Reinaina", "Aikoira", "Abigail", "Adelaide", "Adelina", "Adriana", "Agatha", "Agnes", "Alessandra", "Alessia", "Alexandra", "Alice", "Alicia", "Alina", "Althea", "Amanda", "Amber", "Amelia", "Amelie", "Anastasie", "Angelique", "Annabelle", "Annalise", "Annika", "Antonia", "Arabella", "Ariadne", "Ariella", "Astrid", "Athena", "Audrey", "Autumn", "Avelina", "Azalea", "Bianca", "Blair", "Blythe", "Briony", "Calista", "Calliope", "Camellia", "Carina", "Caroline", "Catriona", "Cecelia", "Cecilia", "Cerise", "Charlotte", "Chiara", "Chloe", "Clarissa", "Clementine", "Colette", "Cosette", "Cynthia", "Daphne", "Delia", "Diana", "Dominique", "Edith", "Eileen", "Eleanora", "Eliana", "Elina", "Elisa", "Eliska", "Elliana", "Eloisa", "Elowen", "Elsa", "Emilia", "Emilie", "Enya", "Erika", "Esme", "Eulalia", "Eulalie", "Euphemia", "Evelyn", "Faith", "Felicia", "Felicity", "Fern", "Fiorella", "Florence", "Francesca", "Freya", "Gabriella", "Gemma", "Georgiana", "Gwendolyn", "Gwyneth", "Hazel", "Heidi", "Honora", "Imogen", "Iona", "Iris", "Isabelle", "Isolde", "Jacinta", "Jade", "Jessamine", "Joanna", "Jocelyn", "June", "Karina", "Katarina", "Laurel", "Leona", "Leontine", "Letitia", "Liora", "Lisette", "Loretta", "Louisa", "Louise", "Lucinda", "Lydia", "Lyra", "Mabel", "Maeve", "Magnolia", "Marceline", "Marina", "Matilda", "Meredith", "Minerva", "Mirabel", "Miranda", "Monica", "Morgana", "Nerissa", "Nina", "Oriana", "Ottilie", "Pandora", "Penelope", "Petra", "Philippa", "Phoebe", "Primrose", "Regina", "Renata", "Rosalind", "Rosemary", "Roxanne", "Ruby", "Sabrina", "Samantha", "Scarlett", "Serena", "Simone", "Sofia", "Sophie", "Stella", "Susanna", "Tabitha", "Thalia", "Theresa", "Tiffany", "Ursula", "Vanessa", "Vera", "Veronica", "Violet", "Virginia", "Willa", "Winifred", "Winter", "Yvette", "Zara", "Zinnia", "Altheia", "Araminta", "Belinda", "Bernadette", "Capucine", "Carlotta", "Celestine", "Clarimond", "Corinne", "Desiree", "Dominiquea", "Dorothea", "Eleanore", "Elisabetta", "Ernestine", "Euphrasie", "Florentine", "Geraldine", "Henrietta", "Hestia", "Isaline", "Jessamyn", "Leonie", "Lilou", "Liselotte", "Maelle", "Magdalene", "Maribelle", "Marigold", "Melina", "Mirabelle", "Noemi", "Ottavia", "Prisca", "Romilly", "Solene", "Tatienne", "Valencia", "Verena", "Yolande", "ZĂ©lie"];
+const ravenwoodSurnames = ["Ash", "Black", "Briar", "Crow", "Dusk", "Elder", "Ember", "Ever", "Fair", "Fallow", "Fern", "Frost", "Glen", "Grey", "Hallow", "Hawke", "Hazel", "Hollow", "Iron", "Ivory", "Lark", "Marlowe", "Mist", "Moon", "Night", "Oak", "Raven", "Rose", "Rowan", "Sable", "Shadow", "Silver", "Snow", "Star", "Stone", "Storm", "Thorn", "Vale", "Vane", "Winter", "Wren", "Wilde", "Wood", "Bell", "Blake", "Byron", "Carrow", "Dacre", "Darcy", "Devereux", "Fairfax", "Graves", "Hale", "Harrow", "Hart", "Huxley", "Locke", "March", "Morrow", "Poe", "Quill", "Reeve", "Sinclair", "Sterling", "Thorne", "Voss", "Whitlock", "Wycliffe", "Arden", "Beaumont", "Bellefleur", "Clairmont", "Delacroix", "Desmarais", "Duval", "Fontaine", "Laurent", "Lenoir", "Moreau", "Rochefort", "Valmont", "Villiers", "AlarcĂłn", "Delgado", "Montoya", "Navarro", "Salazar", "Serrano", "ValdĂ©s", "Vega", "Volkov", "Morozov", "Orlov", "Petrov", "Romanov", "Sokolov", "Vasiliev", "Dragomir", "Takeda", "Kuroda", "Mori", "Akiyama", "Hayashi", "Ishikawa", "Han", "Seo", "Kang", "Jin", "Lin", "Shen", "Wei", "Zhao", "Crowbyron", "La Zhaofield", "Von Crowhurst", "La Salazarvane", "La Duvalclair", "Della Mistmere", "La Thornewick", "St. Lockebridge", "Del Fernember", "Du Thornridge", "Bellbridge", "St. Zhaowood", "Von Irondell", "St. Fallowclair", "Delgadoquill", "Villiersstone", "Du Wycliffehart", "Le Wood", "Von Seostorm", "Hayashihayashi", "Du Seomont", "Blakefield", "Le Fontainemoor", "De Fernwell", "Larkmist", "Le Halerose", "De Jinsokolov", "Le Snowfield", "Shadowwinter", "Van Fairfaxthorne", "La Stonestar", "Della Morozovstone", "Von Vasilievwood", "Ravenwinter", "Van Elderhurst", "Vasilievshade", "Du Ravenshade", "Du Darcy", "Evercliff", "Von Duvalmont", "Le Jinhurst", "Del Starsterling", "De Hallow", "De Thornerose", "La Ravenarden", "De Ardenbrook", "Della Fallowwood", "La Fallowclair", "La Fontainecourt", "La Beaumontbridge", "Silverwinter", "Glenhart", "St. Hazelzhao", "De Huxleyrose", "St. Clairmontromanov", "Devereuxhurst", "Roseshade", "Del Vasilievgrave", "Van Romanovwick", "Du Fairthorne","Ashcroft", "Ashbourne", "Ashfield", "Ashmere", "Ashford", "Ashwell", "Blackthorn", "Blackwood", "Blackwell", "Blackridge", "Blackmoor", "Blackstone", "Briarwood", "Briarfield", "Briarwell", "Crowhurst", "Crowley", "Crowmere", "Crowfield", "Crowstone", "Duskridge", "Duskmere", "Duskwood", "Elderwood", "Eldermere", "Elderbrook", "Elderfield", "Emberstone", "Emberwood", "Emberfield", "Everbrook", "Everfield", "Evermere", "Fairbrook", "Fairmont", "Fairfield", "Fallowmere", "Fallowbrook", "Fernbrook", "Fernfield", "Fernwick", "Frostmere", "Frostfield", "Frostwick", "Glenbrook", "Glenmere", "Greybrook", "Greyfield", "Greywick", "Greyhaven", "Greymoor", "Hallowmere", "Hallowbrook", "Hawkridge", "Hawkstone", "Hazelbrook", "Hazelfield", "Hazelwick", "Hollowbrook", "Hollowmere", "Ironbrook", "Ironfield", "Ivorybrook", "Ivoryfield", "Larkfield", "Larkwood", "Mistbrook", "Mistfield", "Mistmere", "Moonbrook", "Moonridge", "Nightbrook", "Nightfield", "Oakridge", "Oakmere", "Oakfield", "Ravenhurst", "Ravenwood", "Ravenmere", "Rosebrook", "Rosefield", "Rowanbrook", "Sablewood", "Sablemere", "Shadowbrook", "Shadowmere", "Silverbrook", "Silvermere", "Snowbrook", "Snowmere", "Starbrook", "Starfield", "Stonebrook", "Stonefield", "Stormbrook", "Stormfield", "Thornbrook", "Thornfield", "Thornmere", "Valebrook", "Valefield", "Winterbrook", "Wintermere", "Wrenfield", "Wildemere", "Woodcroft", "Woodmere"];
 
 function fillMysteryTemplate(template: string, killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryNpc[], witness?: MysteryNpc): string {
   const linkedPool = npcs.filter((npc) => npc.id !== killer.id && npc.id !== victim.id);
@@ -1173,12 +1253,22 @@ function mysteryFindableAvailability(findable: MysteryFindable, day: number, day
 
 function mysteryInventoryIconFor(item: string): IconDumpKey | undefined {
   const lower = item.toLowerCase();
+  if (/\b(betting slip|wager|gambling|bookmaker|racing stub)\b/.test(lower)) return "bettingSlip";
+  if (/\b(wedding invitation|wedding invite|engagement invitation)\b/.test(lower)) return "weddingInvitation";
+  if (/\b(funeral programme|funeral program|memorial programme|memorial program)\b/.test(lower)) return "funeralProgramme";
+  if (/\b(newspaper|newspapers|article|articles|scandal column|columns|press clipping|clipping)\b/.test(lower)) return "newspaper";
+  if (/\b(cigarette|cigarettes|cigarette case|tobacco|cigar|cigars)\b/.test(lower)) return "cigarettes";
+  if (/\b(matchbox|match box|matchbook|match book|matches|lighter)\b/.test(lower)) return "matchBox";
+  if (/\b(handgun|gun|pistol|revolver|firearm|bullet|bullets|cartridge|cartridges)\b/.test(lower)) return "handgun";
+  if (/\b(cufflink|cufflinks|cuff link|cuff links|button|buttons|jewellery|jewelry)\b/.test(lower)) return "cuffLink";
+  if (/\b(lipstick|makeup|make-up|rouge|powder compact|compact|perfume)\b/.test(lower)) return "lipstick";
+  if (/\b(toy|doll|teddy|child's|children's|childrens|drawing|crayon|marble|marbles)\b/.test(lower)) return "childrenToy";
   if (/\b(vial|vials|medicine|prescription|aspirin|sleeping-pill|sleeping pill|drug container|drug containers|empty drug|ampoule|ampoules|syringe|poison|rat poison|cleaning fluid)\b/.test(lower)) return "vial";
   if (/\b(card|cards|deck)\b/.test(lower)) return "cards";
   if (/\bkey\b/.test(lower)) return "key";
   if (/\b(letter|letters|envelope|envelopes|apology|threatening)\b/.test(lower)) return "letter";
   if (/\b(money|coin|coins|gold|cash|bill|bills|fund|funds|currency)\b/.test(lower)) return "money";
-  if (/\b(candle|candlestick|lantern|lighter|matchbook)\b/.test(lower)) return "candle";
+  if (/\b(candle|candlestick|lantern)\b/.test(lower)) return "candle";
   if (/\b(document|documents|paper|papers|ledger|slip|slips|will|id card|identification|receipt|programme|program|permit|contract|deed|certificate|notebook|note|newspaper|article|catalogue|catalog|map|photo|photograph|drawing|invitation|badge|ticket|statement|list)\b/.test(lower)) return "document";
   return "bag";
 }
@@ -1297,8 +1387,8 @@ function mysteryDramaFindableForNpc(npc: MysteryNpc, rooms: MysteryRoom[]): Myst
     name = `Suspicious document draft tied to ${fullName(npc)}`;
     description = `A document draft that points to ${fullName(npc)}'s private trouble, but does not match any murder proof.`;
   } else if (lowerSecret.includes("debt") || lowerSecret.includes("gambling") || lowerSecret.includes("money") || lowerOccupation.includes("bank") || lowerOccupation.includes("account")) {
-    name = `Betting slip with ${fullName(npc)}'s initials`;
-    description = `A betting slip and small money note that makes ${fullName(npc)} look desperate, but only explains unrelated drama.`;
+    name = `A betting slip and small money note with ${fullName(npc)}'s initials, that makes ${fullName(npc)} look desperate`;
+    description = "";
   } else if (lowerSecret.includes("relationship") || lowerSecret.includes("dating") || lowerStatus.includes("dating") || lowerStatus.includes("engaged") || lowerStatus.includes("relationship")) {
     name = `Love letter hidden by ${fullName(npc)}`;
     description = `A love letter that exposes ${fullName(npc)}'s private relationship trouble without proving a killing.`;
@@ -1308,7 +1398,7 @@ function mysteryDramaFindableForNpc(npc: MysteryNpc, rooms: MysteryRoom[]): Myst
   } else if (lowerOccupation.includes("journalist") || lowerOccupation.includes("author") || lowerOccupation.includes("archivist") || lowerOccupation.includes("clerk")) {
     name = `Notebook page with ${fullName(npc)}'s private notes`;
     description = `A notebook page full of names and times that can distract the investigation without matching the murder proof.`;
-  } else if (lowerQuirk.includes("cigarette") || npc.substancePreference.includes("cigarettes")) {
+  } else if (lowerQuirk.includes("cigarette") || mysteryDisplaySubstancePreference(npc).includes("cigarettes")) {
     name = `Cigarette case engraved for ${fullName(npc)}`;
     description = `A cigarette case that places ${fullName(npc)} in social rooms often, but does not prove a crime.`;
     roomId = held ? undefined : socialRoomId;
@@ -1364,8 +1454,8 @@ function mysteryNeutralHouseFindablesForScenario(npcs: MysteryNpc[], rooms: Myst
   };
   const adults = npcs.filter((npc) => npc.age >= 18);
   const children = npcs.filter((npc) => npc.age < 13);
-  const smokers = npcs.filter((npc) => npc.substancePreference.includes("cigarettes"));
-  const drinkers = npcs.filter((npc) => npc.substancePreference.includes("alcohol"));
+  const smokers = npcs.filter((npc) => mysteryDisplaySubstancePreference(npc).includes("cigarettes"));
+  const drinkers = npcs.filter((npc) => mysteryDisplaySubstancePreference(npc).includes("alcohol"));
   const cardPlayers = npcs.filter((npc) => npc.interests.some((interest) => interest.toLowerCase().includes("cards") || interest.toLowerCase().includes("chess")));
   const romanceResidents = npcs.filter((npc) => /dating|engaged|relationship|married|open to explore/i.test(npc.familyStatus));
   const divorcedResidents = npcs.filter((npc) => /divorced|on a break/i.test(npc.familyStatus));
@@ -1568,6 +1658,16 @@ function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[
     availableDay: 1,
     availableDaytime: "Morning"
   });
+  findables.push({
+    id: uid(),
+    kind: "Snatchable",
+    origin: "House",
+    name: "grand hall service key",
+    description: "Opens every staff and service area in the mansion; can be stolen from the Great Hall service desk.",
+    roomId: "grand-hall",
+    availableDay: 1,
+    availableDaytime: "Morning"
+  });
 
   const guestKeyRooms = new Set<string>();
   for (const npc of npcs.filter((candidate) => candidate.role === "Guest")) {
@@ -1592,22 +1692,20 @@ function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[
     const victim = npcs.find((npc) => npc.id === murder.victimId);
     if (!killer || !victim) return;
     const motiveProof = mysteryPreciseMotiveProof(murder.motive, killer, victim);
-    const motiveText = `${motiveProof.description} Can be found ${motiveProof.locationNote} with search roll ${mysteryRollTargetNumber(motiveProof.searchDifficulty)}.`;
     const methodProof = mysteryPreciseMethodProof(murder.method, killer, victim, roomName(murder.roomId));
-    const methodText = `${methodProof.description} Can be found ${methodProof.locationNote} with search roll ${mysteryRollTargetNumber(methodProof.searchDifficulty)}.`;
     findables.push(
       {
         id: uid(),
         kind: "Proof",
         origin: "Crime",
         name: motiveProof.name,
-        description: motiveText,
+        description: motiveProof.description,
         roomId: killer.roomId,
         holderNpcId: killer.id,
         availableDay: 1,
         availableDaytime: "Morning",
         relatedMurderIndex: index,
-        proofText: motiveText,
+        proofText: motiveProof.description,
         searchDifficulty: motiveProof.searchDifficulty
       },
       {
@@ -1615,12 +1713,12 @@ function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[
         kind: "Proof",
         origin: "Crime",
         name: methodProof.name,
-        description: methodText,
+        description: methodProof.description,
         roomId: murder.roomId,
         availableDay: murder.day,
         availableDaytime: murder.daytime,
         relatedMurderIndex: index,
-        proofText: methodText,
+        proofText: methodProof.description,
         searchDifficulty: methodProof.searchDifficulty
       }
     );
@@ -1649,11 +1747,23 @@ function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[
   return findables;
 }
 
-function mysteryWitnessSummaryFor(killer: MysteryNpc, victim: MysteryNpc, witness: MysteryNpc, roomName: string, method: string): string {
+function mysteryWitnessSummaryFor(killer: MysteryNpc, victim: MysteryNpc, witness: MysteryNpc, roomName: string, method: string, motive: string, proofHint?: string): string {
+  const motiveDetail = cleanSentenceEnd(motive).replace(/^To\b/i, "to");
+  const witnessProof = proofHint?.trim();
+  if (witnessProof && /^Witness:/i.test(witnessProof)) {
+    return cleanSentenceEnd(witnessProof)
+      .replace(/^Witness:\s*/i, "")
+      .replace(/,\s*but\s+[^.]*?\bwill only speak after trust is gained\./i, ".")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+  const proofDetail = proofHint
+    ? cleanSentenceEnd(proofHint.split("; can be found")[0].split(". Can be found")[0])
+    : `evidence connected to ${fullName(victim)}'s death`;
   const variants = [
     `${fullName(witness)} saw ${fullName(killer)} flee from ${roomName} after the murder`,
-    `${fullName(witness)} heard ${fullName(victim)} threaten ${fullName(killer)} shortly before the murder`,
-    `${fullName(witness)} saw ${fullName(killer)} hiding evidence connected to ${fullName(victim)}'s death`,
+    `${fullName(witness)} overheard ${fullName(killer)} say they needed ${motiveDetail} shortly before the murder`,
+    `${fullName(witness)} saw ${fullName(killer)} tuck away ${proofDetail} shortly after ${fullName(victim)} died`,
     `${fullName(witness)} noticed ${fullName(killer)} changing clothes after the estimated time of the murder`,
     `${fullName(witness)} saw ${fullName(killer)} take the service route away from ${roomName}`
   ];
@@ -1670,18 +1780,6 @@ function mysteryWitnessAccessText(witness: MysteryNpc): string {
 function mysteryProofsFor(method: string, motive: string, killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], availableDay: number, availableDaytime: Daytime, roomName = "the murder room"): { proofs: string[]; witnessId?: string; witnessSummary?: string } {
   const witnessPool = npcs.filter((npc) => npc.id !== killer.id && npc.id !== victim.id && npc.alive !== false);
   const witness = pick(witnessPool.length > 0 ? witnessPool : [killer]);
-  let witnessSummary: string | undefined;
-  if (witness.id !== killer.id) {
-    witnessSummary = mysteryWitnessSummaryFor(killer, victim, witness, roomName, method);
-    addMysteryNpcRelationship(
-      relationships,
-      witness,
-      killer,
-      "Witness",
-      `${witnessSummary}, but ${mysteryWitnessAccessText(witness)}.`,
-      { hidden: true, trustImpact: 5, motiveRisk: 11, availableDay, availableDaytime }
-    );
-  }
   const proofTemplates = [
     pick(mysteryWitnessClues),
     pick(mysteryMethodClues(method)),
@@ -1692,6 +1790,18 @@ function mysteryProofsFor(method: string, motive: string, killer: MysteryNpc, vi
     .map((proof) => fillMysteryTemplate(proof, killer, victim, npcs, witness))
     .filter((proof, index, list) => list.indexOf(proof) === index)
     .slice(0, 4);
+  let witnessSummary: string | undefined;
+  if (witness.id !== killer.id) {
+    witnessSummary = mysteryWitnessSummaryFor(killer, victim, witness, roomName, method, motive, proofs[0]);
+    addMysteryNpcRelationship(
+      relationships,
+      witness,
+      killer,
+      "Witness",
+      `${witnessSummary}, but ${mysteryWitnessAccessText(witness)}.`,
+      { hidden: true, trustImpact: 5, motiveRisk: 11, availableDay, availableDaytime }
+    );
+  }
   return { proofs, witnessId: witness.id !== killer.id ? witness.id : undefined, witnessSummary };
 }
 
@@ -1802,24 +1912,38 @@ function mysteryMotiveFor(killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryN
       victim,
       killer,
       "Witness",
-      `${fullName(victim)} had seen evidence that ${fullName(killer)} forged a document.`,
+      `${fullName(victim)} had seen evidence that ${fullName(killer)} forged a second identity card and copied a signature in private papers.`,
       { hidden: true, trustImpact: -10, motiveRisk: 14, availableDay, availableDaytime }
     );
-    return `To keep ${fullName(victim)} from proving that ${fullName(killer)} had forged a document`;
+    return `To keep ${fullName(victim)} from proving that ${fullName(killer)} had forged a second identity card`;
   }
 
   if (scenario === "work_theft") {
-    killer.secret = killer.role === "Staff" ? "Has been stealing small amounts of money from work." : "Has been bribing a servant.";
-    victim.secret = `Knew about ${fullName(killer)}'s theft or bribery at Ravenwood.`;
+    const theftTarget = pick(["cash from the service till", "guest tips from the staff ledger", "money from the locked pantry envelope"]);
+    const staffTargets = npcs.filter((npc) => npc.role === "Staff" && npc.id !== killer.id && npc.id !== victim.id);
+    const bribedStaff = staffTargets.length > 0 ? pick(staffTargets) : undefined;
+    const bribe = pick(["cash", "an expensive watch", "forged references", "a promise of work at another hotel"]);
+    const bribeTarget = bribedStaff ? fullName(bribedStaff) : "a servant";
+    const isTheft = killer.role === "Staff";
+    killer.secret = isTheft
+      ? `Has been stealing ${theftTarget} at Ravenwood.`
+      : `Has been bribing ${bribeTarget} with ${bribe}.`;
+    victim.secret = isTheft
+      ? `Knew that ${fullName(killer)} stole ${theftTarget}.`
+      : `Knew that ${fullName(killer)} bribed ${bribeTarget} with ${bribe}.`;
     addMysteryNpcRelationship(
       relationships,
       victim,
       killer,
       "Witness",
-      `${fullName(victim)} knew about ${fullName(killer)}'s theft or bribery at Ravenwood.`,
+      isTheft
+        ? `${fullName(victim)} knew about ${fullName(killer)}'s theft at Ravenwood. ${fullName(killer)} stole ${theftTarget}.`
+        : `${fullName(victim)} knew about ${fullName(killer)}'s bribery at Ravenwood. ${fullName(killer)} bribed ${bribeTarget} with ${bribe}.`,
       { hidden: true, trustImpact: -9, motiveRisk: 13, availableDay, availableDaytime }
     );
-    return `To stop ${fullName(victim)} revealing that ${fullName(killer)} had stolen money.`;
+    return isTheft
+      ? `To stop ${fullName(victim)} revealing that ${fullName(killer)} had stolen ${theftTarget}`
+      : `To stop ${fullName(victim)} revealing that ${fullName(killer)} had bribed ${bribeTarget}`;
   }
 
   if (scenario === "relationship") {
@@ -1842,7 +1966,7 @@ function mysteryMotiveFor(killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryN
       );
       return `To stop ${fullName(victim)} from revealing a blackmail scheme`;
     }
-    const partner = pick(partnerCandidates);
+    const partner = mysteryPickWeightedRomanticCandidate(killer, partnerCandidates) ?? pick(partnerCandidates);
     ensureSharedRavenwoodHistory(killer, partner);
     ensureSharedRavenwoodHistory(victim, killer);
     killer.familyStatus = "Secretly dating";
@@ -1853,7 +1977,7 @@ function mysteryMotiveFor(killer: MysteryNpc, victim: MysteryNpc, npcs: MysteryN
       relationships,
       killer,
       partner,
-      "Romance",
+      "Affair",
       `${fullName(killer)} and ${fullName(partner)} are romantically involved but keeping it private.`,
       { hidden: true, trustImpact: 6, motiveRisk: 8, skipGuards: true }
     );
@@ -2003,23 +2127,65 @@ function mysterySecretFor(age: number): string {
   return pick(mysterySecrets);
 }
 
+function mysteryResolveNpcSecretPlaceholders(secret: string, npc: MysteryNpc, npcs: MysteryNpc[]): string {
+  let linkedIndex = 0;
+  const linkedCandidates = npcs.filter((candidate) => candidate.id !== npc.id);
+  return secret.replace(/\{linked_character\}/g, () => {
+    const linked = linkedCandidates.length > 0
+      ? linkedCandidates[stableHash(`${npc.id}-${secret}-linked-${linkedIndex}`) % linkedCandidates.length]
+      : undefined;
+    linkedIndex += 1;
+    return linked ? fullName(linked) : "another resident";
+  });
+}
+
 function mysterySubstancePreferenceFor(age: number, role: MysteryNpc["role"]): MysteryNpc["substancePreference"] {
   if (age < 16) return "none";
   if (role === "Staff") return pick(["none", "none", "cigarettes", "alcohol", "alcohol and cigarettes"]);
   return pick(["none", "alcohol", "alcohol", "cigarettes", "weed", "alcohol and cigarettes", "alcohol and weed"]);
 }
 
-function mysteryGuestCurrentStay(): string {
-  const days = rand(0, 4);
+function mysterySubstancePreferenceCompatibleWithQuirk(preference: MysteryNpc["substancePreference"], quirk?: string): MysteryNpc["substancePreference"] {
+  if (!quirk || !quirk.toLowerCase().includes("sensitive to smoke")) return preference;
+  if (preference === "alcohol and cigarettes" || preference === "alcohol and weed") return "alcohol";
+  if (preference === "cigarettes" || preference === "weed") return "none";
+  return preference;
+}
+
+function mysteryDisplaySubstancePreference(npc: MysteryNpc): MysteryNpc["substancePreference"] {
+  return mysterySubstancePreferenceCompatibleWithQuirk(npc.substancePreference, npc.quirk);
+}
+
+function mysteryStayNightsRangeForReason(reasonOfStay?: string): { min: number; max: number } {
+  const reason = mysteryReasonBase(reasonOfStay ?? "").toLowerCase();
+  if (reason.includes("weekend break")) return { min: 2, max: 3 };
+  if (reason.includes("summer vacation")) return { min: 5, max: 12 };
+  if (reason.includes("honeymoon")) return { min: 4, max: 10 };
+  if (reason.includes("romantic getaway")) return { min: 2, max: 5 };
+  if (reason.includes("business partner") || reason.includes("work conference") || reason.includes("lawyer")) return { min: 1, max: 4 };
+  if (reason.includes("wedding") || reason.includes("engagement party") || reason.includes("memorial") || reason.includes("funeral")) return { min: 2, max: 5 };
+  if (reason.includes("family reunion") || reason.includes("visiting a relative")) return { min: 4, max: 8 };
+  if (reason.includes("anniversary")) return { min: 2, max: 4 };
+  if (reason.includes("old friend")) return { min: 2, max: 6 };
+  if (reason.includes("recovering after an illness")) return { min: 7, max: 14 };
+  if (reason.includes("missing person") || reason.includes("family history") || reason.includes("local story")) return { min: 4, max: 10 };
+  if (reason.includes("reviewing the hotel")) return { min: 1, max: 3 };
+  return { min: 3, max: 7 };
+}
+
+function mysteryGuestCurrentStay(plannedNights: number): string {
+  const maxElapsedDays = Math.max(0, Math.min(4, plannedNights - 1));
+  const days = rand(0, maxElapsedDays);
   if (days === 0) return "Arrived today.";
   if (days === 1) return "Has been staying at Ravenwood for 1 day.";
   return `Has been staying at Ravenwood for ${days} days.`;
 }
 
-function mysteryGuestPlannedStay(currentStay: string): string {
+function mysteryGuestPlannedStay(currentStay: string, reasonOfStay?: string): string {
   const stayedMatch = currentStay.match(/(\d+) day/);
   const alreadyStayed = currentStay.includes("Arrived today") ? 0 : Number(stayedMatch?.[1] ?? 1);
-  const plannedNights = Math.max(alreadyStayed + rand(2, 6), rand(3, 10));
+  const range = mysteryStayNightsRangeForReason(reasonOfStay);
+  const plannedNights = clamp(rand(range.min, range.max), Math.max(range.min, alreadyStayed + 1), range.max);
   return `Planned stay: ${plannedNights} nights.`;
 }
 
@@ -2049,10 +2215,12 @@ function mysteryStayHistoryFor(role: MysteryNpc["role"], age: number, reasonOfSt
       previousStay: "Lives or works at Ravenwood."
     };
   }
-  const currentStay = mysteryGuestCurrentStay();
+  const range = mysteryStayNightsRangeForReason(reasonOfStay);
+  const plannedNights = rand(range.min, range.max);
+  const currentStay = mysteryGuestCurrentStay(plannedNights);
   return {
     currentStay,
-    plannedStay: mysteryGuestPlannedStay(currentStay),
+    plannedStay: `Planned stay: ${plannedNights} nights.`,
     previousStay: mysteryGuestPreviousStay(age, reasonOfStay)
   };
 }
@@ -2085,7 +2253,7 @@ function mysteryChildGuardianRelation(childSex: Sex, childAge: number, guardian:
   if (ageGap >= 22 && roll(0.68)) {
     return { childRelation: `${childRole} of`, guardianRelation: `${parentRole} of`, reasonRole: parentRole };
   }
-  if (ageGap <= 30 && roll(0.32)) {
+  if (ageGap <= 15 && roll(0.32)) {
     return { childRelation: `${youngerSiblingRole} of`, guardianRelation: `${olderSiblingRole} of`, reasonRole: olderSiblingRole };
   }
   if (roll(0.55)) {
@@ -2127,38 +2295,42 @@ function mysteryBalancedSexPlan(total: number, playerSex?: Sex): Sex[] {
 }
 
 function mysteryEducationFor(age: number, role: MysteryNpc["role"]): string {
-  if (age < 14) return pick(["Some elementary school", "Completed elementary school", "Home-schooled through secondary level", "No formal education"]);
-  if (age < 18) return role === "Guest" ? pick(["Some secondary school", "Home-schooled through secondary level", "Drama school training"]) : pick(["Some secondary school", "Food hygiene training", "No formal education", "Completed compulsory schooling"]);
+  if (age < 14) return pick(["Primary school certificate", "Home-schooled", "No formal education"]);
+  if (age < 18) return role === "Guest" ? pick(["Secondary school certificate", "Home-schooled", "Drama school training"]) : pick(["Secondary school certificate", "Food hygiene training", "No formal education", "Completed compulsory schooling"]);
   if (role === "Staff") return pick(["No formal education", "Completed compulsory schooling", "Food hygiene training", "Customer service training", "First aid training", "Security guard training", "Trade apprenticeship"]);
   return pick(mysteryEducations);
 }
 
-function mysteryOccupationFor(age: number, role: MysteryNpc["role"]): string {
-  if (age < 14) return role === "Guest" ? "Child guest" : "Household child";
-  if (age < 18) return role === "Guest" ? pick(["Student", "Young heir", "Companion in training"]) : pick(["Kitchen helper", "Laundry helper", "Page"]);
-  return role === "Guest" ? pick(mysteryGuestOccupations) : pick(mysteryStaffOccupations);
+function mysteryStaffOccupationsForSex(sex?: Sex): string[] {
+  return sex === "Male" ? mysteryStaffOccupations : mysteryStaffOccupations.filter((occupation) => occupation !== "Poolboy");
 }
 
-function mysteryProfileFor(age: number, role: MysteryNpc["role"]): { education: string; occupation: string } {
+function mysteryOccupationFor(age: number, role: MysteryNpc["role"], sex?: Sex): string {
+  if (age < 14) return role === "Guest" ? "None" : pick(["Kitchen helper", "Laundry helper"]);
+  if (age < 18) return role === "Guest" ? pick(["Student", "Young heir", "Companion in training"]) : pick(["Kitchen helper", "Laundry helper"]);
+  return role === "Guest" ? pick(mysteryGuestOccupations.filter((occupation) => occupation !== "None")) : pick(mysteryStaffOccupationsForSex(sex));
+}
+
+function mysteryProfileFor(age: number, role: MysteryNpc["role"], sex?: Sex): { education: string; occupation: string } {
   if (age < 14) {
     return {
-      education: pick(["Some elementary school", "Completed elementary school", "Home-schooled through secondary level", "No formal education"]),
-      occupation: role === "Guest" ? "Child guest" : "Household child"
+      education: pick(["Primary school certificate", "Home-schooled", "No formal education"]),
+      occupation: role === "Guest" ? "None" : pick(["Kitchen helper", "Laundry helper"])
     };
   }
   if (age < 18) {
     return role === "Guest"
       ? {
-        education: pick(["Some secondary school", "Home-schooled through secondary level", "Drama school training"]),
+        education: pick(["Secondary school certificate", "Home-schooled", "Drama school training"]),
         occupation: pick(["Student", "Young heir", "Companion in training"])
       }
       : {
-        education: pick(["Some secondary school", "Food hygiene training", "No formal education", "Completed compulsory schooling"]),
-        occupation: pick(["Kitchen helper", "Laundry helper", "Page"])
+        education: pick(["Secondary school certificate", "Food hygiene training", "No formal education", "Completed compulsory schooling"]),
+        occupation: pick(["Kitchen helper", "Laundry helper"])
       };
   }
   if (role === "Staff") {
-    const occupation = pick(mysteryStaffOccupations);
+    const occupation = pick(mysteryStaffOccupationsForSex(sex));
     const educationByStaffJob: Record<string, string[]> = {
       Butler: ["Customer service training", "Office administration training", "Completed compulsory schooling"],
       Cleaner: ["No formal education", "Food hygiene training", "Completed compulsory schooling"],
@@ -2167,13 +2339,16 @@ function mysteryProfileFor(age: number, role: MysteryNpc["role"]): { education: 
       "Head waiter": ["Customer service training", "Food hygiene training", "Completed compulsory schooling"],
       Housekeeper: ["Customer service training", "Office administration training", "Completed compulsory schooling"],
       "Kitchen porter": ["Food hygiene training", "No formal education", "Completed compulsory schooling"],
-      "Laundry worker": ["No formal education", "Completed compulsory schooling", "Basic literacy training"],
+      "Laundry worker": ["No formal education", "Completed compulsory schooling", "Trade apprenticeship"],
       "Night porter": ["Security guard training", "Customer service training", "Completed compulsory schooling"],
       Nurse: ["First aid training", "Medical secretary training", "Completed compulsory schooling"],
       "Security guard": ["Security guard training", "First aid training", "Completed compulsory schooling"],
       Waiter: ["Customer service training", "Food hygiene training", "Completed compulsory schooling"],
       Chauffeur: ["First aid training", "Security guard training", "Completed compulsory schooling"],
-      "Estate cleaner": ["No formal education", "Food hygiene training", "Completed compulsory schooling"]
+      "Estate cleaner": ["No formal education", "Food hygiene training", "Completed compulsory schooling"],
+      "Kitchen helper": ["Food hygiene training", "Completed compulsory schooling"],
+      "Laundry helper": ["No formal education", "Completed compulsory schooling", "Trade apprenticeship"],
+      Poolboy: ["Customer service training", "First aid training", "Completed compulsory schooling"]
     };
     return { occupation, education: pick(educationByStaffJob[occupation] ?? ["Trade apprenticeship", "Completed compulsory schooling"]) };
   }
@@ -2236,6 +2411,216 @@ function addMysteryFamilyNote(npc: MysteryNpc, note: string) {
   npc.familyRelationNote = npc.familyRelationNote ? `${npc.familyRelationNote}; ${note}` : note;
 }
 
+function emptyMysteryFamilyGraph(): MysteryFamilyGraph {
+  return { parentChild: [], siblings: [], spouses: [], partners: [], lovers: [], cousins: [], auntUncleNibling: [] };
+}
+
+function mysteryGraphPairKey(aId: string, bId: string): string {
+  return [aId, bId].sort().join(":");
+}
+
+function addMysteryGraphPair(list: { aId: string; bId: string }[], aId: string, bId: string) {
+  if (aId === bId || list.some((item) => mysteryGraphPairKey(item.aId, item.bId) === mysteryGraphPairKey(aId, bId))) return;
+  list.push({ aId, bId });
+}
+
+function addMysteryGraphParent(graph: MysteryFamilyGraph, parentId: string, childId: string) {
+  if (parentId === childId || graph.parentChild.some((item) => item.parentId === parentId && item.childId === childId)) return;
+  graph.parentChild.push({ parentId, childId });
+}
+
+function addMysteryGraphAuntUncle(graph: MysteryFamilyGraph, auntUncleId: string, niblingId: string) {
+  if (auntUncleId === niblingId || graph.auntUncleNibling.some((item) => item.auntUncleId === auntUncleId && item.niblingId === niblingId)) return;
+  graph.auntUncleNibling.push({ auntUncleId, niblingId });
+}
+
+function mysteryFamilyGraphFromSavedFacts(mystery: Pick<MysteryGame, "familyGraph" | "npcRelationships" | "npcs">): MysteryFamilyGraph {
+  const graph: MysteryFamilyGraph = {
+    parentChild: [...(mystery.familyGraph?.parentChild ?? [])],
+    siblings: [...(mystery.familyGraph?.siblings ?? [])],
+    spouses: [...(mystery.familyGraph?.spouses ?? [])],
+    partners: [...(mystery.familyGraph?.partners ?? [])],
+    lovers: [...(mystery.familyGraph?.lovers ?? [])],
+    cousins: [...(mystery.familyGraph?.cousins ?? [])],
+    auntUncleNibling: [...(mystery.familyGraph?.auntUncleNibling ?? [])]
+  };
+  const byId = new Map(mystery.npcs.map((npc) => [npc.id, npc]));
+  for (const relationship of mystery.npcRelationships ?? []) {
+    const from = byId.get(relationship.fromId);
+    const to = byId.get(relationship.toId);
+    if (!from || !to) continue;
+    const detail = relationship.detail.toLowerCase();
+    const fromName = fullName(from).toLowerCase();
+    const toName = fullName(to).toLowerCase();
+    if (relationship.kind === "Marriage") addMysteryGraphPair(graph.spouses, from.id, to.id);
+    if (relationship.kind === "Romance") addMysteryGraphPair(graph.partners, from.id, to.id);
+    if (relationship.kind === "Affair") addMysteryGraphPair(graph.lovers, from.id, to.id);
+    if (relationship.kind !== "Family") continue;
+    if (detail.includes("siblings")) addMysteryGraphPair(graph.siblings, from.id, to.id);
+    if (detail.includes("cousins")) addMysteryGraphPair(graph.cousins, from.id, to.id);
+    if (detail.includes(`${fromName} is parent to ${toName}`)) addMysteryGraphParent(graph, from.id, to.id);
+    if (detail.includes(`${toName} is parent to ${fromName}`)) addMysteryGraphParent(graph, to.id, from.id);
+    if (detail.includes(`${toName} is staying with mother ${fromName}`) || detail.includes(`${toName} is staying with father ${fromName}`)) addMysteryGraphParent(graph, from.id, to.id);
+    if (detail.includes(`${fromName} is staying with mother ${toName}`) || detail.includes(`${fromName} is staying with father ${toName}`)) addMysteryGraphParent(graph, to.id, from.id);
+    if (detail.includes(`${toName} is staying with aunt ${fromName}`) || detail.includes(`${toName} is staying with uncle ${fromName}`)) addMysteryGraphAuntUncle(graph, from.id, to.id);
+    if (detail.includes(`${fromName} is staying with aunt ${toName}`) || detail.includes(`${fromName} is staying with uncle ${toName}`)) addMysteryGraphAuntUncle(graph, to.id, from.id);
+    if (detail.includes(`${toName} is staying with older sister ${fromName}`) || detail.includes(`${toName} is staying with older brother ${fromName}`)) addMysteryGraphPair(graph.siblings, from.id, to.id);
+    if (detail.includes(`${fromName} is staying with older sister ${toName}`) || detail.includes(`${fromName} is staying with older brother ${toName}`)) addMysteryGraphPair(graph.siblings, from.id, to.id);
+  }
+  return graph;
+}
+
+function replaceMysteryFamilyGraph(target: MysteryFamilyGraph, source: MysteryFamilyGraph) {
+  target.parentChild.splice(0, target.parentChild.length, ...source.parentChild);
+  target.siblings.splice(0, target.siblings.length, ...source.siblings);
+  target.spouses.splice(0, target.spouses.length, ...source.spouses);
+  target.partners.splice(0, target.partners.length, ...source.partners);
+  target.lovers.splice(0, target.lovers.length, ...source.lovers);
+  target.cousins.splice(0, target.cousins.length, ...source.cousins);
+  target.auntUncleNibling.splice(0, target.auntUncleNibling.length, ...source.auntUncleNibling);
+}
+
+function mysteryFamilyGraphBloodPairKeys(graph: MysteryFamilyGraph): Set<string> {
+  return new Set([
+    ...graph.parentChild.map((item) => mysteryGraphPairKey(item.parentId, item.childId)),
+    ...graph.siblings.map((item) => mysteryGraphPairKey(item.aId, item.bId)),
+    ...graph.cousins.map((item) => mysteryGraphPairKey(item.aId, item.bId)),
+    ...graph.auntUncleNibling.map((item) => mysteryGraphPairKey(item.auntUncleId, item.niblingId))
+  ]);
+}
+
+function repairMysteryFamilyGraphConsistency(npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], familyGraph: MysteryFamilyGraph): string[] {
+  const sanityLines: string[] = [];
+  const byId = new Map(npcs.map((npc) => [npc.id, npc]));
+  const ids = new Set(byId.keys());
+  const nextGraph = mysteryFamilyGraphFromSavedFacts({ familyGraph, npcRelationships: relationships, npcs });
+  replaceMysteryFamilyGraph(familyGraph, nextGraph);
+  const validPair = (aId: string, bId: string) => aId !== bId && ids.has(aId) && ids.has(bId);
+  const uniquePairs = (pairs: { aId: string; bId: string }[]) => {
+    const seen = new Set<string>();
+    return pairs.filter((item) => {
+      if (!validPair(item.aId, item.bId)) return false;
+      const key = mysteryGraphPairKey(item.aId, item.bId);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  familyGraph.siblings.splice(0, familyGraph.siblings.length, ...uniquePairs(familyGraph.siblings));
+  familyGraph.spouses.splice(0, familyGraph.spouses.length, ...uniquePairs(familyGraph.spouses));
+  familyGraph.partners.splice(0, familyGraph.partners.length, ...uniquePairs(familyGraph.partners));
+  familyGraph.lovers.splice(0, familyGraph.lovers.length, ...uniquePairs(familyGraph.lovers));
+  familyGraph.cousins.splice(0, familyGraph.cousins.length, ...uniquePairs(familyGraph.cousins));
+  familyGraph.parentChild.splice(0, familyGraph.parentChild.length, ...familyGraph.parentChild.filter((item, index, list) => {
+    const parent = byId.get(item.parentId);
+    const child = byId.get(item.childId);
+    if (!parent || !child || item.parentId === item.childId || parent.age < child.age + 14) return false;
+    return list.findIndex((candidate) => candidate.parentId === item.parentId && candidate.childId === item.childId) === index;
+  }));
+  familyGraph.auntUncleNibling.splice(0, familyGraph.auntUncleNibling.length, ...familyGraph.auntUncleNibling.filter((item, index, list) => {
+    if (!validPair(item.auntUncleId, item.niblingId)) return false;
+    return list.findIndex((candidate) => candidate.auntUncleId === item.auntUncleId && candidate.niblingId === item.niblingId) === index;
+  }));
+
+  const parents = new Map<string, string[]>();
+  const addParent = (parentId: string, childId: string) => {
+    if (!parents.has(childId)) parents.set(childId, []);
+    parents.get(childId)!.push(parentId);
+  };
+  for (const pair of familyGraph.parentChild) addParent(pair.parentId, pair.childId);
+  const childrenByParent = new Map<string, string[]>();
+  for (const pair of familyGraph.parentChild) {
+    if (!childrenByParent.has(pair.parentId)) childrenByParent.set(pair.parentId, []);
+    childrenByParent.get(pair.parentId)!.push(pair.childId);
+  }
+  for (const children of childrenByParent.values()) {
+    for (let leftIndex = 0; leftIndex < children.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < children.length; rightIndex += 1) {
+        addMysteryGraphPair(familyGraph.siblings, children[leftIndex], children[rightIndex]);
+      }
+    }
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const siblingGroups = new Map<string, Set<string>>();
+    const find = (id: string): Set<string> => {
+      for (const group of siblingGroups.values()) {
+        if (group.has(id)) return group;
+      }
+      const group = new Set<string>([id]);
+      siblingGroups.set(id, group);
+      return group;
+    };
+    for (const pair of familyGraph.siblings) {
+      const left = find(pair.aId);
+      const right = find(pair.bId);
+      if (left === right) continue;
+      for (const id of right) left.add(id);
+      siblingGroups.delete(pair.bId);
+    }
+    for (const group of siblingGroups.values()) {
+      const idsInGroup = Array.from(group);
+      for (let leftIndex = 0; leftIndex < idsInGroup.length; leftIndex += 1) {
+        for (let rightIndex = leftIndex + 1; rightIndex < idsInGroup.length; rightIndex += 1) {
+          const before = familyGraph.siblings.length;
+          addMysteryGraphPair(familyGraph.siblings, idsInGroup[leftIndex], idsInGroup[rightIndex]);
+          changed = changed || familyGraph.siblings.length > before;
+        }
+      }
+      const sharedParentIds = new Set(idsInGroup.flatMap((id) => parents.get(id) ?? []));
+      for (const parentId of sharedParentIds) {
+        for (const childId of idsInGroup) {
+          const parent = byId.get(parentId);
+          const child = byId.get(childId);
+          if (!parent || !child || parent.age < child.age + 14) continue;
+          const before = familyGraph.parentChild.length;
+          addMysteryGraphParent(familyGraph, parentId, childId);
+          if (familyGraph.parentChild.length > before) {
+            addParent(parentId, childId);
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  const relationshipPairHasKind = (kind: MysteryNpcRelationshipKind, aId: string, bId: string) => relationships.some((relationship) =>
+    relationship.kind === kind && mysteryGraphPairKey(relationship.fromId, relationship.toId) === mysteryGraphPairKey(aId, bId)
+  );
+  for (const pair of familyGraph.siblings) {
+    const left = byId.get(pair.aId);
+    const right = byId.get(pair.bId);
+    if (!left || !right || relationshipPairHasKind("Family", left.id, right.id)) continue;
+    if (addMysteryNpcRelationship(relationships, left, right, "Family", `${fullName(left)} and ${fullName(right)} are siblings.`, { trustImpact: 8, motiveRisk: 2, skipGuards: true })) {
+      sanityLines.push(`Family repair: added missing sibling link between ${fullName(left)} and ${fullName(right)}.`);
+    }
+  }
+  for (const pair of familyGraph.parentChild) {
+    const parent = byId.get(pair.parentId);
+    const child = byId.get(pair.childId);
+    if (!parent || !child || relationshipPairHasKind("Family", parent.id, child.id)) continue;
+    if (addMysteryNpcRelationship(relationships, parent, child, "Family", `${fullName(parent)} is parent to ${fullName(child)}.`, { trustImpact: 9, motiveRisk: 3, skipGuards: true })) {
+      sanityLines.push(`Family repair: added missing parent link between ${fullName(parent)} and ${fullName(child)}.`);
+    }
+  }
+
+  const bloodPairs = mysteryFamilyGraphBloodPairKeys(familyGraph);
+  const romanceBefore = relationships.length;
+  for (let index = relationships.length - 1; index >= 0; index -= 1) {
+    const relationship = relationships[index];
+    if (mysteryIsRomanticRelationship(relationship.kind) && bloodPairs.has(mysteryGraphPairKey(relationship.fromId, relationship.toId))) {
+      relationships.splice(index, 1);
+    }
+  }
+  familyGraph.spouses.splice(0, familyGraph.spouses.length, ...familyGraph.spouses.filter((pair) => !bloodPairs.has(mysteryGraphPairKey(pair.aId, pair.bId))));
+  familyGraph.partners.splice(0, familyGraph.partners.length, ...familyGraph.partners.filter((pair) => !bloodPairs.has(mysteryGraphPairKey(pair.aId, pair.bId))));
+  familyGraph.lovers.splice(0, familyGraph.lovers.length, ...familyGraph.lovers.filter((pair) => !bloodPairs.has(mysteryGraphPairKey(pair.aId, pair.bId))));
+  if (relationships.length !== romanceBefore) sanityLines.push("Family repair: removed romantic relationship links that conflicted with blood family.");
+  return sanityLines;
+}
+
 function mysteryTitleCaseRelation(relation: string): string {
   return relation.split(" ").map(titleCase).join(" ");
 }
@@ -2257,8 +2642,31 @@ function mysteryAllowsLargeAgeGapRomance(a: MysteryNpc, b: MysteryNpc): boolean 
   return !crossesFifty || roll(0.08);
 }
 
+function mysteryOppositeSex(sex: Sex): Sex {
+  return sex === "Female" ? "Male" : "Female";
+}
+
+function mysteryWeightedRomanticSex(partner: MysteryNpc): Sex {
+  return roll(0.7) ? mysteryOppositeSex(partner.sex) : partner.sex;
+}
+
+function mysteryPickWeightedRomanticCandidate(anchor: MysteryNpc, candidates: MysteryNpc[]): MysteryNpc | undefined {
+  const validCandidates = candidates.filter((candidate) => candidate.id !== anchor.id);
+  if (validCandidates.length === 0) return undefined;
+  const oppositeSexCandidates = validCandidates.filter((candidate) => candidate.sex !== anchor.sex);
+  const sameSexCandidates = validCandidates.filter((candidate) => candidate.sex === anchor.sex);
+  if (oppositeSexCandidates.length > 0 && sameSexCandidates.length > 0) {
+    return pick(roll(0.7) ? oppositeSexCandidates : sameSexCandidates);
+  }
+  return pick(validCandidates);
+}
+
 function mysteryIsRomanticRelationship(kind: MysteryNpcRelationshipKind): boolean {
   return kind === "Marriage" || kind === "Romance" || kind === "Affair";
+}
+
+function mysteryIsOfficialPartnerRelationship(kind: MysteryNpcRelationshipKind): boolean {
+  return kind === "Marriage" || kind === "Romance";
 }
 
 function mysteryIsBloodFamilyDetail(detail: string): boolean {
@@ -2272,6 +2680,17 @@ function mysteryHasSpouseRelationship(relationships: MysteryNpcRelationship[], n
   );
 }
 
+function mysteryHasOfficialPartnerFor(relationships: MysteryNpcRelationship[], npc: MysteryNpc): boolean {
+  return relationships.some((relationship) =>
+    mysteryIsOfficialPartnerRelationship(relationship.kind) &&
+    (relationship.fromId === npc.id || relationship.toId === npc.id)
+  );
+}
+
+function mysteryHasOfficialPartnerStatus(npc: MysteryNpc): boolean {
+  return /\b(married|in a relationship|engaged|open relationship)\b/i.test(npc.familyStatus) && !/\b(secret|break|unsure|open to explore)\b/i.test(npc.familyStatus);
+}
+
 function addMysteryNpcRelationship(
   relationships: MysteryNpcRelationship[],
   from: MysteryNpc,
@@ -2283,8 +2702,9 @@ function addMysteryNpcRelationship(
   if (from.id === to.id) return false;
   if (!options.skipGuards && kind === "Family" && mysteryIsBloodFamilyDetail(detail) && !mysteryAllowsStaffGuestBloodFamily(from, to)) return false;
   if (!options.skipGuards && mysteryIsRomanticRelationship(kind) && !mysteryAllowsLargeAgeGapRomance(from, to)) return false;
-  if (kind === "Marriage" && relationships.some((relationship) =>
-    relationship.kind === "Marriage" &&
+  if (kind === "Romance" && (mysteryHasOfficialPartnerStatus(from) || mysteryHasOfficialPartnerStatus(to))) return false;
+  if (mysteryIsOfficialPartnerRelationship(kind) && relationships.some((relationship) =>
+    mysteryIsOfficialPartnerRelationship(relationship.kind) &&
     (relationship.fromId === from.id || relationship.toId === from.id || relationship.fromId === to.id || relationship.toId === to.id)
   )) return false;
   const duplicate = relationships.some((relationship) =>
@@ -2297,8 +2717,14 @@ function addMysteryNpcRelationship(
     from.familyStatus = "Married";
     to.familyStatus = "Married";
   }
-  if (kind === "Romance" || kind === "Affair") {
+  if (kind === "Romance") {
+    from.familyStatus = "In a relationship";
+    to.familyStatus = "In a relationship";
+  }
+  if (kind === "Affair" && !mysteryHasOfficialPartnerFor(relationships, from)) {
     from.familyStatus = "Secretly dating";
+  }
+  if (kind === "Affair" && !mysteryHasOfficialPartnerFor(relationships, to)) {
     to.familyStatus = "Secretly dating";
   }
   relationships.push({
@@ -2317,28 +2743,38 @@ function addMysteryNpcRelationship(
 }
 
 function mysteryRelationshipsWithSingleSpouses(relationships: MysteryNpcRelationship[]): MysteryNpcRelationship[] {
-  const marriedNpcIds = new Set<string>();
-  return relationships.filter((relationship) => {
-    if (relationship.kind !== "Marriage") return true;
-    if (marriedNpcIds.has(relationship.fromId) || marriedNpcIds.has(relationship.toId)) return false;
-    marriedNpcIds.add(relationship.fromId);
-    marriedNpcIds.add(relationship.toId);
+  const officialPartnerNpcIds = new Set<string>();
+  return [...relationships]
+    .sort((left, right) =>
+      (left.kind === "Marriage" ? 0 : left.kind === "Romance" ? 1 : 2) -
+      (right.kind === "Marriage" ? 0 : right.kind === "Romance" ? 1 : 2)
+    )
+    .filter((relationship) => {
+    if (!mysteryIsOfficialPartnerRelationship(relationship.kind)) return true;
+    if (officialPartnerNpcIds.has(relationship.fromId) || officialPartnerNpcIds.has(relationship.toId)) return false;
+    officialPartnerNpcIds.add(relationship.fromId);
+    officialPartnerNpcIds.add(relationship.toId);
     return true;
-  });
+    });
 }
 
 function mysteryDisplayFamilyStatus(npc: MysteryNpc, mystery: MysteryGame): string {
   const validRelationships = mysteryRelationshipsWithSingleSpouses(mystery.npcRelationships ?? []);
-  const hasPrivateRomance = validRelationships.some((relationship) =>
-    (relationship.kind === "Romance" || relationship.kind === "Affair") &&
-    (relationship.fromId === npc.id || relationship.toId === npc.id)
-  );
-  if (hasPrivateRomance) return "Secretly dating";
   const hasHotelMarriage = validRelationships.some((relationship) =>
     relationship.kind === "Marriage" &&
     (relationship.fromId === npc.id || relationship.toId === npc.id)
   );
   if (hasHotelMarriage) return "Married";
+  const hasHotelPartner = validRelationships.some((relationship) =>
+    relationship.kind === "Romance" &&
+    (relationship.fromId === npc.id || relationship.toId === npc.id)
+  );
+  if (hasHotelPartner) return "In a relationship";
+  const hasPrivateLover = validRelationships.some((relationship) =>
+    relationship.kind === "Affair" &&
+    (relationship.fromId === npc.id || relationship.toId === npc.id)
+  );
+  if (hasPrivateLover) return "Secretly dating";
   const outsideHotelStatuses = new Set([
     "Married",
     "In a relationship",
@@ -2351,25 +2787,109 @@ function mysteryDisplayFamilyStatus(npc: MysteryNpc, mystery: MysteryGame): stri
   return outsideHotelStatuses.has(npc.familyStatus) ? `${npc.familyStatus} (outside of hotel)` : npc.familyStatus;
 }
 
-function mysteryRelationshipLinesFor(npc: MysteryNpc, npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], currentDay?: number, currentDaytime?: Daytime): string[] {
-  return mysteryRelationshipsWithSingleSpouses(relationships)
+function mysterySecretSentenceForNpc(npc: MysteryNpc): string {
+  const secret = npc.secret.trim().replace(/\.$/, "");
+  return `${fullName(npc)} ${secret.charAt(0).toLowerCase()}${secret.slice(1)}.`;
+}
+
+function mysteryServantKnowledgeDetail(staffMember: MysteryNpc, guest: MysteryNpc, npcs: MysteryNpc[] = [staffMember, guest]): string {
+  const facts = [
+    `reason of stay - ${guest.reasonOfStay}`,
+    `interests - ${guest.interests.join(", ")}`,
+    `quirk - ${cleanSentenceEnd(guest.quirk)}`,
+    `secret - ${cleanSentenceEnd(mysteryResolveNpcSecretPlaceholders(guest.secret, guest, npcs))}`
+  ];
+  return `${fullName(staffMember)} regularly serves ${fullName(guest)} and knows their habits: ${facts.join("; ")}.`;
+}
+
+function mysteryServantKnowledgeDetailForSheet(detail: string, npcs: MysteryNpc[]): string {
+  const match = detail.match(/^(.+?) regularly serves (.+?) and knows their habits:/i);
+  if (!match) return detail;
+  const servedName = match[2].trim().toLowerCase();
+  const guest = [...npcs]
+    .sort((a, b) => fullName(b).length - fullName(a).length)
+    .find((candidate) => fullName(candidate).toLowerCase() === servedName);
+  if (!guest) return detail;
+  const facts = [
+    `reason of stay - ${guest.reasonOfStay}`,
+    `interests - ${guest.interests.join(", ")}`,
+    `quirk - ${cleanSentenceEnd(guest.quirk)}`,
+    `secret - ${cleanSentenceEnd(mysteryResolveNpcSecretPlaceholders(guest.secret, guest, npcs))}`
+  ];
+  return `${match[1].trim()} regularly serves ${fullName(guest)} and knows their habits: ${facts.join("; ")}.`;
+}
+
+function mysteryRelationshipDetailWithKnownSecret(detail: string, npcs: MysteryNpc[], playerFirstName?: string): string {
+  if (!/\bsecret about\b/i.test(detail)) return detail;
+  const lowerDetail = detail.toLowerCase();
+  const target = [...npcs]
+    .sort((a, b) => fullName(b).length - fullName(a).length)
+    .find((candidate) => lowerDetail.includes(`secret about ${fullName(candidate).toLowerCase()}`));
+  if (!target) return detail;
+  return `${detail} (${mysterySecretSentenceForNpc(target)})`;
+}
+
+function mysteryRelationshipDetailForSheet(detail: string, npcs: MysteryNpc[], playerFirstName?: string): string {
+  return mysteryServantKnowledgeDetailForSheet(mysteryRelationshipDetailWithKnownSecret(detail, npcs, playerFirstName), npcs)
+    .replace(/^.*?\b(Witness:\s*)/i, "$1")
+    .replace(/\b(heard|saw|noticed|overheard)\s+([^.!?]*?)\s+tuck away\s+Witness:\s*/i, "Witness: ")
+    .replace(/,\s*but\s+[^.]*?\bwon't tell the player unless[^.]*\./gi, ".")
+    .replace(/,\s*but\s+[^.]*?\bwill not tell the player unless[^.]*\./gi, ".")
+    .replace(/,\s*but\s+[^.]*?\bwill only speak after trust is gained\./gi, ".")
+    .replace(/\bpass by a service route that does not match their public alibi and is frightened to say it openly shortly after ([^.!?]+?) died\b/gi, "pass by a service route shortly after $1 died that does not match their public alibi and is frightened to say it openly")
+    .replace(/\bshortly after ([^.!?]+?) died,\s*but\b/gi, "shortly after $1 died")
+    .replace(/became romantically involved during an earlier Ravenwood stay/gi, "became romantically involved during private time at Ravenwood")
+    .replace(/has been meeting (.*?) in private again after a previous stay/gi, "has been meeting $1 in private around Ravenwood")
+    .replace(/became close during an earlier Ravenwood stay and have remained loyal friends/gi, "became close during their time around Ravenwood and have remained loyal friends")
+    .replace(/which could ruin more than one reputation/gi, "which could ruin both of their reputations")
+    .replace(/^Witness:\s*/i, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function mysteryRelationshipLinesFor(npc: MysteryNpc, npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], currentDay?: number, currentDaytime?: Daytime, playerFirstName?: string, familyGraph?: MysteryFamilyGraph): string[] {
+  const directRelationships = mysteryRelationshipsWithSingleSpouses(relationships)
     .filter((relationship) => relationship.fromId === npc.id || relationship.toId === npc.id)
-    .map((relationship) => {
+  const directPairKeys = new Set(directRelationships.map((relationship) => mysteryGraphPairKey(relationship.fromId, relationship.toId)));
+  const relationshipLines = directRelationships.map((relationship) => {
       const otherId = relationship.fromId === npc.id ? relationship.toId : relationship.fromId;
       const other = npcs.find((candidate) => candidate.id === otherId);
       const availableFrom = relationship.availableDay && relationship.availableDaytime
-        ? `, available from ${mysteryAvailabilityLabel(relationship.availableDay, relationship.availableDaytime)}${
-          currentDay && currentDaytime && !mysteryTimeHasArrived(currentDay, currentDaytime, relationship.availableDay, relationship.availableDaytime)
-            ? ", not yet knowable in real play"
-            : ""
-        }`
+        ? `, available from ${mysteryAvailabilityLabel(relationship.availableDay, relationship.availableDaytime)}`
         : "";
-      const visibility = relationship.hidden ? `hidden, testing visible${availableFrom}` : `known${availableFrom}`;
-      const detail = other && relationship.kind === "Family"
-        ? mysteryFamilyRelationshipSentence(npc, other, relationship)
-        : relationship.detail;
-      return `${relationship.kind} with ${other ? fullName(other) : "Unknown"} (${visibility}): ${detail}`;
+      const visibility = relationship.hidden ? `hidden, testing visible${availableFrom}` : "known";
+      const graphRolePhrase = other && (relationship.kind === "Family" || relationship.kind === "Marriage")
+        ? mysteryGraphFamilyRolePhrase(npc, other, familyGraph)
+        : null;
+      const detail = other && graphRolePhrase
+        ? `${fullName(npc)} is ${graphRolePhrase} ${fullName(other)}.`
+        : other && relationship.kind === "Family"
+          ? mysteryFamilyRelationshipSentence(npc, other, relationship)
+          : mysteryRelationshipDetailForSheet(relationship.detail, npcs, playerFirstName);
+      const hiddenMarker = relationship.hidden ? `(${visibility}): ` : "";
+      return `${hiddenMarker}${detail}`;
     });
+  const graphLines = familyGraph
+    ? npcs
+      .filter((other) => other.id !== npc.id && !directPairKeys.has(mysteryGraphPairKey(npc.id, other.id)))
+      .map((other) => {
+        const rolePhrase = mysteryGraphFamilyRolePhrase(npc, other, familyGraph);
+        return rolePhrase ? `${fullName(npc)} is ${rolePhrase} ${fullName(other)}.` : null;
+      })
+      .filter((line): line is string => Boolean(line))
+    : [];
+  return [...relationshipLines, ...graphLines];
+}
+
+function mysteryResidentRelationshipLineForDisplay(line: string): string {
+  return line
+    .replace(/\(hidden, testing visible(?:,\s*[^)]*)?\):\s*/g, "")
+    .replace(/\(hidden, testing visible\):?\s*/g, "")
+    .replace(/\(known\):?\s*/g, "")
+    .replace(/\s+\./g, ".")
+    .replace(/\.{2,}/g, ".")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function mysterySexedRole(npc: MysteryNpc, female: string, male: string): string {
@@ -2426,6 +2946,19 @@ function mysteryFamilyRelationshipSentence(subject: MysteryNpc, other: MysteryNp
     : relationship.detail;
 }
 
+function mysteryGraphFamilyRolePhrase(subject: MysteryNpc, other: MysteryNpc, graph?: MysteryFamilyGraph): string | null {
+  if (!graph) return null;
+  const pairMatches = (item: { aId: string; bId: string }) => mysteryGraphPairKey(item.aId, item.bId) === mysteryGraphPairKey(subject.id, other.id);
+  if (graph.spouses.some(pairMatches)) return "spouse of";
+  if (graph.siblings.some(pairMatches)) return `${mysterySiblingRole(subject)} of`;
+  if (graph.cousins.some(pairMatches)) return "cousin of";
+  if (graph.parentChild.some((item) => item.parentId === subject.id && item.childId === other.id)) return `${mysteryParentRole(subject)} of ${mysteryChildRole(other)}`;
+  if (graph.parentChild.some((item) => item.parentId === other.id && item.childId === subject.id)) return `${mysteryChildRole(subject)} of ${mysteryParentRole(other)}`;
+  if (graph.auntUncleNibling.some((item) => item.auntUncleId === subject.id && item.niblingId === other.id)) return `${mysterySexedRole(subject, "aunt", "uncle")} of ${mysterySexedRole(other, "niece", "nephew")}`;
+  if (graph.auntUncleNibling.some((item) => item.auntUncleId === other.id && item.niblingId === subject.id)) return `${mysterySexedRole(subject, "niece", "nephew")} of ${mysterySexedRole(other, "aunt", "uncle")}`;
+  return null;
+}
+
 function refreshMysteryFamilyNotes(npcs: MysteryNpc[], relationships: MysteryNpcRelationship[]) {
   for (const npc of npcs) npc.familyRelationNote = undefined;
   for (const relationship of relationships) {
@@ -2449,21 +2982,25 @@ function normalizeMysteryNpcRelationships(npcs: MysteryNpc[], relationships: Mys
   const ids = new Set(npcs.map((npc) => npc.id));
   const byId = new Map(npcs.map((npc) => [npc.id, npc]));
   const seenExact = new Set<string>();
-  const marriedNpcIds = new Set<string>();
+  const officialPartnerNpcIds = new Set<string>();
   let cousinLinks = 0;
   let staffGuestBloodLinks = 0;
   let largeAgeGapRomances = 0;
   const normalized: MysteryNpcRelationship[] = [];
-  for (const relationship of relationships) {
+  const orderedRelationships = [...relationships].sort((left, right) =>
+    (left.kind === "Marriage" ? 0 : left.kind === "Romance" ? 1 : 2) -
+    (right.kind === "Marriage" ? 0 : right.kind === "Romance" ? 1 : 2)
+  );
+  for (const relationship of orderedRelationships) {
     const from = byId.get(relationship.fromId);
     const to = byId.get(relationship.toId);
     if (!from || !to || !ids.has(from.id) || !ids.has(to.id) || from.id === to.id) continue;
     const exactKey = [relationship.kind, [from.id, to.id].sort().join(":"), relationship.detail].join("|");
     if (seenExact.has(exactKey)) continue;
-    if (relationship.kind === "Marriage") {
-      if (marriedNpcIds.has(from.id) || marriedNpcIds.has(to.id)) continue;
-      marriedNpcIds.add(from.id);
-      marriedNpcIds.add(to.id);
+    if (mysteryIsOfficialPartnerRelationship(relationship.kind)) {
+      if (officialPartnerNpcIds.has(from.id) || officialPartnerNpcIds.has(to.id)) continue;
+      officialPartnerNpcIds.add(from.id);
+      officialPartnerNpcIds.add(to.id);
     }
     if (relationship.kind === "Family" && relationship.detail.toLowerCase().includes("cousin")) {
       if (cousinLinks >= 3) continue;
@@ -2488,8 +3025,14 @@ function normalizeMysteryNpcRelationships(npcs: MysteryNpc[], relationships: Mys
       from.familyStatus = "Married";
       to.familyStatus = "Married";
     }
-    if (relationship.kind === "Romance" || relationship.kind === "Affair") {
+    if (relationship.kind === "Romance") {
+      from.familyStatus = "In a relationship";
+      to.familyStatus = "In a relationship";
+    }
+    if (relationship.kind === "Affair" && !officialPartnerNpcIds.has(from.id)) {
       from.familyStatus = "Secretly dating";
+    }
+    if (relationship.kind === "Affair" && !officialPartnerNpcIds.has(to.id)) {
       to.familyStatus = "Secretly dating";
     }
   }
@@ -2497,8 +3040,269 @@ function normalizeMysteryNpcRelationships(npcs: MysteryNpc[], relationships: Mys
   return normalized;
 }
 
+function mysteryReasonBase(reason: string): string {
+  let base = reason.trim();
+  while (/\s*\([^)]*\)\s*$/.test(base)) {
+    base = base.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  }
+  return base;
+}
+
+function mysterySetReasonOfStay(npc: MysteryNpc, reasonOfStay: string, sanityLines: string[], note: string) {
+  if (npc.reasonOfStay === reasonOfStay) return;
+  sanityLines.push(`NPC repair: ${fullName(npc)} reason of stay changed from "${npc.reasonOfStay}" to "${reasonOfStay}"${note ? ` ${note}` : ""}.`);
+  npc.reasonOfStay = reasonOfStay;
+  const stayHistory = mysteryStayHistoryFor(npc.role, npc.age, npc.reasonOfStay);
+  npc.currentStay = stayHistory.currentStay;
+  npc.plannedStay = stayHistory.plannedStay;
+  npc.previousStay = stayHistory.previousStay;
+}
+
+function mysteryPartnerFor(
+  npc: MysteryNpc,
+  npcs: MysteryNpc[],
+  relationships: MysteryNpcRelationship[],
+  kinds: MysteryNpcRelationshipKind[]
+): MysteryNpc | undefined {
+  const validRelationships = mysteryRelationshipsWithSingleSpouses(relationships);
+  const link = validRelationships.find((relationship) =>
+    kinds.includes(relationship.kind) &&
+    (relationship.fromId === npc.id || relationship.toId === npc.id)
+  );
+  const otherId = link ? (link.fromId === npc.id ? link.toId : link.fromId) : undefined;
+  return otherId ? npcs.find((candidate) => candidate.id === otherId) : undefined;
+}
+
+function mysteryFallbackReasonForInvalidStay(npc: MysteryNpc): string {
+  const options = [
+    "Taking a weekend break",
+    "Following an anonymous invitation",
+    "Reviewing the hotel",
+    "Researching a local story",
+    "Escaping unwanted media attention"
+  ];
+  return options[stableHash(`${npc.id}-${npc.reasonOfStay}-fallback-reason`) % options.length];
+}
+
+function mysteryIsLegalProfessional(npc: MysteryNpc): boolean {
+  return /barrister|lawyer|solicitor|judge|legal/i.test(npc.occupation) || /law degree|legal training/i.test(npc.education);
+}
+
+function mysteryInheritanceLawyerForDisplay(npc: MysteryNpc, mystery: Pick<MysteryGame, "npcs" | "npcRelationships">): MysteryNpc | undefined {
+  const existingLawyerLink = (mystery.npcRelationships ?? []).find((relationship) =>
+    relationship.kind === "Work" &&
+    relationship.detail.toLowerCase().includes("lawyer") &&
+    relationship.detail.toLowerCase().includes("inheritance") &&
+    (relationship.fromId === npc.id || relationship.toId === npc.id)
+  );
+  const existingLawyerId = existingLawyerLink ? (existingLawyerLink.fromId === npc.id ? existingLawyerLink.toId : existingLawyerLink.fromId) : undefined;
+  const existingLawyer = existingLawyerId ? mystery.npcs.find((candidate) => candidate.id === existingLawyerId && candidate.id !== npc.id) : undefined;
+  return existingLawyer ?? mystery.npcs.find((candidate) => candidate.id !== npc.id && candidate.age >= 18 && mysteryIsLegalProfessional(candidate));
+}
+
+function mysteryDisplayReasonOfStay(npc: MysteryNpc, mystery: Pick<MysteryGame, "npcs" | "npcRelationships">): string {
+  const baseReason = mysteryReasonBase(npc.reasonOfStay);
+  if (baseReason !== "Meeting a lawyer about an inheritance" || /\([^)]*\)/.test(npc.reasonOfStay)) return npc.reasonOfStay;
+  const lawyer = mysteryInheritanceLawyerForDisplay(npc, mystery);
+  return lawyer ? `${baseReason} (${fullName(lawyer)})` : npc.reasonOfStay;
+}
+
+function mysteryDisplayEducation(education: string): string {
+  const replacements: Record<string, string> = {
+    "Some elementary school": "Primary school certificate",
+    "Completed elementary school": "Primary school certificate",
+    "Some secondary school": "Secondary school certificate",
+    "Secondary school diploma": "High school diploma",
+    "Home-schooled through secondary level": "Home-schooled",
+    "General education diploma": "High school diploma",
+    "Basic literacy training": "No formal education",
+    "Basic bookkeeping training": "Basic book-keeping training",
+    "Technical college": "Technical college diploma",
+    "Architecture degree": "BEng — Bachelor of Engineering",
+    "Medical school": "MD — Doctor of Medicine",
+    "Medical degree": "MD — Doctor of Medicine"
+  };
+  return replacements[education] ?? education;
+}
+
+function mysteryDisplayOccupation(npc: MysteryNpc): string {
+  const replacements: Record<string, string> = {
+    "Child guest": "None",
+    "Household child": "None",
+    Page: "Kitchen helper",
+    Archivist: "Author",
+    "Art appraiser": "Art dealer",
+    Barrister: npc.age >= 55 ? "Retired" : "Junior clerk",
+    Bookbinder: "Antique dealer",
+    "Stage actress": "Actor",
+    "Stage student": "Actor"
+  };
+  return replacements[npc.occupation] ?? npc.occupation;
+}
+
+function repairMysteryReasonContext(npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], sanityLines: string[]) {
+  const guests = npcs.filter((npc) => npc.role === "Guest");
+  const adults = guests.filter((npc) => npc.age >= 18);
+  const adultResidents = npcs.filter((npc) => npc.age >= 18);
+  const businessOccupations = /accountant|antique|appraiser|art dealer|auctioneer|bank|barrister|bookbinder|boutique|manager|journalist|author|architect|tour guide|doctor/i;
+  const hotelFamilyIds = new Set(
+    relationships
+      .filter((relationship) => relationship.kind === "Family" || relationship.kind === "Marriage")
+      .flatMap((relationship) => [relationship.fromId, relationship.toId])
+  );
+  for (const npc of guests) {
+    const baseReason = mysteryReasonBase(npc.reasonOfStay);
+    if (baseReason === "Attending a family reunion" && !hotelFamilyIds.has(npc.id)) {
+      mysterySetReasonOfStay(npc, "Attending a family reunion (outside of hotel)", sanityLines, "because no family member is staying at Ravenwood");
+      continue;
+    }
+
+    if (baseReason === "Meeting a business partner") {
+      const existingBusinessLink = relationships.find((relationship) =>
+        relationship.kind === "Work" &&
+        relationship.detail.toLowerCase().includes("business partner") &&
+        (relationship.fromId === npc.id || relationship.toId === npc.id)
+      );
+      const existingPartnerId = existingBusinessLink ? (existingBusinessLink.fromId === npc.id ? existingBusinessLink.toId : existingBusinessLink.fromId) : undefined;
+      const existingPartner = existingPartnerId ? npcs.find((candidate) => candidate.id === existingPartnerId) : undefined;
+      const partner = existingPartner ?? pick(
+        adults.filter((candidate) => candidate.id !== npc.id && businessOccupations.test(candidate.occupation)).length > 0
+          ? adults.filter((candidate) => candidate.id !== npc.id && businessOccupations.test(candidate.occupation))
+          : adults.filter((candidate) => candidate.id !== npc.id)
+      );
+      if (partner) {
+        addMysteryNpcRelationship(
+          relationships,
+          npc,
+          partner,
+          "Work",
+          `${fullName(npc)} came to Ravenwood to meet business partner ${fullName(partner)}.`,
+          { hidden: true, trustImpact: 3, motiveRisk: 4, skipGuards: true }
+        );
+        mysterySetReasonOfStay(npc, `${baseReason} (${fullName(partner)})`, sanityLines, "so the business partner exists in the mansion");
+      }
+    }
+
+    if (baseReason === "Meeting a lawyer about an inheritance") {
+      const legalAdults = adultResidents.filter((candidate) => candidate.id !== npc.id && mysteryIsLegalProfessional(candidate));
+      const fallbackAdults = adultResidents.filter((candidate) => candidate.id !== npc.id);
+      const existingLawyer = mysteryInheritanceLawyerForDisplay(npc, { npcs, npcRelationships: relationships });
+      const lawyer = existingLawyer ?? (legalAdults.length > 0 ? pick(legalAdults) : fallbackAdults.length > 0 ? pick(fallbackAdults) : undefined);
+      if (lawyer) {
+        if (!mysteryIsLegalProfessional(lawyer)) {
+          const oldOccupation = lawyer.occupation;
+          const oldEducation = lawyer.education;
+          lawyer.education = "Law degree";
+          sanityLines.push(`NPC repair: ${fullName(lawyer)} kept occupation ${oldOccupation} and changed education from ${oldEducation} to Law degree so the inheritance lawyer exists in the mansion.`);
+        }
+        addMysteryNpcRelationship(
+          relationships,
+          npc,
+          lawyer,
+          "Work",
+          `${fullName(npc)} came to Ravenwood to meet lawyer ${fullName(lawyer)} about an inheritance.`,
+          { hidden: true, trustImpact: 3, motiveRisk: 5, skipGuards: true }
+        );
+        mysterySetReasonOfStay(npc, `${baseReason} (${fullName(lawyer)})`, sanityLines, "so the inheritance lawyer exists in the mansion");
+      }
+    }
+
+    if (baseReason === "Taking a romantic getaway" || baseReason === "Meeting a secret romantic partner") {
+      const partner = mysteryPartnerFor(npc, npcs, relationships, ["Marriage", "Romance", "Affair"]);
+      mysterySetReasonOfStay(npc, `${baseReason} (${partner ? `with ${fullName(partner)}` : "alone"})`, sanityLines, "so the romantic stay is explicit");
+    }
+
+    if (baseReason === "Attending an engagement party") {
+      if (/\([^)]*\)/.test(npc.reasonOfStay)) continue;
+      const engagedGuest = adults.find((candidate) => /\bengaged\b/i.test(candidate.familyStatus) && !/secret/i.test(candidate.familyStatus));
+      const partner = engagedGuest ? mysteryPartnerFor(engagedGuest, npcs, relationships, ["Romance", "Marriage"]) : undefined;
+      const partyLabel = engagedGuest && partner
+        ? `for ${fullName(engagedGuest)} and ${fullName(partner)}`
+        : "outside of mansion";
+      mysterySetReasonOfStay(npc, `${baseReason} (${partyLabel})`, sanityLines, "so the engagement party has a clear host");
+    }
+
+    if (baseReason === "Attending a wedding") {
+      if (/\([^)]*\)/.test(npc.reasonOfStay)) continue;
+      const wedding = mysteryRelationshipsWithSingleSpouses(relationships)
+        .find((relationship) =>
+          relationship.kind === "Marriage" &&
+          guests.some((candidate) => candidate.id === relationship.fromId) &&
+          guests.some((candidate) => candidate.id === relationship.toId)
+        );
+      const left = wedding ? npcs.find((candidate) => candidate.id === wedding.fromId) : undefined;
+      const right = wedding ? npcs.find((candidate) => candidate.id === wedding.toId) : undefined;
+      const weddingLabel = left && right ? `for ${fullName(left)} and ${fullName(right)}` : "outside of mansion";
+      mysterySetReasonOfStay(npc, `${baseReason} (${weddingLabel})`, sanityLines, "so the wedding has a clear couple");
+    }
+
+    if (baseReason === "Celebrating an anniversary") {
+      const partner = mysteryPartnerFor(npc, npcs, relationships, ["Marriage", "Romance"]);
+      if (partner) {
+        mysterySetReasonOfStay(npc, `${baseReason} (with ${fullName(partner)})`, sanityLines, "so the anniversary companion is present");
+      } else {
+        mysterySetReasonOfStay(npc, mysteryFallbackReasonForInvalidStay(npc), sanityLines, "because they had no spouse or partner travelling with them");
+      }
+    }
+  }
+}
+
+function mysteryFamilyGroupReason(group: MysteryNpc[], relationships: MysteryNpcRelationship[]): string {
+  const groupIds = new Set(group.map((member) => member.id));
+  const groupLinks = relationships.filter((relationship) => groupIds.has(relationship.fromId) && groupIds.has(relationship.toId));
+  const visibleEngagement = groupLinks.find((relationship) => {
+    if (relationship.hidden || !["Romance", "Marriage"].includes(relationship.kind)) return false;
+    const left = group.find((member) => member.id === relationship.fromId);
+    const right = group.find((member) => member.id === relationship.toId);
+    return Boolean(left && right && [left, right].some((member) => /\bengaged\b/i.test(member.familyStatus) && !/secret/i.test(member.familyStatus)));
+  });
+  if (visibleEngagement) {
+    const left = group.find((member) => member.id === visibleEngagement.fromId);
+    const right = group.find((member) => member.id === visibleEngagement.toId);
+    if (left && right) return `Attending an engagement party (for ${fullName(left)} and ${fullName(right)})`;
+  }
+
+  const widowedParent = group.find((member) => member.age >= 45 && /widowed/i.test(member.familyStatus) && groupLinks.some((relationship) => {
+    if (relationship.kind !== "Family") return false;
+    const other = group.find((candidate) => candidate.id === (relationship.fromId === member.id ? relationship.toId : relationship.toId === member.id ? relationship.fromId : ""));
+    if (!other) return false;
+    return mysteryFamilyRolePhrase(member, other, relationship)?.includes("mother") || mysteryFamilyRolePhrase(member, other, relationship)?.includes("father");
+  }));
+  if (widowedParent) return `Attending a funeral service (for ${fullName(widowedParent)}'s late spouse)`;
+
+  const marriage = groupLinks.find((relationship) => relationship.kind === "Marriage");
+  if (marriage && group.length === 2) return "On their honeymoon";
+  if (marriage && group.length >= 3) {
+    const left = group.find((member) => member.id === marriage.fromId);
+    const right = group.find((member) => member.id === marriage.toId);
+    if (left && right) return `Attending a wedding (for ${fullName(left)} and ${fullName(right)})`;
+  }
+
+  const hasParentChild = groupLinks.some((relationship) => {
+    if (relationship.kind !== "Family") return false;
+    const left = group.find((member) => member.id === relationship.fromId);
+    const right = group.find((member) => member.id === relationship.toId);
+    if (!left || !right) return false;
+    const leftRole = mysteryFamilyRolePhrase(left, right, relationship);
+    const rightRole = mysteryFamilyRolePhrase(right, left, relationship);
+    return Boolean(leftRole?.match(/\b(mother|father)\b/) || rightRole?.match(/\b(mother|father)\b/));
+  });
+  const hasChild = group.some((member) => member.age < 18);
+  if (hasParentChild && hasChild) return "Taking a summer vacation";
+  if (group.length >= 4) return "Attending a family reunion";
+  if (hasParentChild) return "Taking a weekend break";
+  return "Visiting a relative";
+}
+
 function repairMysteryNpcProfileConsistency(npcs: MysteryNpc[], relationships: MysteryNpcRelationship[]): string[] {
   const sanityLines: string[] = [];
+  for (const npc of npcs) {
+    const resolvedSecret = mysteryResolveNpcSecretPlaceholders(npc.secret, npc, npcs);
+    if (resolvedSecret !== npc.secret) {
+      sanityLines.push(`NPC repair: ${fullName(npc)} secret placeholders were resolved to actual resident names.`);
+      npc.secret = resolvedSecret;
+    }
+  }
   const guestFamilyLinks = relationships.filter((relationship) => {
     if (relationship.kind !== "Family" && relationship.kind !== "Marriage") return false;
     const from = npcs.find((npc) => npc.id === relationship.fromId);
@@ -2524,26 +3328,21 @@ function repairMysteryNpcProfileConsistency(npcs: MysteryNpc[], relationships: M
     }
     if (groupIds.size <= 1) continue;
     const group = Array.from(groupIds).map((id) => guestById.get(id)).filter((item): item is MysteryNpc => Boolean(item));
-    const familyReason = group.find((member) => /family|relative|wedding|engagement|memorial|funeral|anniversary|inheritance/i.test(member.reasonOfStay))?.reasonOfStay ?? "Attending a family reunion";
+    const familyReason = mysteryFamilyGroupReason(group, relationships);
     for (const member of group) {
       if (member.reasonOfStay !== familyReason) {
-        sanityLines.push(`NPC repair: ${fullName(member)} reason of stay changed from "${member.reasonOfStay}" to "${familyReason}" to match their family group.`);
-        member.reasonOfStay = familyReason;
-        const stayHistory = mysteryStayHistoryFor(member.role, member.age, member.reasonOfStay);
-        member.currentStay = stayHistory.currentStay;
-        member.plannedStay = stayHistory.plannedStay;
-        member.previousStay = stayHistory.previousStay;
+        mysterySetReasonOfStay(member, familyReason, sanityLines, "to match their family group");
       }
     }
   }
+  repairMysteryReasonContext(npcs, relationships, sanityLines);
 
   const requiredEducation: Record<string, string[]> = {
-    Doctor: ["Medical school", "Medical degree"],
-    Nurse: ["Medical school", "Medical degree", "First aid training"],
-    Barrister: ["Law degree", "Legal training"],
-    Architect: ["Architecture degree", "Technical college"],
-    Accountant: ["Basic bookkeeping training", "Office administration training"],
-    "Bank manager": ["Basic bookkeeping training", "Office administration training"],
+    Doctor: ["MD — Doctor of Medicine", "PhD in Medicine", "First aid training"],
+    Nurse: ["First aid training", "Medical secretary training"],
+    Architect: ["BEng — Bachelor of Engineering", "MEng — Master of Engineering", "Technical college diploma"],
+    Accountant: ["Basic book-keeping training", "Office administration training"],
+    "Bank manager": ["Basic book-keeping training", "Office administration training", "MBA — Master of Business Administration"],
     "Security guard": ["Security guard training", "Police academy training"]
   };
   for (const npc of npcs) {
@@ -2567,21 +3366,18 @@ function mysteryRomanceHistoryDetail(from: MysteryNpc, to: MysteryNpc): string {
   if (context === "staff") {
     return pick([
       `${fullName(from)} and ${fullName(to)} became romantically involved during late staff shifts and disagree about whether to make it public now.`,
-      `${fullName(from)} has been meeting ${fullName(to)} in private after service, which could ruin more than one position.`,
-      `${fullName(from)} still wants answers from ${fullName(to)} after a promise made during a quiet shift at Ravenwood.`
+      `${fullName(from)} has been meeting ${fullName(to)} in private after service, which could ruin more than one position.`
     ]);
   }
   if (context === "mixed") {
     return pick([
       `${fullName(from)} and ${fullName(to)} became romantically involved through repeated private service at Ravenwood and disagree about whether to make it public now.`,
-      `${fullName(from)} has been meeting ${fullName(to)} away from the public rooms, which could ruin more than one reputation.`,
-      `${fullName(from)} still wants answers from ${fullName(to)} after a promise made during a private Ravenwood conversation.`
+      `${fullName(from)} has been meeting ${fullName(to)} away from the public rooms, which could ruin more than one reputation.`
     ]);
   }
   return pick([
-    `${fullName(from)} and ${fullName(to)} became romantically involved during an earlier Ravenwood stay and disagree about whether to make it public now.`,
-    `${fullName(from)} has been meeting ${fullName(to)} in private again after a previous stay, which could ruin more than one reputation.`,
-    `${fullName(from)} still wants answers from ${fullName(to)} after a promise made during an earlier visit.`
+    `${fullName(from)} and ${fullName(to)} became romantically involved during private time at Ravenwood and disagree about whether to make it public now.`,
+    `${fullName(from)} has been meeting ${fullName(to)} in private around Ravenwood, which could ruin more than one reputation.`
   ]);
 }
 
@@ -2591,21 +3387,21 @@ function mysteryFriendshipDetail(from: MysteryNpc, to: MysteryNpc): string {
     return pick([
       `${fullName(from)} and ${fullName(to)} built a good friendship while working at Ravenwood and still trust each other more than most people in the house.`,
       `${fullName(from)} quietly looks out for ${fullName(to)} because their staff friendship has survived several difficult shifts.`,
-      `${fullName(from)} and ${fullName(to)} often defend each other when staff gossip begins.`
+      `${fullName(from)} and ${fullName(to)} defend each other when gossip begins.`
     ]);
   }
   if (context === "mixed") {
     return pick([
       `${fullName(from)} and ${fullName(to)} became friendly through repeated Ravenwood visits and still trust each other more than most people in the house.`,
       `${fullName(from)} quietly looks out for ${fullName(to)} because their friendship crosses the staff-guest divide.`,
-      `${fullName(from)} and ${fullName(to)} often defend each other when gossip begins in the house.`
+      `${fullName(from)} and ${fullName(to)} defend each other when gossip begins.`
     ]);
   }
   return pick([
     `${fullName(from)} and ${fullName(to)} share an old friendship and still trust each other more than most people at Ravenwood.`,
-    `${fullName(from)} and ${fullName(to)} became close during an earlier Ravenwood stay and have remained loyal friends.`,
+    `${fullName(from)} and ${fullName(to)} became close during their time around Ravenwood and have remained loyal friends.`,
     `${fullName(from)} quietly looks out for ${fullName(to)} because their friendship has survived several difficult years.`,
-    `${fullName(from)} and ${fullName(to)} often defend each other when gossip begins in the house.`
+    `${fullName(from)} and ${fullName(to)} defend each other when gossip begins.`
   ]);
 }
 
@@ -2631,12 +3427,8 @@ function buildMysteryNpcRelationshipPool(npcs: MysteryNpc[], relationships: Myst
   for (const staffMember of staff) {
     const guest = guests.length > 0 ? pick(guests) : undefined;
     if (guest && roll(0.38)) {
-      const detail = pick([
-        `${fullName(staffMember)} regularly serves ${fullName(guest)} and knows their habits.`,
-        `${fullName(staffMember)} saw ${fullName(guest)} in a private corridor after dinner.`,
-        `${fullName(staffMember)} is careful around ${fullName(guest)} because one complaint could cost the position.`
-      ]);
-      if (detail.includes("regularly serves")) ensureSharedRavenwoodHistory(staffMember, guest);
+      const detail = mysteryServantKnowledgeDetail(staffMember, guest, npcs);
+      ensureSharedRavenwoodHistory(staffMember, guest);
       addRandom(staffMember, guest, pick<MysteryNpcRelationshipKind>(["Work", "Suspicion", "Protection"]), detail, roll(0.45), rand(-8, 6), rand(1, 7));
     }
   }
@@ -2646,7 +3438,8 @@ function buildMysteryNpcRelationshipPool(npcs: MysteryNpc[], relationships: Myst
     const pool = roll(0.75) && adults.length >= 2 ? adults : npcs;
     if (pool.length < 2) break;
     const from = pick(pool);
-    const to = pick(pool.filter((npc) => npc.id !== from.id));
+    const toCandidates = pool.filter((npc) => npc.id !== from.id);
+    const to = pick(toCandidates);
     if (from.age < 18 || to.age < 18) {
       addRandom(from, to, pick<MysteryNpcRelationshipKind>(["Friendship", "Protection", "Suspicion"]), pick([
         `${fullName(from)} trusts ${fullName(to)} more than most people in the house.`,
@@ -2654,22 +3447,32 @@ function buildMysteryNpcRelationshipPool(npcs: MysteryNpc[], relationships: Myst
         `${fullName(from)} overheard ${fullName(to)} arguing and has not understood the meaning yet.`
       ]), roll(0.42), rand(-4, 8), rand(0, 4));
     } else if (roll(0.14)) {
-      ensureSharedRavenwoodHistory(from, to);
-      const romanceDetail = mysteryRomanceHistoryDetail(from, to);
-      addRandom(from, to, pick<MysteryNpcRelationshipKind>(["Romance", "Affair"]), romanceDetail, true, rand(-10, 12), rand(5, 14));
+      const romanticTo = mysteryPickWeightedRomanticCandidate(
+        from,
+        toCandidates.filter((candidate) => candidate.age >= 18 && mysteryAllowsLargeAgeGapRomance(from, candidate))
+      );
+      if (!romanticTo) continue;
+      ensureSharedRavenwoodHistory(from, romanticTo);
+      const romanceDetail = mysteryRomanceHistoryDetail(from, romanticTo);
+      const romanceKind: MysteryNpcRelationshipKind = mysteryHasOfficialPartnerFor(relationships, from) ||
+        mysteryHasOfficialPartnerFor(relationships, romanticTo) ||
+        mysteryHasOfficialPartnerStatus(from) ||
+        mysteryHasOfficialPartnerStatus(romanticTo)
+        ? "Affair"
+        : pick<MysteryNpcRelationshipKind>(["Romance", "Affair"]);
+      addRandom(from, romanticTo, romanceKind, romanceDetail, true, rand(-10, 12), rand(5, 14));
     } else {
       const kind = pick<MysteryNpcRelationshipKind>(["Friendship", "Rivalry", "Debt", "Blackmail", "Suspicion"]);
       const detail = kind === "Friendship"
         ? mysteryFriendshipDetail(from, to)
         : pick([
           `${fullName(from)} owes ${fullName(to)} a favor and resents the reminder.`,
-          `${fullName(from)} believes ${fullName(to)} lied about why they came to Ravenwood.`,
           `${fullName(from)} and ${fullName(to)} were seen arguing before the house was sealed.`,
           `${fullName(from)} knows an embarrassing secret about ${fullName(to)}.`,
           `${fullName(from)} considers ${fullName(to)} useful, but not trustworthy.`,
-          `${fullName(from)} and ${fullName(to)} share an old friendship that has gone sour.`
+          `${fullName(from)} and ${fullName(to)} absolutely despise each other.`
         ]);
-      if (detail.includes("old friendship")) ensureSharedRavenwoodHistory(from, to);
+      if (detail.includes("absolutely despise")) ensureSharedRavenwoodHistory(from, to);
       addRandom(from, to, kind, detail, roll(0.5), kind === "Friendship" ? rand(6, 14) : rand(-14, 10), kind === "Friendship" ? rand(0, 4) : rand(2, 12));
     }
   }
@@ -2842,9 +3645,14 @@ function makeMysteryNpc(
   if (!input.familyName) blockedFamilyNames.add(familyName.toLowerCase());
   const normalizedAge = clamp(input.age, input.role === "Staff" ? RAVENWOOD_MIN_STAFF_AGE : RAVENWOOD_MIN_NPC_AGE, RAVENWOOD_MAX_NPC_AGE);
   const isChild = normalizedAge < 14;
-  const profile = mysteryProfileFor(normalizedAge, input.role);
+  const profile = mysteryProfileFor(normalizedAge, input.role, sex);
   const reasonOfStay = input.reasonOfStay ?? (input.role === "Staff" ? "WORK" : pick(mysteryReasonsOfStay));
   const stayHistory = mysteryStayHistoryFor(input.role, normalizedAge, reasonOfStay);
+  const quirk = input.quirk ?? mysteryUniqueQuirkFor(normalizedAge, usedQuirks);
+  const substancePreference = mysterySubstancePreferenceCompatibleWithQuirk(
+    input.substancePreference ?? mysterySubstancePreferenceFor(normalizedAge, input.role),
+    quirk
+  );
   return {
     id: input.id ?? uid(),
     firstName: input.firstName ?? uniqueRavenwoodFirstName(sex, familyName, usedNames, usedFirstNames),
@@ -2861,14 +3669,14 @@ function makeMysteryNpc(
     plannedStay: input.plannedStay ?? stayHistory.plannedStay,
     previousStay: input.previousStay ?? stayHistory.previousStay,
     secret: input.secret ?? mysterySecretFor(normalizedAge),
-    quirk: input.quirk ?? mysteryUniqueQuirkFor(normalizedAge, usedQuirks),
+    quirk,
     roomId: input.roomId,
     stationRoomId: input.stationRoomId,
     trust: input.trust ?? rand(4, 18),
     temporaryTrust: input.temporaryTrust ?? 0,
     romance: input.romance ?? 0,
     romanceRevealed: input.romanceRevealed ?? false,
-    substancePreference: input.substancePreference ?? mysterySubstancePreferenceFor(normalizedAge, input.role),
+    substancePreference,
     substanceState: input.substanceState ?? "sober",
     substanceTurns: input.substanceTurns ?? 0,
     familyRelationNote: input.familyRelationNote,
@@ -2928,6 +3736,7 @@ function createMysteryGameFromDraft(
   const childCount = rand(0, 2);
   const npcs: MysteryNpc[] = [];
   const npcRelationships: MysteryNpcRelationship[] = [];
+  const familyGraph = emptyMysteryFamilyGraph();
   const residentSexPlan = mysteryBalancedSexPlan(residentCount, playerInput.sex);
   let residentSexIndex = 0;
   const nextResidentSex = () => residentSexPlan[residentSexIndex++] ?? pick<Sex>(["Female", "Male"]);
@@ -2957,7 +3766,7 @@ function createMysteryGameFromDraft(
     const room = sharedRooms.length > 0 && roll(0.25)
       ? pick(sharedRooms)
       : pick(emptyRooms.length > 0 ? emptyRooms : roomsWithSpace);
-    const relatedAdult = adultGuests.length > 0 && roll(0.36) ? pick(adultGuests) : null;
+    const relatedAdult = adultGuests.length > 0 && roll(0.3) ? pick(adultGuests) : null;
     const possibleFamilyLinks = relatedAdult
       ? [
         "Sibling",
@@ -2969,7 +3778,10 @@ function createMysteryGameFromDraft(
       : [];
     const familyLink = relatedAdult && possibleFamilyLinks.length > 0 ? pick(possibleFamilyLinks) : null;
     const relatedAge = relatedAdult?.age ?? rand(18, RAVENWOOD_MAX_NPC_AGE);
-    const sex = nextResidentSex();
+    const plannedSex = nextResidentSex();
+    const sex = familyLink === "Spouse" && relatedAdult
+      ? mysteryWeightedRomanticSex(relatedAdult)
+      : plannedSex;
     const age = familyLink === "Spouse"
       ? (() => {
         const proposedAge = clamp(relatedAge + rand(-9, 9), 18, RAVENWOOD_MAX_NPC_AGE);
@@ -3012,6 +3824,7 @@ function createMysteryGameFromDraft(
     if (relatedAdult && familyLink === "Spouse") {
       const added = addMysteryNpcRelationship(npcRelationships, relatedAdult, npc, "Marriage", `${fullName(relatedAdult)} and ${fullName(npc)} arrived as spouses.`, { trustImpact: 10, motiveRisk: 3, skipGuards: true });
       if (added) {
+        addMysteryGraphPair(familyGraph.spouses, relatedAdult.id, npc.id);
         relatedAdult.familyStatus = "Married";
         addMysteryFamilyNote(relatedAdult, `Spouse of ${fullName(npc)}`);
         addMysteryFamilyNote(npc, `Spouse of ${fullName(relatedAdult)}`);
@@ -3019,12 +3832,14 @@ function createMysteryGameFromDraft(
     } else if (relatedAdult && familyLink === "Sibling") {
       const added = addMysteryNpcRelationship(npcRelationships, relatedAdult, npc, "Family", `${fullName(relatedAdult)} and ${fullName(npc)} are siblings.`, { trustImpact: 8, motiveRisk: 2 });
       if (added) {
+        addMysteryGraphPair(familyGraph.siblings, relatedAdult.id, npc.id);
         addMysteryFamilyNote(relatedAdult, `${mysteryTitleCaseRelation(mysterySiblingRole(relatedAdult))} of ${fullName(npc)}`);
         addMysteryFamilyNote(npc, `${mysteryTitleCaseRelation(mysterySiblingRole(npc))} of ${fullName(relatedAdult)}`);
       }
     } else if (relatedAdult && familyLink === "Cousin") {
       const added = addMysteryNpcRelationship(npcRelationships, relatedAdult, npc, "Family", `${fullName(relatedAdult)} and ${fullName(npc)} are cousins.`, { trustImpact: 5, motiveRisk: 2 });
       if (added) {
+        addMysteryGraphPair(familyGraph.cousins, relatedAdult.id, npc.id);
         generatedCousinLinks += 1;
         addMysteryFamilyNote(relatedAdult, `Cousin of ${fullName(npc)}`);
         addMysteryFamilyNote(npc, `Cousin of ${fullName(relatedAdult)}`);
@@ -3032,12 +3847,14 @@ function createMysteryGameFromDraft(
     } else if (relatedAdult && familyLink === "Adult child") {
       const added = addMysteryNpcRelationship(npcRelationships, relatedAdult, npc, "Family", `${fullName(relatedAdult)} is parent to ${fullName(npc)}.`, { trustImpact: 9, motiveRisk: 3 });
       if (added) {
+        addMysteryGraphParent(familyGraph, relatedAdult.id, npc.id);
         addMysteryFamilyNote(relatedAdult, `${mysteryTitleCaseRelation(mysteryParentRole(relatedAdult))} of ${mysteryChildRole(npc)} ${fullName(npc)}`);
         addMysteryFamilyNote(npc, `${mysteryTitleCaseRelation(mysteryChildRole(npc))} of ${mysteryParentRole(relatedAdult)} ${fullName(relatedAdult)}`);
       }
     } else if (relatedAdult && familyLink === "Parent") {
       const added = addMysteryNpcRelationship(npcRelationships, relatedAdult, npc, "Family", `${fullName(npc)} is parent to ${fullName(relatedAdult)}.`, { trustImpact: 9, motiveRisk: 3 });
       if (added) {
+        addMysteryGraphParent(familyGraph, npc.id, relatedAdult.id);
         addMysteryFamilyNote(relatedAdult, `${mysteryTitleCaseRelation(mysteryChildRole(relatedAdult))} of ${mysteryParentRole(npc)} ${fullName(npc)}`);
         addMysteryFamilyNote(npc, `${mysteryTitleCaseRelation(mysteryParentRole(npc))} of ${mysteryChildRole(relatedAdult)} ${fullName(relatedAdult)}`);
       }
@@ -3048,7 +3865,7 @@ function createMysteryGameFromDraft(
   }
   for (let index = 0; index < childCount; index += 1) {
     const childAge = rand(RAVENWOOD_MIN_NPC_AGE, 13);
-    const plausibleGuardians = adultGuests.filter((guest) => guest.age >= childAge + 16);
+    const plausibleGuardians = adultGuests.filter((guest) => guest.age >= childAge + 5);
     const guardian = pick(plausibleGuardians.length > 0 ? plausibleGuardians : adultGuests);
     const childRoom = guestRooms.find((room) => room.id === guardian.roomId) ?? pick(guestRooms.filter((room) => room.id !== playerRoom.id));
     if (!childRoom.occupantIds.includes(guardian.id)) moveNpcToRoom(guardian, childRoom);
@@ -3062,7 +3879,7 @@ function createMysteryGameFromDraft(
       familyName: guardian.familyName,
       familyStatus: "Child",
       education: mysteryEducationFor(childAge, "Guest"),
-      occupation: "Child guest",
+      occupation: "None",
       reasonOfStay: guardian.reasonOfStay,
       currentStay: guardian.currentStay,
       plannedStay: guardian.plannedStay,
@@ -3082,6 +3899,13 @@ function createMysteryGameFromDraft(
     child.visualRace = childPortrait?.visualRace ?? guardian.visualRace;
     const childRelationshipAdded = addMysteryNpcRelationship(npcRelationships, guardian, child, "Family", `${fullName(child)} is staying with ${guardianRelation.reasonRole} ${fullName(guardian)}.`, { trustImpact: 12, motiveRisk: 2 });
     if (childRelationshipAdded) {
+      if (guardianRelation.reasonRole === "mother" || guardianRelation.reasonRole === "father") {
+        addMysteryGraphParent(familyGraph, guardian.id, child.id);
+      } else if (guardianRelation.reasonRole === "older sister" || guardianRelation.reasonRole === "older brother") {
+        addMysteryGraphPair(familyGraph.siblings, guardian.id, child.id);
+      } else {
+        addMysteryGraphAuntUncle(familyGraph, guardian.id, child.id);
+      }
       addMysteryFamilyNote(guardian, `${titleCase(guardianRelation.guardianRelation)} ${fullName(child)}`);
       addMysteryFamilyNote(child, `${titleCase(guardianRelation.childRelation)} ${fullName(guardian)}`);
     }
@@ -3108,6 +3932,8 @@ function createMysteryGameFromDraft(
   }
   buildMysteryNpcRelationshipPool(npcs, npcRelationships);
   npcRelationships.splice(0, npcRelationships.length, ...normalizeMysteryNpcRelationships(npcs, npcRelationships));
+  const familySanityLines = repairMysteryFamilyGraphConsistency(npcs, npcRelationships, familyGraph);
+  npcRelationships.splice(0, npcRelationships.length, ...normalizeMysteryNpcRelationships(npcs, npcRelationships));
   const profileSanityLines = repairMysteryNpcProfileConsistency(npcs, npcRelationships);
   assignMysteryGuestRooms(rooms, npcs, npcRelationships, playerRoom.id);
   const openingServant = npcs.find((npc) => npc.role === "Staff" && ["Butler", "Housekeeper", "Waiter", "Head waiter"].includes(npc.occupation)) ?? npcs.find((npc) => npc.role === "Staff");
@@ -3126,12 +3952,10 @@ function createMysteryGameFromDraft(
   for (let index = 0; index < murderSchedule.length; index += 1) {
     const livingNpcs = npcs.filter((npc) => !deadNpcIds.has(npc.id));
     const repeatKillerIds = previousKillerIds.filter((id) => !deadNpcIds.has(id));
-    const killer = repeatKillerIds.length > 0 && roll(index === 1 ? 0.78 : 0.68)
+    const killer = repeatKillerIds.length > 0 && roll(0.65)
       ? npcs.find((npc) => npc.id === pick(repeatKillerIds)) ?? pick(livingNpcs)
       : pick(livingNpcs);
-    const victimPool = livingNpcs.filter((npc) => npc.id !== killer.id && !previousKillerIds.includes(npc.id));
-    const fallbackVictimPool = livingNpcs.filter((npc) => npc.id !== killer.id);
-    const victim = pick(victimPool.length > 0 ? victimPool : fallbackVictimPool);
+    const victim = pick(livingNpcs.filter((npc) => npc.id !== killer.id));
     const { day: murderDay, daytime } = murderSchedule[index];
     const method = pick(mysteryMethods);
     const methodRooms = mysteryRoomsForMethod(method, rooms, playerRoom.id);
@@ -3179,6 +4003,8 @@ function createMysteryGameFromDraft(
     }
   }
   npcRelationships.splice(0, npcRelationships.length, ...normalizeMysteryNpcRelationships(npcs, npcRelationships));
+  const finalFamilySanityLines = repairMysteryFamilyGraphConsistency(npcs, npcRelationships, familyGraph);
+  npcRelationships.splice(0, npcRelationships.length, ...normalizeMysteryNpcRelationships(npcs, npcRelationships));
   const finalProfileSanityLines = repairMysteryNpcProfileConsistency(npcs, npcRelationships);
   const lockdownReason = pick(mysteryLockdownReasons);
   const mysteryId = uid();
@@ -3198,7 +4024,7 @@ function createMysteryGameFromDraft(
       faceTrait: playerInput.faceTrait ?? initialDraft.faceTrait,
       age: playerAge,
       detectiveId: detectiveProfile?.id,
-      detectiveQuirks: detectiveProfile?.quirks,
+      detectiveQuirks: detectiveProfile ? mysteryDetectiveQuirksFor(detectiveProfile, playerAge) : undefined,
       ravenwoodPortraitKey: playerPortrait?.key,
       portraitLineage: playerPortrait?.lineage,
       visualRace: playerPortrait?.visualRace
@@ -3208,6 +4034,7 @@ daytime: "Morning",
 rooms,
 npcs,
 npcRelationships,
+familyGraph,
 murders,
 findables,
 currentRoomId: "grand-hall",
@@ -3240,7 +4067,7 @@ won: false,
   };
   return {
     ...mystery,
-    sanityLedger: [...buildMysterySanityLedger(mystery), ...profileSanityLines, ...finalProfileSanityLines, ...scenarioSanityLines].slice(-600)
+    sanityLedger: [...buildMysterySanityLedger(mystery), ...familySanityLines, ...profileSanityLines, ...finalFamilySanityLines, ...finalProfileSanityLines, ...scenarioSanityLines].slice(-600)
   };
 }
 
@@ -3262,11 +4089,13 @@ export default function App() {
   const [ravenwoodAiTestInput, setRavenwoodAiTestInput] = useState("Ask Nadine what she noticed after dinner.");
   const [ravenwoodAiTestOutput, setRavenwoodAiTestOutput] = useState("");
   const [expandedMysteryArchiveDays, setExpandedMysteryArchiveDays] = useState<Record<number, boolean>>({});
+  const [expandedMysteryDebugRoster, setExpandedMysteryDebugRoster] = useState(false);
   const [mysteryTreeViewport, setMysteryTreeViewport] = useState({ width: 0, height: 0 });
   const [solveMurderIndex, setSolveMurderIndex] = useState<number | null>(null);
   const [accusationKillerId, setAccusationKillerId] = useState<string | null>(null);
   const [accusationProofName, setAccusationProofName] = useState<string | null>(null);
   const [accusationMotiveText, setAccusationMotiveText] = useState("");
+  const [accusationDropdown, setAccusationDropdown] = useState<"killer" | "proof" | null>(null);
   const [accusationFeedback, setAccusationFeedback] = useState<{ title: string; text: string; mode: "victory" | "warning" | "loss"; triggerDeath?: boolean } | null>(null);
   const mysteryRelationsScrollRef = useRef<ScrollView | null>(null);
   const mysteryRelationsScrollYRef = useRef(0);
@@ -3278,12 +4107,70 @@ export default function App() {
   const mysteryTreeSinglePressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detectiveCarouselRef = useRef<ScrollView | null>(null);
   const detectiveCarouselOffsetRef = useRef(0);
+  const storyScrollRef = useRef<ScrollView | null>(null);
+  const storyMessageOffsetsRef = useRef<Record<string, number>>({});
+  const compassGlow = useRef(new Animated.Value(0)).current;
   const C = themes[themeName];
   const activeMystery = useMemo(() => mysteries.find((mystery) => mystery.id === activeMysteryId) ?? null, [activeMysteryId, mysteries]);
+  const activeMysteryVisibleMessageKey = activeMystery?.messages.slice(-5).map((message) => message.id).join("|") ?? "";
   const selectedMysteryDetective = useMemo(
     () => ravenwoodDetectiveProfiles.find((profile) => profile.id === selectedMysteryDetectiveId) ?? ravenwoodDetectiveProfiles[0],
     [selectedMysteryDetectiveId]
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    const html = document.documentElement;
+    const body = document.body;
+    const previousScrollRestoration = window.history.scrollRestoration;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousHtmlHeight = html.style.height;
+    const previousBodyHeight = body.style.height;
+    window.history.scrollRestoration = "manual";
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    html.style.height = "100%";
+    body.style.height = "100%";
+    window.scrollTo(0, 0);
+    return () => {
+      window.history.scrollRestoration = previousScrollRestoration;
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+      html.style.height = previousHtmlHeight;
+      body.style.height = previousBodyHeight;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  }, [screen, activeMysteryId]);
+
+  useEffect(() => {
+    storyMessageOffsetsRef.current = {};
+  }, [activeMysteryVisibleMessageKey]);
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(compassGlow, { toValue: 1, duration: 760, useNativeDriver: true }),
+        Animated.timing(compassGlow, { toValue: 0.35, duration: 420, useNativeDriver: true }),
+        Animated.timing(compassGlow, { toValue: 0.82, duration: 540, useNativeDriver: true }),
+        Animated.timing(compassGlow, { toValue: 0.15, duration: 880, useNativeDriver: true })
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [compassGlow]);
+
+  useEffect(() => {
+    if (screen !== "mystery" || !activeMystery?.storyFocusMessageId) return;
+    const timer = setTimeout(() => {
+      const offset = storyMessageOffsetsRef.current[activeMystery.storyFocusMessageId ?? ""];
+      storyScrollRef.current?.scrollTo({ y: Math.max(0, offset ?? 0), animated: true });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [screen, activeMystery?.storyFocusMessageId, activeMysteryVisibleMessageKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3367,19 +4254,53 @@ export default function App() {
     return mystery.inventory.some((item) => {
       const lower = item.toLowerCase();
       if ((lower.includes("master key") || lower.includes("master room key")) && room.kind === "guest") return true;
+      if (lower.includes("grand hall service key") && (room.kind === "staff" || room.kind === "service")) return true;
       if (!lower.includes("key")) return false;
       return lower.includes(roomNameText) || lower.includes(roomIdText);
     });
   }
 
+  function mysteryInventoryKeyForRoom(inventory: string[], room: MysteryRoom): string | undefined {
+    if (room.kind === "public") return undefined;
+    const roomNameText = room.name.toLowerCase();
+    const roomIdText = room.id.replace(/-/g, " ");
+    return inventory.find((item) => {
+      const lower = item.toLowerCase();
+      if (!lower.includes("key")) return false;
+      if ((lower.includes("master key") || lower.includes("master room key")) && room.kind === "guest") return true;
+      if (lower.includes("grand hall service key") && (room.kind === "staff" || room.kind === "service")) return true;
+      return lower.includes(roomNameText) || lower.includes(roomIdText);
+    });
+  }
+
+  function mysteryRemoveOneInventoryItem(inventory: string[], item: string): string[] {
+    let removed = false;
+    return inventory.filter((candidate) => {
+      if (!removed && candidate === item) {
+        removed = true;
+        return false;
+      }
+      return true;
+    });
+  }
+
+  function mysteryPendingWitnessInviteForRoom(mystery: MysteryGame, room: MysteryRoom): MysteryNpc | undefined {
+    return mystery.npcs.find((npc) =>
+      npc.alive &&
+      mystery.witnessInvitationNpcIds?.includes(npc.id) &&
+      !mystery.witnessKnowledgeDeliveredNpcIds?.includes(npc.id) &&
+      mysteryPrivateMeetingRoomIdFor(npc) === room.id
+    );
+  }
+
   function mysteryPlayerCanAccessRoom(mystery: MysteryGame, room: MysteryRoom): boolean {
-    return mysteryPlayerHasKeyForRoom(mystery, room);
+    return mysteryPlayerHasKeyForRoom(mystery, room) || Boolean(mysteryPendingWitnessInviteForRoom(mystery, room));
   }
 
   function mysteryAccessInviteAvailable(mystery: MysteryGame, room: MysteryRoom): { byTrust: boolean; byRomance: boolean; npc?: MysteryNpc } {
     const people = mystery.npcs.filter((npc) => npc.alive && currentMysteryNpcRoomId(mystery, npc) === room.id);
     const trusted = people.find((npc) => effectiveMysteryTrust(npc) >= 70);
-    const romantic = people.find((npc) => npc.romanceRevealed && npc.romance >= 65);
+    const romantic = people.find((npc) => mysteryCanPlayerHaveRomanceWithNpc(mystery.player, npc) && npc.romanceRevealed && npc.romance >= 65);
     return { byTrust: Boolean(trusted), byRomance: Boolean(romantic), npc: trusted ?? romantic };
   }
 
@@ -3387,6 +4308,11 @@ export default function App() {
     if (mysteryPlayerHasKeyForRoom(mystery, room)) {
       const opened = { ...room, accessible: true };
       return { allowed: true, room: opened, ledger: `Access granted to ${room.name}: player has a matching key.` };
+    }
+    const witnessInvite = mysteryPendingWitnessInviteForRoom(mystery, room);
+    if (witnessInvite) {
+      const line = `${fullName(witnessInvite)} is waiting for you in ${room.name}; they asked for this private meeting.`;
+      return { allowed: true, room: { ...room, accessible: true }, message: { id: uid(), speaker: "GM", text: line, rich: mysteryNpcSegments(line, mystery) }, ledger: `Access granted to ${room.name}: pending witness invitation from ${fullName(witnessInvite)}.` };
     }
     const lower = text.toLowerCase();
     const invite = mysteryAccessInviteAvailable(mystery, room);
@@ -3412,20 +4338,54 @@ export default function App() {
 
   function readableMysterySecret(secret: string): string {
     return secret
+      .replace(/\{linked_character\}/gi, "another resident")
       .replace(/secretly changed room keys before arrival/gi, "requested a room change at arrival")
       .replace(/secretly changed room keys/gi, "requested a room change")
       .replace(/changed room keys before arrival/gi, "requested a room change at arrival");
   }
 
-  function currentMysteryNpcRoomId(mystery: Pick<MysteryGame, "id" | "day" | "daytime">, npc: MysteryNpc): string {
+  function mysteryNpcSleepRoomId(npc: MysteryNpc): string {
+    return npc.roomId;
+  }
+
+  function mysteryNpcIsSleeping(mystery: Pick<MysteryGame, "id" | "day" | "daytime">, npc: MysteryNpc): boolean {
+    if (!npc.alive) return false;
+    const mainSleepRoll = stableHash(`${mystery.id}-${mystery.day}-${npc.id}-main-sleep`) % 100;
+    const previousSleepRoll = stableHash(`${mystery.id}-${Math.max(1, mystery.day - 1)}-${npc.id}-main-sleep`) % 100;
+    const napRoll = stableHash(`${mystery.id}-${mystery.day}-${npc.id}-nap`) % 100;
+    if (mystery.daytime === "Midnight") return mainSleepRoll < (npc.role === "Staff" ? 72 : 84);
+    if (mystery.daytime === "Night") return mainSleepRoll < (npc.role === "Staff" ? 34 : 48);
+    if (mystery.daytime === "Morning") return previousSleepRoll < (npc.role === "Staff" ? 18 : 28);
+    if (mystery.daytime === "Afternoon") return napRoll < (npc.age >= 55 || npc.isChild ? 16 : 7);
+    return false;
+  }
+
+  function currentMysteryNpcRoomId(
+    mystery: Pick<MysteryGame, "id" | "day" | "daytime"> & Partial<Pick<MysteryGame, "currentRoomId" | "witnessInvitationNpcIds" | "witnessKnowledgeDeliveredNpcIds">>,
+    npc: MysteryNpc
+  ): string {
     if (!npc.alive) return npc.role === "Guest" ? npc.roomId : npc.stationRoomId;
+    if (
+      mystery.currentRoomId &&
+      mystery.witnessInvitationNpcIds?.includes(npc.id) &&
+      !mystery.witnessKnowledgeDeliveredNpcIds?.includes(npc.id)
+    ) {
+      return mystery.currentRoomId;
+    }
+    if (mysteryNpcIsSleeping(mystery, npc)) return mysteryNpcSleepRoomId(npc);
+    if (npc.role === "Staff") {
+      const dutyRoll = stableHash(`${mystery.id}-${mystery.day}-${mystery.daytime}-${npc.id}-station-duty`) % 100;
+      const workTime = ["Morning", "Breakfast", "Midday", "Lunch", "Afternoon", "Evening"].includes(mystery.daytime);
+      if (workTime && dutyRoll < (mystery.daytime === "Evening" ? 68 : 84)) return npc.stationRoomId;
+      if ((mystery.daytime === "Night" || mystery.daytime === "Midnight") && dutyRoll < 24) return npc.stationRoomId;
+    }
     if (ravenwoodMealTimes.includes(mystery.daytime) && npc.age >= 13) return "dining-room";
     if (npc.substanceState === "drunk" && ravenwoodDrinkTimes.includes(mystery.daytime)) return pickByHash(ravenwoodSocialRooms, `${mystery.id}-${mystery.day}-${mystery.daytime}-${npc.id}-drunk`);
-    if (npc.substanceState === "high" || npc.substancePreference.includes("cigarettes") || npc.substancePreference.includes("weed")) {
+    const substancePreference = mysteryDisplaySubstancePreference(npc);
+    if (npc.substanceState === "high" || substancePreference.includes("cigarettes") || substancePreference.includes("weed")) {
       const smokeRoll = stableHash(`${mystery.id}-${mystery.day}-${mystery.daytime}-${npc.id}-smoke`) % 100;
       if (smokeRoll < 38 && (mystery.daytime === "Afternoon" || mystery.daytime === "Evening" || mystery.daytime === "Night")) return "smoking-room";
     }
-    if (npc.role === "Staff" && !ravenwoodDrinkTimes.includes(mystery.daytime)) return npc.stationRoomId;
     const driftChance = npc.role === "Guest" ? 62 : 22;
     const driftRoll = stableHash(`${mystery.id}-${mystery.day}-${mystery.daytime}-${npc.id}-room`) % 100;
     if (driftRoll < driftChance) return pickByHash(ravenwoodSocialRooms, `${mystery.id}-${mystery.day}-${mystery.daytime}-${npc.id}-social-room`);
@@ -3476,6 +4436,57 @@ export default function App() {
     return people;
   }
 
+  function mysteryPrivateMeetingRoomIdFor(npc: MysteryNpc): string {
+    return npc.role === "Guest" ? npc.roomId : npc.stationRoomId;
+  }
+
+  function mysteryWitnessRelationshipAvailable(mystery: MysteryGame, relationship: MysteryNpcRelationship): boolean {
+    if (relationship.kind !== "Witness") return false;
+    if (!relationship.availableDay || !relationship.availableDaytime) return true;
+    return mysteryTimeHasArrived(mystery.day, mystery.daytime, relationship.availableDay, relationship.availableDaytime);
+  }
+
+  function mysteryWitnessKnowledgeLinesFor(mystery: MysteryGame, witness: MysteryNpc): string[] {
+    return (mystery.npcRelationships ?? [])
+      .filter((relationship) =>
+        relationship.kind === "Witness" &&
+        relationship.fromId === witness.id &&
+        mysteryWitnessRelationshipAvailable(mystery, relationship)
+      )
+      .map((relationship) => relationship.detail
+        .replace(new RegExp(`, but ${escapeRegExp(fullName(witness))} won't tell.*$`, "i"), ".")
+        .replace(/\.\.+$/g, ".")
+      );
+  }
+
+  function mysteryWitnessInvitationResolution(
+    mystery: MysteryGame,
+    nextNpcs: MysteryNpc[],
+    currentRoomId: string,
+    invitedIds: string[],
+    deliveredIds: string[]
+  ): { invitedIds: string[]; messages: StoryMessage[]; ledgerLines: string[] } {
+    const invited = new Set(invitedIds);
+    const delivered = new Set(deliveredIds);
+    const messages: StoryMessage[] = [];
+    const ledgerLines: string[] = [];
+    const nextMystery = { ...mystery, npcs: nextNpcs, currentRoomId };
+    for (const npc of nextNpcs) {
+      if (!npc.alive || invited.has(npc.id) || delivered.has(npc.id)) continue;
+      if (effectiveMysteryTrust(npc) < 75 && (!mysteryCanPlayerHaveRomanceWithNpc(mystery.player, npc) || npc.romance < 75)) continue;
+      const knowledgeLines = mysteryWitnessKnowledgeLinesFor(nextMystery, npc);
+      if (knowledgeLines.length === 0) continue;
+      const privateRoomId = mysteryPrivateMeetingRoomIdFor(npc);
+      const privateRoomName = mysteryRoomName(nextMystery, privateRoomId);
+      const currentRoomName = mysteryRoomName(nextMystery, currentRoomId);
+      const line = `${fullName(npc)} finds you in ${currentRoomName}. "Please, not here. Meet me in ${privateRoomName} right away, in private. I know something about the murder."`;
+      messages.push({ id: uid(), speaker: "GM", text: line, rich: mysteryNpcSegments(line, nextMystery) });
+      ledgerLines.push(`Witness invitation triggered: ${fullName(npc)} reached trust/romance threshold and requested a private meeting in ${privateRoomName}.`);
+      invited.add(npc.id);
+    }
+    return { invitedIds: Array.from(invited), messages, ledgerLines };
+  }
+
   function nextMysteryTime(day: number, daytime: Daytime): { day: number; daytime: Daytime } {
     const index = daytimes.indexOf(daytime);
     if (index >= daytimes.length - 1) return { day: day + 1, daytime: "Morning" };
@@ -3488,7 +4499,7 @@ export default function App() {
     if (lower.match(/\b(pickpocket|palm|steal|snatch|plant|lockpick|pick the lock|unlock|sleight|conceal)\b/)) return "Sleight of Hand";
     if (lower.match(/\b(sneak|hide|follow|tail|shadow|slip past|crawl|quiet|eavesdrop)\b/)) return "Stealth";
     if (lower.match(/\b(lie|bluff|deceive|trick|mislead|pretend|fake|cover story|disguise)\b/)) return "Deception";
-    if (lower.match(/\b(persuade|convince|promise|negotiate|reason|plead|appeal|argue)\b/)) return "Persuasion";
+    if (lower.match(/\b(persuade|persuation|persuasion|convince|promise|negotiate|reason|plead|appeal|argue)\b/)) return "Persuasion";
     if (lower.match(/\b(charm|command|impress|confidence|talk|greet|socialize|speak|ask|question|interview|accuse|arrest)\b/)) return "Charisma";
     if (lower.match(/\b(body|corpse|blood|death|dead|wound|poison|illness|medicine|medical|doctor|examine|heal|treat)\b/)) return "Medicine";
     if (lower.match(/\b(history|remember|recall|archive|record|ledger|family tree|lineage|antique|old story|date|guest book)\b/)) return "History";
@@ -3499,10 +4510,9 @@ export default function App() {
   }
 
   function mysteryQuirkModifierFor(quirks: MysteryDetectiveQuirk[] | undefined, check: MysteryCheckKind): number {
-    const total = (quirks ?? [])
+    return (quirks ?? [])
       .filter((quirk) => quirk.check === check)
       .reduce((total, quirk) => total + quirk.modifier, 0);
-    return clamp(total, -3, 3);
   }
 
   function mysteryRollOutcome(text: string, mystery: MysteryGame): MysteryRollOutcome | undefined {
@@ -3529,6 +4539,72 @@ export default function App() {
     return `Roll: ${rollResult.check} d12 ${rollResult.die}${quirkText} = ${rollResult.total} (${rollResult.tier})`;
   }
 
+  function mysterySentenceCase(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    return trimmed[0].toUpperCase() + trimmed.slice(1);
+  }
+
+  function mysteryPlayerFacingFindableName(findable: MysteryFindable): string {
+    if (findable.kind !== "Proof") return findable.name;
+    return findable.name
+      .replace(/\s+(?:listing|accusing|naming|proving|with|from|wrapped|used|altered|tied|explaining|belonging to|matching)\b.*$/i, "")
+      .trim();
+  }
+
+  function mysteryFindableDiscoveryDescription(findable: MysteryFindable): string {
+    const displayName = mysteryPlayerFacingFindableName(findable);
+    const description = findable.description
+      .replace(/\s*(?:\.|;)?\s*Can be found\b.*$/i, "")
+      .replace(/\s*;\s*search roll\s+\d+\b.*$/i, "")
+      .replace(/\bproving\b/gi, "suggesting")
+      .replace(/\bthe day of the murder\b/gi, "that same day")
+      .trim();
+    if (findable.kind === "Proof" && displayName && description.toLowerCase().startsWith(`${displayName.toLowerCase()} `)) {
+      const cleanedProofDescription = description
+        .slice(displayName.length)
+        .replace(/^[,.;:\s]+/g, "")
+        .replace(/^listing\b/i, "It lists")
+        .replace(/^accusing\b/i, "It accuses")
+        .replace(/^naming\b/i, "It names")
+        .replace(/^suggesting\b/i, "It suggests")
+        .replace(/^showing\b/i, "It shows")
+        .replace(/^with\b/i, "It has")
+        .replace(/^from\b/i, "It comes from")
+        .replace(/^wrapped\b/i, "It is wrapped")
+        .replace(/^used\b/i, "It was used")
+        .replace(/^altered\b/i, "It was altered")
+        .replace(/^tied\b/i, "It is tied")
+        .replace(/^explaining\b/i, "It explains")
+        .replace(/^belonging\b/i, "It belongs")
+        .replace(/^matching\b/i, "It matches")
+        .trim();
+      return mysterySentenceCase(cleanedProofDescription.replace(/[.]+$/g, "")) + ".";
+    }
+    const ownerMatch = findable.name.match(/\bbelonging to\s+(.+)$/i);
+    if (!ownerMatch || ownerMatch.index === undefined) return description;
+    const ownerName = ownerMatch[1].replace(/[.]+$/g, "").trim();
+    const itemName = findable.name.slice(0, ownerMatch.index).trim();
+    if (!ownerName || !itemName) return description;
+    const articleItemPattern = `(?:a|an|the)?\\s*${escapeRegExp(itemName)}`;
+    const ownerPattern = escapeRegExp(ownerName);
+    const duplicateLead = new RegExp(
+      `^${articleItemPattern}\\s+(?:belonging to|associated with|linked to|connected to)\\s+${ownerPattern}\\s*,?\\s*`,
+      "i"
+    );
+    const possessiveLead = new RegExp(
+      `^${ownerPattern}'s\\s+${escapeRegExp(itemName)}\\s*,?\\s*`,
+      "i"
+    );
+    const cleaned = description
+      .replace(duplicateLead, "")
+      .replace(possessiveLead, "")
+      .replace(/^[,.;:\s]+/g, "")
+      .trim();
+    if (!cleaned || cleaned === description) return description;
+    return mysterySentenceCase(cleaned.replace(/[.]+$/g, "")) + ".";
+  }
+
   function mysteryRollMeets(rollResult: MysteryRollOutcome | undefined, tier: MysteryRollOutcome["tier"]): boolean {
     if (!rollResult) return false;
     const needed = tier === "hard" ? 10 : tier === "medium" ? 6 : tier === "easy" ? 3 : 2;
@@ -3537,6 +4613,37 @@ export default function App() {
 
   function mysteryRollBotched(rollResult: MysteryRollOutcome | undefined): boolean {
     return Boolean(rollResult && rollResult.total <= 1);
+  }
+
+  function mysteryRollAttemptKey(text: string, mystery: MysteryGame, check: MysteryCheckKind, roomId: string): string {
+    const lower = text.toLowerCase();
+    const roomIntent = detectMysteryRoomIntent(text, mystery);
+    const target = mysteryTargetNpc(text, mystery, roomId) ?? mystery.npcs.find((npc) => lower.includes(npc.firstName.toLowerCase()) || lower.includes(fullName(npc).toLowerCase()));
+    const action = lower.match(/\b(lockpick|pick the lock|unlock)\b/)
+      ? "lockpick"
+      : lower.match(/\b(sneak|hide|slip past|eavesdrop|follow|tail|shadow)\b/)
+        ? "sneak"
+        : lower.match(/\b(steal|snatch|pickpocket|lift|palm|take .*from|borrow .*without)\b/)
+          ? "steal"
+          : lower.match(/\b(accuse|arrest)\b/)
+            ? "accuse"
+            : mysterySpeechIntent(text)
+              ? `talk-${mysteryToneForText(text)}`
+              : lower.match(/\b(search|investigate|proof|evidence|inspect|look|read|trace|clue|find)\b/)
+                ? "search"
+                : "action";
+    const objective = lower.match(/\b(bed|drawer|desk|writing case|case|bag|pocket|key|letter|note|ledger|knife|gun|candlestick|poison|document|proof|evidence|body|blood|secret|alibi|witness|room)\b/)?.[1] ?? "general";
+    const place = roomIntent?.id ?? roomId;
+    const targetPart = target?.id ?? "no-target";
+    return [check, action, place, targetPart, objective].join(":");
+  }
+
+  function mysteryRollAttemptIsLimited(mystery: MysteryGame, key: string): boolean {
+    return (mystery.rollAttemptLedger?.[key] ?? 0) >= 2;
+  }
+
+  function mysteryRecordRollAttempt(ledger: Record<string, number>, key: string): Record<string, number> {
+    return { ...ledger, [key]: (ledger[key] ?? 0) + 1 };
   }
 
   function mysteryRoll(_text: string, _mystery: MysteryGame): string | undefined {
@@ -3552,7 +4659,7 @@ export default function App() {
     if (npc.substanceState === "drunk") return `${fullName(npc)} is drunk; their voice runs warmer, louder, and less guarded than usual.`;
     if (npc.substanceState === "tipsy") return `${fullName(npc)} is tipsy enough for their manners to loosen.`;
     if (npc.substanceState === "high") return `${fullName(npc)} seems high; their attention drifts and their trust is temporarily unstable.`;
-    if (npc.substancePreference.includes("cigarettes")) return `${fullName(npc)} smells faintly of cigarette smoke.`;
+    if (mysteryDisplaySubstancePreference(npc).includes("cigarettes")) return `${fullName(npc)} smells faintly of cigarette smoke.`;
     return null;
   }
 
@@ -3562,13 +4669,14 @@ export default function App() {
       let substanceState = npc.substanceTurns > 1 ? npc.substanceState : "sober";
       let substanceTurns = Math.max(0, npc.substanceTurns - 1);
       let temporaryTrust = substanceTurns > 0 ? npc.temporaryTrust : 0;
+      const substancePreference = mysteryDisplaySubstancePreference(npc);
       const seed = `${mystery.id}-${nextTime.day}-${nextTime.daytime}-${npc.id}-substance`;
       const rollValue = stableHash(seed) % 100;
-      if (ravenwoodDrinkTimes.includes(nextTime.daytime) && npc.substancePreference.includes("alcohol") && rollValue < 30) {
+      if (ravenwoodDrinkTimes.includes(nextTime.daytime) && substancePreference.includes("alcohol") && rollValue < 30) {
         substanceState = rollValue < 10 ? "drunk" : "tipsy";
         substanceTurns = substanceState === "drunk" ? 3 : 2;
         temporaryTrust = substanceState === "drunk" ? rand(-7, 8) : rand(-3, 5);
-      } else if ((nextTime.daytime === "Afternoon" || nextTime.daytime === "Evening" || nextTime.daytime === "Night") && npc.substancePreference.includes("weed") && rollValue >= 30 && rollValue < 48) {
+      } else if ((nextTime.daytime === "Afternoon" || nextTime.daytime === "Evening" || nextTime.daytime === "Night") && substancePreference.includes("weed") && rollValue >= 30 && rollValue < 48) {
         substanceState = "high";
         substanceTurns = 3;
         temporaryTrust = rand(-6, 9);
@@ -3619,10 +4727,22 @@ export default function App() {
     return Boolean(rollResult && ["Charisma", "Rizz", "Persuasion", "Deception"].includes(rollResult.check) && rollResult.tier !== "failed");
   }
 
+  function mysteryIsSocialRoll(rollResult: MysteryRollOutcome | undefined): rollResult is MysteryRollOutcome {
+    return Boolean(rollResult && ["Charisma", "Rizz", "Persuasion", "Deception"].includes(rollResult.check));
+  }
+
   function mysteryPositiveSocialRollTrustDelta(rollResult: MysteryRollOutcome): number {
-    if (rollResult.tier === "hard") return 10;
-    if (rollResult.tier === "medium") return 7;
-    return 5;
+    const checkBonus = rollResult.check === "Persuasion" ? 2 : rollResult.check === "Deception" ? 1 : 0;
+    if (rollResult.tier === "hard") return 14 + checkBonus;
+    if (rollResult.tier === "medium") return 9 + checkBonus;
+    return 4 + checkBonus;
+  }
+
+  function mysteryFailedSocialRollTrustDelta(rollResult: MysteryRollOutcome, tone: ReturnType<typeof mysteryToneForText>): number {
+    const checkPenalty = rollResult.check === "Deception" ? 4 : rollResult.check === "Persuasion" ? 2 : 0;
+    const tonePenalty = tone === "threat" || tone === "accuse" ? 4 : tone === "rude" ? 5 : tone === "flirt" ? 2 : 0;
+    const botchPenalty = mysteryRollBotched(rollResult) ? 4 : 0;
+    return -(5 + checkPenalty + tonePenalty + botchPenalty);
   }
 
   function mysteryNoRollTrustGesture(text: string, npc: MysteryNpc): boolean {
@@ -3633,21 +4753,36 @@ export default function App() {
     return Boolean(appearanceCompliment || lower.match(/\b(take interest|show interest|ask about yourself|tell me about yourself|how are you|are you okay|what do you like|your interests|your hobby|your hobbies|listen to you|hear you out)\b/));
   }
 
-  function mysteryToneTrustDelta(text: string, rollResult: MysteryRollOutcome | undefined, npc: MysteryNpc): number {
+  function mysteryToneTrustDelta(text: string, rollResult: MysteryRollOutcome | undefined, npc: MysteryNpc, player?: Pick<MysteryGame["player"], "age">): number {
     const tone = mysteryToneForText(text);
+    const romanceAllowed = player ? mysteryCanPlayerHaveRomanceWithNpc(player, npc) : npc.age >= 18;
     const tierDelta = rollResult?.tier === "hard" ? 5 : rollResult?.tier === "medium" ? 3 : rollResult?.tier === "easy" ? 1 : -2;
     const alteredModifier = npc.substanceState === "drunk" || npc.substanceState === "high" ? rand(-2, 3) : 0;
     if (!rollResult && mysteryNoRollTrustGesture(text, npc)) return 1 + (stableHash(`${npc.id}-${text}-trust-gesture`) % 3);
+    if (mysteryIsSocialRoll(rollResult) && rollResult.tier === "failed") {
+      return clamp(mysteryFailedSocialRollTrustDelta(rollResult, tone) + alteredModifier, -18, -5);
+    }
     if (rollResult && mysteryIsPositiveSocialRoll(rollResult) && tone !== "threat" && tone !== "rude") {
-      if (tone === "flirt" && npc.age < 18) return -6;
-      return clamp(mysteryPositiveSocialRollTrustDelta(rollResult) + alteredModifier, 5, 10);
+      if (tone === "flirt" && !romanceAllowed) return -6;
+      const toneBonus = tone === "kind" ? 2 : tone === "flirt" ? 1 : tone === "accuse" ? -4 : 0;
+      return clamp(mysteryPositiveSocialRollTrustDelta(rollResult) + toneBonus + alteredModifier, 3, 18);
     }
     if (tone === "kind") return Math.max(1, tierDelta + alteredModifier);
-    if (tone === "flirt") return npc.age >= 18 ? clamp(tierDelta + alteredModifier, -4, 6) : -6;
-    if (tone === "threat") return rollResult?.tier === "hard" ? -2 : -8;
-    if (tone === "accuse") return rollResult?.tier === "hard" ? -3 : -9;
+    if (tone === "flirt") return romanceAllowed ? clamp(tierDelta + alteredModifier, -4, 8) : -6;
+    if (tone === "threat") return rollResult?.tier === "hard" ? -2 : -12;
+    if (tone === "accuse") return rollResult?.tier === "hard" ? -3 : -14;
     if (tone === "rude") return -7;
     return rollResult && rollResult.tier !== "failed" ? 1 + alteredModifier : alteredModifier;
+  }
+
+  function mysteryTrustShiftLine(npc: MysteryNpc, trustDelta: number): string {
+    if (trustDelta >= 12) return ` ${fullName(npc)} looks at you with new trust.`;
+    if (trustDelta >= 6) return ` ${fullName(npc)} softens toward you.`;
+    if (trustDelta >= 2) return ` ${fullName(npc)} seems a little more open.`;
+    if (trustDelta <= -12) return ` ${fullName(npc)} pulls sharply away from you.`;
+    if (trustDelta <= -6) return ` ${fullName(npc)} grows colder.`;
+    if (trustDelta <= -2) return ` ${fullName(npc)} seems less willing to trust you.`;
+    return "";
   }
 
   function applyMysteryTrustDelta(npcs: MysteryNpc[], ids: string[], delta: number): MysteryNpc[] {
@@ -3730,19 +4865,16 @@ export default function App() {
     const roomName = mysteryRoomName(mystery, roomId);
     const people = mysteryPeopleInRoom(mystery, roomId).filter((person) => person.id !== mystery.player.id) as MysteryNpc[];
     const nearby = people.length > 0
-      ? `${fullName(people[0])} is nearby, ${mysteryTrustLabel(people[0])}${people[0].substanceState !== "sober" ? ` and visibly ${people[0].substanceState}` : ""}.`
-      : "No resident is openly present, though the house never feels unwatched.";
-    const timeMood = mystery.daytime === "Night" || mystery.daytime === "Midnight"
-      ? ravenwoodHotelPremise.night
-      : ravenwoodHotelPremise.daytime;
-    return `The ${roomName} keeps Ravenwood's manners intact: ${room ? mysteryRoomMood(room) : ravenwoodHotelPremise.mood}. ${nearby} ${timeMood}`;
+      ? `${fullName(people[0])} is nearby.`
+      : "No resident is openly present.";
+    return `The ${roomName} keeps Ravenwood's manners intact: ${room ? mysteryRoomMood(room) : "the room settles around you with small sounds and watchful shadows"}. ${nearby}`;
   }
 
   function mysterySubstanceBehavior(npc: MysteryNpc): string | null {
     if (npc.substanceState === "drunk") return "Their voice is warmer, louder, and less guarded than usual.";
     if (npc.substanceState === "tipsy") return "Their manners have loosened a little.";
     if (npc.substanceState === "high") return "Their attention drifts between the room and the conversation.";
-    if (npc.substancePreference.includes("cigarettes")) return "They smell faintly of cigarette smoke.";
+    if (mysteryDisplaySubstancePreference(npc).includes("cigarettes")) return "They smell faintly of cigarette smoke.";
     return null;
   }
 
@@ -3788,7 +4920,7 @@ export default function App() {
     if (lower.includes(npcName) || lower.includes(npcInitials)) {
       return "That is mine, or near enough to mine that I want to know where you found it.";
     }
-    if ((lower.includes("cigarette") || lower.includes("lighter")) && npc.substancePreference.includes("cigarettes")) {
+    if ((lower.includes("cigarette") || lower.includes("lighter")) && mysteryDisplaySubstancePreference(npc).includes("cigarettes")) {
       return "A cigarette is a small mercy in this house. I might answer better with one in my hand.";
     }
     if ((lower.includes("vial") || lower.includes("aspirin") || lower.includes("prescription")) && /doctor|nurse|medical|first aid/i.test(npc.occupation)) {
@@ -3818,8 +4950,9 @@ export default function App() {
     const directToCrime = /\b(murder|death|dead|body|killer|motive|alibi|where were|proof|evidence|victim)\b/i.test(text);
     const referencedItem = mysteryReferencedInventoryItem(text, mystery);
     const itemReaction = referencedItem ? mysteryInventoryItemNpcReaction(referencedItem, npc) : null;
-    const trustDelta = mysteryToneTrustDelta(text, rollResult, npc);
-    const romanceDelta = tone === "flirt" && npc.age >= 18 && rollResult && rollResult.tier !== "failed" ? (rollResult.tier === "hard" ? 6 : rollResult.tier === "medium" ? 3 : 1) : 0;
+    const romanceAllowed = mysteryCanPlayerHaveRomanceWithNpc(mystery.player, npc);
+    const trustDelta = mysteryToneTrustDelta(text, rollResult, npc, mystery.player);
+    const romanceDelta = tone === "flirt" && romanceAllowed && rollResult && rollResult.tier !== "failed" ? (rollResult.tier === "hard" ? 6 : rollResult.tier === "medium" ? 3 : 1) : 0;
     const substance = mysterySubstanceBehavior(npc);
     let answer = "";
     const foodAnswer = mysteryFoodAnswer(text, mystery, npc, trust);
@@ -3832,7 +4965,7 @@ export default function App() {
         ? "You are frighteningly direct. I will answer because I believe you mean to finish this."
         : "Do not mistake this hotel for an empty house. People hear things through these walls.";
     } else if (tone === "flirt") {
-      answer = npc.age < 18
+      answer = !romanceAllowed
         ? "That is not appropriate. Ask about the case if you must."
         : trust > 45 || rollResult?.tier === "hard"
           ? "You choose a dangerous hour to be charming. Still, I am listening."
@@ -3967,10 +5100,10 @@ export default function App() {
   function mysteryRoomDescription(mystery: MysteryGame, roomId: string): StoryMessage {
     const room = mystery.rooms.find((candidate) => candidate.id === roomId);
     const people = mysteryPeopleInRoom(mystery, roomId).filter((person) => person.id !== mystery.player.id) as MysteryNpc[];
-    const visiblePeople = people.slice(0, 4);
+    const visiblePeople = people.slice(0, 2);
     const extra = people.length > visiblePeople.length ? ` and ${people.length - visiblePeople.length} more` : "";
     const text = room
-      ? `You enter the ${room.name}: ${mysteryRoomMood(room)}. ${visiblePeople.length > 0 ? `${visiblePeople.map(fullName).join(", ")}${extra} ${visiblePeople.length === 1 ? "is" : "are"} here.` : "No resident is openly present."}`
+      ? `The ${room.name} keeps Ravenwood's manners intact: ${mysteryRoomMood(room)}. ${visiblePeople.length > 0 ? `${visiblePeople.map(fullName).join(", ")}${extra} ${visiblePeople.length === 1 ? "is" : "are"} nearby.` : "No resident is openly present."}`
       : `You pause, unsure where Ravenwood has led you.`;
     return { id: uid(), speaker: "GM", text, rich: mysteryNpcSegments(text, mystery) };
   }
@@ -4080,13 +5213,13 @@ export default function App() {
         trustWithPlayer: effectiveMysteryTrust(target),
         baseTrust: target.trust,
         temporaryTrust: target.temporaryTrust,
-        romance: target.romanceRevealed ? target.romance : "hidden",
+        romance: mysteryCanPlayerHaveRomanceWithNpc(mystery.player, target) && target.romanceRevealed ? target.romance : "hidden",
         substanceState: target.substanceState,
-        substancePreference: target.substancePreference,
-        occupation: target.occupation,
-        education: target.education,
+        substancePreference: mysteryDisplaySubstancePreference(target),
+        occupation: mysteryDisplayOccupation(target),
+        education: mysteryDisplayEducation(target.education),
         interests: target.interests,
-        reasonOfStay: target.reasonOfStay,
+        reasonOfStay: mysteryDisplayReasonOfStay(target, mystery),
         secret: target.secret,
         quirk: target.quirk,
         currentLocation: mysteryRoomName(mystery, currentMysteryNpcRoomId(mystery, target)),
@@ -4104,6 +5237,17 @@ export default function App() {
       knownCaseState: {
         discoveredProof: mystery.discoveredProof,
         inventory: mystery.inventory,
+        pendingWitnessInvitations: (mystery.witnessInvitationNpcIds ?? [])
+          .map((npcId) => {
+            const witness = mystery.npcs.find((npc) => npc.id === npcId);
+            if (!witness || mystery.witnessKnowledgeDeliveredNpcIds?.includes(witness.id)) return null;
+            return {
+              witness: fullName(witness),
+              privateMeetingRoom: mysteryRoomName(mystery, mysteryPrivateMeetingRoomIdFor(witness)),
+              knowledgeToRevealInPrivate: mysteryWitnessKnowledgeLinesFor(mystery, witness)
+            };
+          })
+          .filter(Boolean),
         discoveredMurders: mystery.murders
           .filter((murder) => murder.discovered)
           .map((murder) => ({
@@ -4249,6 +5393,8 @@ export default function App() {
       let murders = mystery.murders;
       let inventory = [...mystery.inventory];
       let findables = [...(mystery.findables ?? [])];
+      let rollAttemptLedger = { ...(mystery.rollAttemptLedger ?? {}) };
+      let seriousCatchCount = mystery.seriousCatchCount ?? 0;
       const namedSuspect = npcs.find((npc) => lower.includes(npc.firstName.toLowerCase()) || lower.includes(fullName(npc).toLowerCase()));
       const suspectMurders = namedSuspect ? murders.filter((murder) => murder.killerId === namedSuspect.id) : [];
       const suspectProofs = suspectMurders.flatMap((murder) => murder.proofs?.length ? murder.proofs : [murder.proof]);
@@ -4259,10 +5405,45 @@ export default function App() {
       let lossPending = mystery.lossPending;
       let hiddenInRoomId = mystery.hiddenInRoomId;
       let hiddenFromNpcIds = [...(mystery.hiddenFromNpcIds ?? [])];
-      const workingMystery = () => ({ ...mystery, rooms, currentRoomId: currentRoom, npcs, murders, findables, discoveredProof });
+      let witnessInvitationNpcIds = [...(mystery.witnessInvitationNpcIds ?? [])];
+      let witnessKnowledgeDeliveredNpcIds = [...(mystery.witnessKnowledgeDeliveredNpcIds ?? [])];
+      let pendingBodyDiscoveryPopup = mystery.pendingBodyDiscoveryPopup;
+      const workingMystery = () => ({ ...mystery, rooms, currentRoomId: currentRoom, npcs, murders, findables, discoveredProof, witnessInvitationNpcIds, witnessKnowledgeDeliveredNpcIds });
       const ledgerLines = [
         `Turn: Day ${mystery.day} ${mystery.daytime}, ${mysteryRoomName(mystery, mystery.currentRoomId)}. Player wrote: "${text}". Next clock: Day ${nextTime.day} ${nextTime.daytime}.`
       ];
+      const recordSeriousCatch = (reason: string): boolean => {
+        seriousCatchCount += 1;
+        ledgerLines.push(`Serious catch ${seriousCatchCount}/5: ${reason}.`);
+        if (seriousCatchCount < 5) return false;
+        finished = true;
+        won = false;
+        lossPending = true;
+        summary = `${mystery.player.firstName} was locked in a closet by Ravenwood staff after being caught too many times.`;
+        messages.push({ id: uid(), speaker: "GM", text: "Staff have had enough. They lock you in a service closet until the police arrive. The investigation is over." });
+        ledgerLines.push("Loss triggered: fifth serious catch.");
+        return true;
+      };
+      const rollAttemptKey = rollResult
+        ? mysteryRollAttemptKey(text, mystery, rollResult.check, currentRoom)
+        : undefined;
+      if (rollAttemptKey && mysteryRollAttemptIsLimited(mystery, rollAttemptKey)) {
+        const line = `That exact approach has already been pushed twice. Try a different method, a different target, or wait for a new clue instead of rolling the same thing again.`;
+        const stampedMessages = stampMysteryMessages(
+          [...mystery.messages, ...messages, { id: uid(), speaker: "GM", text: line }],
+          mystery.day,
+          mystery.daytime
+        );
+        const splitMessages = splitMysteryMessages(stampedMessages);
+        return {
+          ...mystery,
+          messages: splitMessages.visible,
+          storyFocusMessageId: splitMessages.visible.find((message) => message.text === line)?.id,
+          journal: appendMysteryJournal(mystery.journal, splitMessages.archived),
+          sanityLedger: [...(mystery.sanityLedger ?? []), `Roll locked out: ${rollAttemptKey}. No time advanced.`].slice(-600)
+        };
+      }
+      if (rollAttemptKey) rollAttemptLedger = mysteryRecordRollAttempt(rollAttemptLedger, rollAttemptKey);
       const abandonedPickups = resolveMysteryAbandonedItemPickups(mystery, npcs, findables, nextTime);
       findables = abandonedPickups.findables;
       ledgerLines.push(...abandonedPickups.ledgerLines);
@@ -4278,15 +5459,28 @@ export default function App() {
           ledgerLines.push(`Typed movement: ${mystery.player.firstName} moved from ${mysteryRoomName(mystery, mystery.currentRoomId)} to ${movementRoom.name}. ${access.ledger}`);
         } else {
           if (access.message) messages.push(access.message);
+          if ((movementRoom.kind === "guest" || movementRoom.kind === "staff" || movementRoom.kind === "service") && lower.match(/\b(lockpick|pick the lock|unlock|force the lock|sneak|slip in|eavesdrop|listen|follow|tail)\b/)) {
+            const roomOwnerIds = new Set(npcs.filter((npc) => npc.roomId === movementRoom.id || npc.stationRoomId === movementRoom.id).map((npc) => npc.id));
+            npcs = npcs.map((npc) => {
+              if (roomOwnerIds.has(npc.id)) return { ...npc, trust: clamp(npc.trust - 12, 0, 100) };
+              if (npc.role === "Staff") return { ...npc, trust: clamp(npc.trust - 8, 0, 100) };
+              return npc;
+            });
+            recordSeriousCatch(`caught trying to break into or sneak near ${movementRoom.name}`);
+            ledgerLines.push(`Failed private access affected only ${movementRoom.name} occupants and staff: occupants -12, staff -8.`);
+          }
           ledgerLines.push(access.ledger);
         }
       }
 
       let bodyDiscoveryHappened = false;
       const dueTimeReached = (murder: MysteryMurder) => murder.day < nextTime.day || (murder.day === nextTime.day && daytimes.indexOf(murder.daytime) <= daytimes.indexOf(nextTime.daytime));
+      const murderTimeReachedThisTurn = (murder: MysteryMurder) =>
+        !mysteryTimeHasArrived(mystery.day, mystery.daytime, murder.day, murder.daytime) &&
+        dueTimeReached(murder);
       const roomFallbacks = new Map<number, { fromId: string; toId: string; fromName: string; toName: string }>();
       murders = murders.map((murder, index) => {
-        if (murder.discovered || murder.solved || murder.prevented || !murder.alternateRoomId || !dueTimeReached(murder) || murder.roomId !== currentRoom) return murder;
+        if (murder.discovered || murder.solved || murder.prevented || !murder.alternateRoomId || !murderTimeReachedThisTurn(murder) || murder.roomId !== currentRoom) return murder;
         const fromName = mysteryRoomName(mystery, murder.roomId);
         const toName = mysteryRoomName(mystery, murder.alternateRoomId);
         roomFallbacks.set(index, { fromId: murder.roomId, toId: murder.alternateRoomId, fromName, toName });
@@ -4312,23 +5506,46 @@ export default function App() {
       if (dueMurders.length > 0) {
         const dueVictimIds = new Set(dueMurders.map((murder) => murder.victimId));
         npcs = npcs.map((npc) => dueVictimIds.has(npc.id) ? { ...npc, alive: false } : npc);
-        const discoveredMurder = dueMurders.find((murder) => murder.roomId === currentRoom);
-        if (discoveredMurder) {
+        const bodyDiscovery = dueMurders
+          .map((murder) => {
+            if (murder.roomId === currentRoom) return { murder, discovererName: mystery.player.firstName };
+            const timeMystery = { ...workingMystery(), day: nextTime.day, daytime: nextTime.daytime, npcs };
+            const npcDiscoverer = npcs.find((npc) =>
+              npc.alive &&
+              npc.id !== murder.killerId &&
+              npc.id !== murder.victimId &&
+              currentMysteryNpcRoomId(timeMystery, npc) === murder.roomId
+            );
+            return npcDiscoverer ? { murder, discovererName: fullName(npcDiscoverer) } : null;
+          })
+          .find(Boolean);
+        if (bodyDiscovery) {
+          const { murder: discoveredMurder, discovererName } = bodyDiscovery;
           bodyDiscoveryHappened = true;
           murders = murders.map((candidate) => candidate === discoveredMurder ? { ...candidate, discovered: true } : candidate);
+          const foundByPlayer = discoveredMurder.roomId === currentRoom;
+          const bodyDiscoveryText = foundByPlayer
+            ? `You find ${mysteryNpcName(mystery, discoveredMurder.victimId)} dead in the ${mysteryRoomName(mystery, discoveredMurder.roomId)}. The method appears to be ${discoveredMurder.method}.`
+            : `${discovererName} finds ${mysteryNpcName(mystery, discoveredMurder.victimId)} dead in the ${mysteryRoomName(mystery, discoveredMurder.roomId)}. The method appears to be ${discoveredMurder.method}.`;
           messages.push({
             id: uid(),
             speaker: "GM",
             icon: "death",
-            text: `Dead body found! ${mysteryNpcName(mystery, discoveredMurder.victimId)} is found dead in the ${mysteryRoomName(mystery, discoveredMurder.roomId)}. The method appears to be ${discoveredMurder.method}.`
+            text: `Dead body found! ${bodyDiscoveryText}`
           });
-          ledgerLines.push(`Murder discovered by room entry: victim ${mysteryNpcName(mystery, discoveredMurder.victimId)}; killer ${mysteryNpcName(mystery, discoveredMurder.killerId)}; room ${mysteryRoomName(mystery, discoveredMurder.roomId)}; method ${discoveredMurder.method}. Victim marked dead.`);
+          pendingBodyDiscoveryPopup = {
+            title: "Dead Body Found!",
+            text: bodyDiscoveryText
+          };
+          ledgerLines.push(`Murder discovered by room entry: victim ${mysteryNpcName(mystery, discoveredMurder.victimId)}; killer ${mysteryNpcName(mystery, discoveredMurder.killerId)}; discoverer ${discovererName}; room ${mysteryRoomName(mystery, discoveredMurder.roomId)}; method ${discoveredMurder.method}. Victim marked dead.`);
         } else {
           ledgerLines.push(`Undiscovered murder time passed: ${dueMurders.map((murder) => mysteryNpcName(mystery, murder.victimId)).join(", ")} marked dead offscreen until the murder room is entered.`);
         }
       }
 
-      if (bodyDiscoveryHappened) {
+      if (finished) {
+        ledgerLines.push("Action stopped because the mystery is already over.");
+      } else if (bodyDiscoveryHappened) {
         ledgerLines.push("Action paused for the body discovery pop-up.");
       } else if (lower.match(/\b(steal|snatch|pickpocket|lift|palm|take .*from|slip .*pocket|borrow .*without)\b/)) {
         const roomPeople = mysteryPeopleInRoom(workingMystery(), currentRoom).filter((person) => person.id !== mystery.player.id) as MysteryNpc[];
@@ -4344,6 +5561,7 @@ export default function App() {
             npcs = applyMysteryTrustDelta(npcs, witnesses, -12);
             const witnessNames = roomPeople.slice(0, 3).map(fullName).join(", ");
             messages.push({ id: uid(), speaker: "GM", text: `Caught. Your hand is seen near ${fullName(target)}'s belongings before you can recover. Trust drops with everyone present${witnessNames ? `: ${witnessNames}` : ""}.`, roll: rollText });
+            recordSeriousCatch(`caught stealing from ${fullName(target)}`);
             ledgerLines.push(`Botched theft: target ${fullName(target)}; trust -12 for present residents.${rollText ? ` ${rollText}.` : ""}`);
           } else if (mysteryRollMeets(rollResult, difficulty.tier)) {
             const item = `${difficulty.item} (${fullName(target)})`;
@@ -4358,6 +5576,7 @@ export default function App() {
             const noticed = rollResult ? rollResult.total <= 2 : true;
             if (noticed) npcs = applyMysteryTrustDelta(npcs, [target.id], -6);
             messages.push({ id: uid(), speaker: "GM", text: `The theft does not land. ${difficulty.item} stays with ${fullName(target)}; ${difficulty.reason}. ${noticed ? `${fullName(target)} notices enough to pull away.` : "You withdraw before anyone can prove what you meant."}`, roll: rollText });
+            if (noticed) recordSeriousCatch(`caught trying to steal from ${fullName(target)}`);
             ledgerLines.push(`Failed theft: target ${fullName(target)}; difficulty ${difficulty.tier}; noticed ${noticed}.${rollText ? ` ${rollText}.` : ""}`);
           }
         }
@@ -4398,10 +5617,12 @@ export default function App() {
           if (foundFindable.kind === "Proof") discoveredProof.push(foundProof);
           inventory = inventory.includes(foundFindable.name) ? inventory : [...inventory, foundFindable.name];
           findables = findables.map((findable) => findable.id === foundFindable.id ? { ...findable, collected: true } : findable);
-          const killerHint = matchingMurder ? ` It points toward ${mysteryNpcName(mystery, matchingMurder.killerId)} if you can connect it cleanly.` : "";
           const composureNote = composureDifficulty ? " You keep steady despite the murder-room pressure." : "";
-          const findLabel = foundFindable.kind === "Proof" ? "You find proof" : "You find an item";
-          messages.push({ id: uid(), speaker: "GM", text: `${findLabel}: ${foundFindable.name}. ${foundFindable.description}${killerHint}${composureNote}`, roll: combinedRollText });
+          const findLabel = "You find an item";
+          const discoveryName = mysteryPlayerFacingFindableName(foundFindable);
+          const discoveryDescription = mysteryFindableDiscoveryDescription(foundFindable);
+          const descriptionText = discoveryDescription ? ` ${discoveryDescription}` : "";
+          messages.push({ id: uid(), speaker: "GM", text: `${findLabel}: ${discoveryName}.${descriptionText}${composureNote}`, roll: foundFindable.kind === "Proof" ? undefined : combinedRollText });
           ledgerLines.push(`${foundFindable.kind} discovered in ${mysteryRoomName(mystery, currentRoom)}: ${foundProof}. Difficulty ${searchDifficulty}; check ${searchCheck}${composureDifficulty ? `; composure difficulty ${composureDifficulty}` : ""}.`);
         } else {
           if (foundFindable && foundProof) {
@@ -4458,19 +5679,57 @@ export default function App() {
         ledgerLines.push(`Win by killing culprit: ${fullName(namedSuspect)} marked dead. Case finished.${rollText ? ` ${rollText}.` : ""}`);
       } else if (movementRoom && movementRoom.id !== mystery.currentRoomId) {
         ledgerLines.push(`Room description shown for ${movementRoom.name}.`);
+      } else if (lower.match(/\b(eavesdrop|listen in|listen to .*conversation|overhear|spy on|sneak.*listen|listen.*secret)\b/)) {
+        const listenRoll = rollResult?.check === "Stealth" ? rollResult : mysterySpecificRollOutcome("Stealth", workingMystery());
+        const listenRollText = mysteryRollText(listenRoll);
+        const present = mysteryPeopleInRoom(workingMystery(), currentRoom).filter((person) => person.id !== mystery.player.id) as MysteryNpc[];
+        if (mysteryRollMeets(listenRoll, "medium")) {
+          const line = present.length > 0
+            ? `You keep still long enough to catch the shape of the room's conversation. ${present[0].firstName} lowers their voice whenever footsteps pass the door.`
+            : `You listen from the edge of the room, but Ravenwood gives you only floorboards, pipes, and distant voices.`;
+          messages.push({ id: uid(), speaker: "GM", text: line, roll: listenRollText, rich: mysteryNpcSegments(line, workingMystery()) });
+          ledgerLines.push(`Eavesdropping succeeded in ${mysteryRoomName(mystery, currentRoom)}.${listenRollText ? ` ${listenRollText}.` : ""}`);
+        } else {
+          const affectedIds = present.length > 0 ? present.map((person) => person.id) : npcs.filter((npc) => npc.role === "Staff").map((npc) => npc.id);
+          npcs = applyMysteryTrustDelta(npcs, affectedIds, -7);
+          const line = present.length > 0
+            ? `${present.slice(0, 2).map(fullName).join(", ")} notice you listening from the wrong side of the conversation.`
+            : `A staff member catches the shape of you lingering where listening looks intentional.`;
+          messages.push({ id: uid(), speaker: "GM", text: line, roll: listenRollText, rich: mysteryNpcSegments(line, workingMystery()) });
+          recordSeriousCatch(`caught sneaking to listen in ${mysteryRoomName(mystery, currentRoom)}`);
+          ledgerLines.push(`Eavesdropping failed in ${mysteryRoomName(mystery, currentRoom)}; trust -7 for immediate witnesses.${listenRollText ? ` ${listenRollText}.` : ""}`);
+        }
       } else if (mysterySpeechIntent(text)) {
         const target = mysteryTargetNpc(text, workingMystery(), currentRoom);
         if (target) {
+          const pendingWitnessMeeting = witnessInvitationNpcIds.includes(target.id) && !witnessKnowledgeDeliveredNpcIds.includes(target.id);
+          const privateMeetingRoomId = mysteryPrivateMeetingRoomIdFor(target);
+          const privateWitnessKnowledge = pendingWitnessMeeting && currentRoom === privateMeetingRoomId
+            ? mysteryWitnessKnowledgeLinesFor(workingMystery(), target)
+            : [];
           const dialogue = mysteryResidentReply(text, workingMystery(), target, rollResult);
           const aiTrustDelta = aiReply?.usedAi && typeof aiReply.trustDelta === "number" ? aiReply.trustDelta : undefined;
           const trustDelta = aiTrustDelta === undefined
             ? dialogue.trustDelta
-            : dialogue.trustDelta > 0
-              ? Math.max(dialogue.trustDelta, aiTrustDelta)
-              : clamp(dialogue.trustDelta + aiTrustDelta, -12, 10);
-          const romanceDelta = aiReply?.usedAi && typeof aiReply.romanceDelta === "number" ? aiReply.romanceDelta : dialogue.romanceDelta;
-          const responseText = aiReply?.usedAi ? aiReply.text : dialogue.message.text;
-          npcs = npcs.map((npc) => npc.id === target.id ? { ...npc, trust: clamp(npc.trust + trustDelta, 0, 100), romance: clamp(npc.romance + romanceDelta, 0, 100), romanceRevealed: npc.romanceRevealed || romanceDelta !== 0 || Boolean(aiReply?.revealRomance) || mysteryToneForText(text) === "flirt" } : npc);
+            : clamp(
+              dialogue.trustDelta + Math.trunc(aiTrustDelta / 2),
+              -20,
+              20
+            );
+          const romanceAllowed = mysteryCanPlayerHaveRomanceWithNpc(mystery.player, target);
+          const proposedRomanceDelta = aiReply?.usedAi && typeof aiReply.romanceDelta === "number" ? aiReply.romanceDelta : dialogue.romanceDelta;
+          const romanceDelta = romanceAllowed ? proposedRomanceDelta : Math.min(0, proposedRomanceDelta);
+          const trustReaction = mysteryTrustShiftLine(target, trustDelta);
+          const responseText = privateWitnessKnowledge.length > 0
+            ? `${fullName(target)} closes the door before speaking. "${privateWitnessKnowledge.join(" ")} I came to you because I trust you enough to say it where no one else can hear."${trustReaction}`
+            : `${aiReply?.usedAi ? aiReply.text : dialogue.message.text}${trustReaction}`;
+          npcs = npcs.map((npc) => npc.id === target.id ? { ...npc, trust: clamp(npc.trust + trustDelta, 0, 100), romance: clamp(npc.romance + romanceDelta, 0, 100), romanceRevealed: romanceAllowed && (npc.romanceRevealed || romanceDelta !== 0 || Boolean(aiReply?.revealRomance) || mysteryToneForText(text) === "flirt") } : npc);
+          if (privateWitnessKnowledge.length > 0) {
+            witnessInvitationNpcIds = witnessInvitationNpcIds.filter((npcId) => npcId !== target.id);
+            witnessKnowledgeDeliveredNpcIds = Array.from(new Set([...witnessKnowledgeDeliveredNpcIds, target.id]));
+            aiMemory = [...aiMemory, `${fullName(target)} privately told ${mystery.player.firstName}: ${privateWitnessKnowledge.join(" ")}`].slice(-120);
+            ledgerLines.push(`Witness knowledge delivered privately by ${fullName(target)} in ${mysteryRoomName(mystery, privateMeetingRoomId)}.`);
+          }
           messages.push({
             id: uid(),
             speaker: "GM",
@@ -4486,11 +5745,8 @@ export default function App() {
         }
       } else {
         const room = mysteryRoomName(mystery, currentRoom);
-        const people = mysteryPeopleInRoom(workingMystery(), currentRoom).filter((person) => person.id !== mystery.player.id) as MysteryNpc[];
-        const knownProof = discoveredProof.length > 0 ? ` You are carrying ${discoveredProof.length} piece${discoveredProof.length === 1 ? "" : "s"} of proof, so careless questions may change who trusts you.` : "";
-        const nearby = people.length > 0 ? ` ${fullName(people[0])} clocks your movement and ${mysteryTrustLabel(people[0])}.` : " No one nearby openly reacts.";
-        const line = aiReply?.usedAi ? aiReply.text : `${mysteryReactiveRoomLine(workingMystery(), currentRoom)} ${nearby}${knownProof}`;
-        messages.push({ id: uid(), speaker: "GM", text: line, roll: rollText, rich: mysteryNpcSegments(line, workingMystery()) });
+        const line = aiReply?.usedAi ? aiReply.text : mysteryReactiveRoomLine(workingMystery(), currentRoom);
+        messages.push({ id: uid(), speaker: "GM", text: line, rich: mysteryNpcSegments(line, workingMystery()) });
         ledgerLines.push(`Free action resolved in ${room} using ${aiReply?.usedAi ? "AI" : "fallback"} reply.${rollText ? ` ${rollText}.` : ""}`);
       }
 
@@ -4513,7 +5769,12 @@ export default function App() {
         const nextPrivateOccupants = mysteryPrivateRoomOccupantsAt(nextPrivateMystery, currentRoom);
         const returningOccupants = nextPrivateOccupants.filter((npc) => !currentPrivateOccupants.some((currentNpc) => currentNpc.id === npc.id));
         const caughtBy = (occupants: MysteryNpc[], rollTextForCatch?: string) => {
-          const occupantIds = new Set(occupants.map((npc) => npc.id));
+          const keyTaken = mysteryInventoryKeyForRoom(inventory, currentRoomModel);
+          if (keyTaken) inventory = mysteryRemoveOneInventoryItem(inventory, keyTaken);
+          const roomOwnerIds = npcs
+            .filter((npc) => npc.roomId === currentRoom || npc.stationRoomId === currentRoom)
+            .map((npc) => npc.id);
+          const occupantIds = new Set([...occupants.map((npc) => npc.id), ...roomOwnerIds]);
           npcs = npcs.map((npc) => {
             if (occupantIds.has(npc.id)) return { ...npc, trust: clamp(npc.trust - 22, 0, 100) };
             if (npc.role === "Staff") return { ...npc, trust: clamp(npc.trust - 14, 0, 100) };
@@ -4521,14 +5782,22 @@ export default function App() {
           });
           hiddenInRoomId = undefined;
           hiddenFromNpcIds = [];
+          rooms = rooms.map((room) =>
+            room.id === currentRoom && room.kind !== "public" && room.id !== mystery.playerRoomId
+              ? { ...room, accessible: false }
+              : room
+          );
+          const caughtRoomId = currentRoom;
+          currentRoom = "grand-hall";
           const occupantNames = occupants.slice(0, 3).map(fullName).join(", ");
           messages.push({
             id: uid(),
             speaker: "GM",
-            text: `${occupantNames || "Someone"} catches you trespassing in ${mysteryRoomName(mystery, currentRoom)}. Trust with the room occupants collapses, and staff trust drops sharply once word spreads.`,
+            text: `${occupantNames || "Someone"} catches you lurking in ${mysteryRoomName(mystery, caughtRoomId)}. ${keyTaken ? `The ${keyTaken} is taken from you, and ` : ""}staff escort you back to the Great Hall. Trust falls only with that room's occupants and the staff.`,
             roll: rollTextForCatch
           });
-          ledgerLines.push(`Trespass discovered in ${mysteryRoomName(mystery, currentRoom)} by ${occupantNames || "private occupants"}; occupant trust -22, staff trust -14.${rollTextForCatch ? ` ${rollTextForCatch}.` : ""}`);
+          recordSeriousCatch(`caught lurking in ${mysteryRoomName(mystery, caughtRoomId)}${keyTaken ? ` with ${keyTaken}` : ""}`);
+          ledgerLines.push(`Trespass discovered in ${mysteryRoomName(mystery, caughtRoomId)} by ${occupantNames || "private occupants"}; key taken: ${keyTaken ?? "none"}; moved to Great Hall; room occupants trust -22, staff trust -14.${rollTextForCatch ? ` ${rollTextForCatch}.` : ""}`);
         };
         if (hiddenInRoomId === currentRoom && nextPrivateOccupants.length === 0) {
           messages.push({ id: uid(), speaker: "GM", text: `You wait until the footsteps leave ${mysteryRoomName(mystery, currentRoom)}. No one discovers you were hidden there.` });
@@ -4561,6 +5830,21 @@ export default function App() {
         }
       }
 
+      if (!finished) {
+        const witnessInvitations = mysteryWitnessInvitationResolution(
+          { ...workingMystery(), day: nextTime.day, daytime: nextTime.daytime },
+          npcs,
+          currentRoom,
+          witnessInvitationNpcIds,
+          witnessKnowledgeDeliveredNpcIds
+        );
+        if (witnessInvitations.messages.length > 0) {
+          witnessInvitationNpcIds = witnessInvitations.invitedIds;
+          messages.push(...witnessInvitations.messages);
+          ledgerLines.push(...witnessInvitations.ledgerLines);
+        }
+      }
+
       if (aiReply?.summary) {
         aiConversationSummaries = [...aiConversationSummaries, aiReply.summary].slice(-80);
       }
@@ -4574,6 +5858,7 @@ export default function App() {
         ledgerLines.push("AI reply unavailable or rejected by validation; scripted fallback used.");
       }
 
+      const turnMessageIds = new Set(messages.map((message) => message.id));
       const stampedMessages = stampMysteryMessages(
         [...mystery.messages, ...messages],
         mystery.day,
@@ -4581,6 +5866,9 @@ export default function App() {
       );
 
       const splitMessages = splitMysteryMessages(stampedMessages);
+      const storyFocusMessageId =
+        splitMessages.visible.find((message) => turnMessageIds.has(message.id) && message.speaker !== "Player")?.id ??
+        splitMessages.visible.find((message) => turnMessageIds.has(message.id))?.id;
       journal = appendMysteryJournal(journal, splitMessages.archived);
 
       return {
@@ -4589,11 +5877,14 @@ export default function App() {
         daytime: nextTime.daytime,
         currentRoomId: currentRoom,
         messages: splitMessages.visible,
+        storyFocusMessageId,
         journal,
         aiMemory,
         aiConversationSummaries,
         hiddenInRoomId,
         hiddenFromNpcIds,
+        witnessInvitationNpcIds,
+        witnessKnowledgeDeliveredNpcIds,
         sanityLedger: [...(mystery.sanityLedger ?? []), ...ledgerLines].slice(-600),
         npcs,
         rooms,
@@ -4601,10 +5892,13 @@ export default function App() {
         discoveredProof,
         findables,
         inventory,
+        rollAttemptLedger,
+        seriousCatchCount,
         finished,
         won,
         summary,
-        lossPending
+        lossPending,
+        pendingBodyDiscoveryPopup
       };
     });
   }
@@ -4615,26 +5909,54 @@ export default function App() {
     if (!room || !mysteryPlayerCanAccessRoom(activeMystery, room)) return;
     patchMystery((mystery) => {
       const rooms = mystery.rooms.map((candidate) => candidate.id === roomId ? { ...candidate, accessible: true } : candidate);
+      let npcs = mystery.npcs;
+      let murders = mystery.murders;
+      let pendingBodyDiscoveryPopup = mystery.pendingBodyDiscoveryPopup;
+      const discoveryMurder = murders.find((murder) =>
+        !murder.discovered &&
+        !murder.solved &&
+        !murder.prevented &&
+        murder.roomId === roomId &&
+        mysteryTimeHasArrived(mystery.day, mystery.daytime, murder.day, murder.daytime)
+      );
+      const roomMessages: StoryMessage[] = [
+        mysteryRoomDescription(
+          { ...mystery, rooms, currentRoomId: roomId, npcs, murders },
+          roomId
+        )
+      ];
+      const ledgerLines = [`Move: Day ${mystery.day} ${mystery.daytime}; ${mystery.player.firstName} moved from ${mysteryRoomName(mystery, mystery.currentRoomId)} to ${room.name}.`];
+      if (discoveryMurder) {
+        const victimName = mysteryNpcName(mystery, discoveryMurder.victimId);
+        const bodyDiscoveryText = `You find ${victimName} dead in the ${mysteryRoomName(mystery, discoveryMurder.roomId)}. The method appears to be ${discoveryMurder.method}.`;
+        npcs = npcs.map((npc) => npc.id === discoveryMurder.victimId ? { ...npc, alive: false } : npc);
+        murders = murders.map((candidate) => candidate === discoveryMurder ? { ...candidate, discovered: true } : candidate);
+        roomMessages.push({ id: uid(), speaker: "GM", icon: "death", text: `Dead body found! ${bodyDiscoveryText}` });
+        pendingBodyDiscoveryPopup = { title: "Dead Body Found!", text: bodyDiscoveryText };
+        ledgerLines.push(`Murder discovered by player room entry: victim ${victimName}; killer ${mysteryNpcName(mystery, discoveryMurder.killerId)}; room ${mysteryRoomName(mystery, discoveryMurder.roomId)}; method ${discoveryMurder.method}.`);
+      }
       const stampedMessages = stampMysteryMessages(
-        [
-          ...mystery.messages,
-          mysteryRoomDescription(
-            { ...mystery, rooms, currentRoomId: roomId },
-            roomId
-          )
-        ],
+        [...mystery.messages, ...roomMessages],
         mystery.day,
         mystery.daytime
       );
 
       const splitMessages = splitMysteryMessages(stampedMessages);
+      const roomMessageIds = new Set(roomMessages.map((message) => message.id));
+      const storyFocusMessageId =
+        splitMessages.visible.find((message) => roomMessageIds.has(message.id) && message.speaker !== "Player")?.id ??
+        splitMessages.visible.find((message) => roomMessageIds.has(message.id))?.id;
       return {
         ...mystery,
         rooms,
+        npcs,
+        murders,
         currentRoomId: roomId,
         messages: splitMessages.visible,
+        storyFocusMessageId,
         journal: appendMysteryJournal(mystery.journal, splitMessages.archived),
-        sanityLedger: [...(mystery.sanityLedger ?? []), `Move: Day ${mystery.day} ${mystery.daytime}; ${mystery.player.firstName} moved from ${mysteryRoomName(mystery, mystery.currentRoomId)} to ${room.name}.`].slice(-600)
+        sanityLedger: [...(mystery.sanityLedger ?? []), ...ledgerLines].slice(-600),
+        pendingBodyDiscoveryPopup
       };
     });
   }
@@ -4643,6 +5965,11 @@ export default function App() {
     if (!activeMystery) return;
     patchMystery((mystery) => ({ ...mystery, lossPending: false }));
     setScreen("menu");
+  }
+
+  function closeBodyDiscoveryPopup() {
+    if (!activeMystery) return;
+    patchMystery((mystery) => ({ ...mystery, pendingBodyDiscoveryPopup: undefined }));
   }
 
   function mysterySolveCandidateNpcs(mystery: MysteryGame, murderIndex: number): MysteryNpc[] {
@@ -4670,20 +5997,17 @@ export default function App() {
     setAccusationKillerId(candidates[0]?.id ?? null);
     setAccusationProofName(activeMystery.inventory[0] ?? null);
     setAccusationMotiveText("");
+    setAccusationDropdown(null);
   }
 
-  function cycleMysteryAccusationKiller() {
-    if (!activeMystery || solveMurderIndex === null) return;
-    const candidates = mysterySolveCandidateNpcs(activeMystery, solveMurderIndex);
-    if (candidates.length === 0) return;
-    const currentIndex = candidates.findIndex((npc) => npc.id === accusationKillerId);
-    setAccusationKillerId(candidates[(currentIndex + 1 + candidates.length) % candidates.length].id);
+  function selectMysteryAccusationKiller(npcId: string) {
+    setAccusationKillerId(npcId);
+    setAccusationDropdown(null);
   }
 
-  function cycleMysteryAccusationProof() {
-    if (!activeMystery || activeMystery.inventory.length === 0) return;
-    const currentIndex = activeMystery.inventory.findIndex((item) => item === accusationProofName);
-    setAccusationProofName(activeMystery.inventory[(currentIndex + 1 + activeMystery.inventory.length) % activeMystery.inventory.length]);
+  function selectMysteryAccusationProof(item: string) {
+    setAccusationProofName(item);
+    setAccusationDropdown(null);
   }
 
   function mysteryMotiveGuessMatches(actual: string, guess: string): boolean {
@@ -4718,6 +6042,7 @@ export default function App() {
     const murder = activeMystery.murders[murderIndex];
     if (!murder) return;
     setSolveMurderIndex(null);
+    setAccusationDropdown(null);
     patchMystery((mystery) => {
       const targetMurder = mystery.murders[murderIndex];
       if (!targetMurder) return mystery;
@@ -4868,11 +6193,69 @@ export default function App() {
     );
   }
 
+  function mysteryFamilyGraph(mystery: MysteryGame): MysteryFamilyGraph {
+    return mysteryFamilyGraphFromSavedFacts(mystery);
+  }
+
+  function mysteryFamilyGraphHasEdges(graph: MysteryFamilyGraph): boolean {
+    return graph.parentChild.length > 0 ||
+      graph.siblings.length > 0 ||
+      graph.spouses.length > 0 ||
+      graph.partners.length > 0 ||
+      graph.lovers.length > 0 ||
+      graph.cousins.length > 0 ||
+      graph.auntUncleNibling.length > 0;
+  }
+
+  function mysteryFamilyTreeEdges(mystery: MysteryGame): MysteryFamilyTreeEdge[] {
+    const graph = mysteryFamilyGraph(mystery);
+    const graphEdges: MysteryFamilyTreeEdge[] = [
+      ...graph.parentChild.map((item) => ({ id: `parent-child-${item.parentId}-${item.childId}`, fromId: item.parentId, toId: item.childId, kind: "parentChild" as const })),
+      ...graph.siblings.map((item) => ({ id: `sibling-${mysteryGraphPairKey(item.aId, item.bId)}`, fromId: item.aId, toId: item.bId, kind: "sibling" as const })),
+      ...graph.spouses.map((item) => ({ id: `spouse-${mysteryGraphPairKey(item.aId, item.bId)}`, fromId: item.aId, toId: item.bId, kind: "spouse" as const })),
+      ...graph.partners.map((item) => ({ id: `partner-${mysteryGraphPairKey(item.aId, item.bId)}`, fromId: item.aId, toId: item.bId, kind: "partner" as const })),
+      ...graph.lovers.map((item) => ({ id: `lover-${mysteryGraphPairKey(item.aId, item.bId)}`, fromId: item.aId, toId: item.bId, kind: "lover" as const })),
+      ...graph.cousins.map((item) => ({ id: `cousin-${mysteryGraphPairKey(item.aId, item.bId)}`, fromId: item.aId, toId: item.bId, kind: "cousin" as const })),
+      ...graph.auntUncleNibling.map((item) => ({ id: `aunt-uncle-${item.auntUncleId}-${item.niblingId}`, fromId: item.auntUncleId, toId: item.niblingId, kind: "auntUncleNibling" as const }))
+    ];
+    const fallbackEdges: MysteryFamilyTreeEdge[] = mysteryFamilyLinks(mystery).map((item) => ({
+        id: item.id,
+        fromId: item.fromId,
+        toId: item.toId,
+        kind: item.kind === "Marriage"
+          ? "spouse"
+          : item.kind === "Romance"
+            ? "partner"
+            : item.kind === "Affair"
+              ? "lover"
+              : "cousin"
+      }));
+    const sourceEdges = graphEdges.length > 0 ? graphEdges : fallbackEdges;
+    const seen = new Set<string>();
+    return sourceEdges.filter((edge) => {
+      const key = `${edge.kind}:${mysteryGraphPairKey(edge.fromId, edge.toId)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function mysteryFamilyGraphEdges(mystery: MysteryGame): { fromId: string; toId: string }[] {
+    const edges = mysteryFamilyTreeEdges(mystery).map((edge) => ({ fromId: edge.fromId, toId: edge.toId }));
+    const seen = new Set<string>();
+    return edges.filter((edge) => {
+      const key = mysteryGraphPairKey(edge.fromId, edge.toId);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   function mysteryResidentFamilyMembers(mystery: MysteryGame, rootId: string): MysteryNpc[] {
     const residentById = new Map(mystery.npcs.map((npc) => [npc.id, npc]));
     const root = residentById.get(rootId);
     if (!root) return [];
-    const links = mysteryFamilyLinks(mystery);
+    const links = mysteryFamilyGraphEdges(mystery);
     const keepDepth = new Map<string, number>([[root.id, 0]]);
     const pending = [root.id];
     let displayedCousins = 0;
@@ -4919,38 +6302,26 @@ export default function App() {
   }
 
   function mysteryParentAndSiblingSets(mystery: MysteryGame) {
-    const parentPairs: { parentId: string; childId: string }[] = [];
-    const siblingPairs = new Set<string>();
-    const npcsById = new Map(mystery.npcs.map((npc) => [npc.id, npc]));
+    const graph = mysteryFamilyGraph(mystery);
+    const parentPairs: { parentId: string; childId: string }[] = [...graph.parentChild];
+    const siblingPairs = new Set<string>(graph.siblings.map((item) => mysteryGraphPairKey(item.aId, item.bId)));
     const pairKey = (a: string, b: string) => [a, b].sort().join(":");
-    const addParent = (parentId: string, childId: string) => {
-      if (parentId !== childId && !parentPairs.some((pair) => pair.parentId === parentId && pair.childId === childId)) {
-        parentPairs.push({ parentId, childId });
-      }
-    };
-    for (const link of mysteryFamilyLinks(mystery).filter((relationship) => relationship.kind === "Family")) {
-      const from = npcsById.get(link.fromId);
-      const to = npcsById.get(link.toId);
-      if (!from || !to) continue;
-      const detail = link.detail.toLowerCase();
-      const fromName = fullName(from).toLowerCase();
-      const toName = fullName(to).toLowerCase();
-      if (detail.includes("siblings") || from.familyRelationNote?.toLowerCase().includes("sister of") || from.familyRelationNote?.toLowerCase().includes("brother of") || to.familyRelationNote?.toLowerCase().includes("sister of") || to.familyRelationNote?.toLowerCase().includes("brother of")) {
-        siblingPairs.add(pairKey(from.id, to.id));
-      }
-      if (detail.includes(`${fromName} is parent to ${toName}`)) addParent(from.id, to.id);
-      if (detail.includes(`${toName} is parent to ${fromName}`)) addParent(to.id, from.id);
-      if (detail.includes(`${toName} is staying with mother ${fromName}`) || detail.includes(`${toName} is staying with father ${fromName}`)) addParent(from.id, to.id);
-      if (detail.includes(`${fromName} is staying with mother ${toName}`) || detail.includes(`${fromName} is staying with father ${toName}`)) addParent(to.id, from.id);
-      if (from.familyRelationNote?.includes(fullName(to)) && /\b(son|daughter)\s+of\b/i.test(from.familyRelationNote)) addParent(to.id, from.id);
-      if (to.familyRelationNote?.includes(fullName(from)) && /\b(son|daughter)\s+of\b/i.test(to.familyRelationNote)) addParent(from.id, to.id);
-      if (from.familyRelationNote?.includes(fullName(to)) && /\b(mother|father)\s+of\b/i.test(from.familyRelationNote)) addParent(from.id, to.id);
-      if (to.familyRelationNote?.includes(fullName(from)) && /\b(mother|father)\s+of\b/i.test(to.familyRelationNote)) addParent(to.id, from.id);
-    }
     return { parentPairs, siblingPairs, pairKey };
   }
 
   function directMysteryTreeRelationshipLabel(root: MysteryNpc, npc: MysteryNpc, mystery: MysteryGame): string | null {
+    const graph = mysteryFamilyGraph(mystery);
+    const pairMatches = (item: { aId: string; bId: string }) => mysteryGraphPairKey(item.aId, item.bId) === mysteryGraphPairKey(root.id, npc.id);
+    if (graph.spouses.some(pairMatches)) return "spouse";
+    if (graph.partners.some(pairMatches)) return "partner";
+    if (graph.lovers.some(pairMatches)) return "lover";
+    if (graph.siblings.some(pairMatches)) return sexedRelation(npc, "sister", "brother");
+    if (graph.cousins.some(pairMatches)) return "cousin";
+    if (graph.parentChild.some((item) => item.parentId === npc.id && item.childId === root.id)) return sexedRelation(npc, "mother", "father");
+    if (graph.parentChild.some((item) => item.parentId === root.id && item.childId === npc.id)) return sexedRelation(npc, "daughter", "son");
+    if (graph.auntUncleNibling.some((item) => item.auntUncleId === npc.id && item.niblingId === root.id)) return sexedRelation(npc, "aunt", "uncle");
+    if (graph.auntUncleNibling.some((item) => item.auntUncleId === root.id && item.niblingId === npc.id)) return sexedRelation(npc, "niece", "nephew");
+    if (mysteryFamilyGraphHasEdges(graph)) return null;
     const link = mysteryFamilyLinks(mystery).find((relationship) =>
       (relationship.fromId === root.id && relationship.toId === npc.id) ||
       (relationship.fromId === npc.id && relationship.toId === root.id)
@@ -4995,29 +6366,30 @@ export default function App() {
 
   function mysteryIsStepChildOf(parentId: string, childId: string, mystery: MysteryGame, parentPairs: { parentId: string; childId: string }[]): boolean {
     if (parentPairs.some((pair) => pair.parentId === parentId && pair.childId === childId)) return false;
-    const partnerIds = mysteryFamilyLinks(mystery)
-      .filter((link) =>
-        (link.kind === "Marriage" || link.kind === "Romance") &&
-        (link.fromId === parentId || link.toId === parentId)
-      )
-      .map((link) => link.fromId === parentId ? link.toId : link.fromId);
+    const graph = mysteryFamilyGraph(mystery);
+    const partnerIds = [
+      ...graph.spouses,
+      ...graph.partners
+    ].filter((pair) => pair.aId === parentId || pair.bId === parentId)
+      .map((pair) => pair.aId === parentId ? pair.bId : pair.aId);
     return partnerIds.some((partnerId) => parentPairs.some((pair) => pair.parentId === partnerId && pair.childId === childId));
   }
 
   function simplifiedMysteryTreeRelationLabel(root: MysteryNpc, currentLabel: string, direct: string, npc: MysteryNpc, mystery: MysteryGame): string | null {
     const childLabels = ["daughter", "son", "step-daughter", "step-son"];
     if (["sister", "brother"].includes(currentLabel) && ["sister", "brother"].includes(direct)) return direct;
+    if (currentLabel === "cousin" && ["sister", "brother"].includes(direct)) return "cousin";
+    if (["sister", "brother"].includes(currentLabel) && direct === "cousin") return "cousin";
     if (["aunt", "uncle"].includes(currentLabel) && ["daughter", "son"].includes(direct)) return "cousin";
     if (["mother", "father"].includes(currentLabel) && ["niece", "nephew"].includes(direct)) return "cousin";
     if (["mother", "father"].includes(currentLabel) && ["daughter", "son"].includes(direct)) return sexedRelation(npc, "sister", "brother");
     if (["mother", "father"].includes(currentLabel) && ["sister", "brother"].includes(direct)) return sexedRelation(npc, "aunt", "uncle");
     if (["sister", "brother"].includes(currentLabel) && ["daughter", "son"].includes(direct)) return sexedRelation(npc, "niece", "nephew");
+    if (childLabels.includes(currentLabel) && direct === "cousin") return sexedRelation(npc, "niece", "nephew");
     if (childLabels.includes(currentLabel) && ["sister", "brother"].includes(direct)) {
       const { parentPairs } = mysteryParentAndSiblingSets(mystery);
-      const directChild = parentPairs.some((pair) => pair.parentId === root.id && pair.childId === npc.id);
-      if (directChild) return sexedRelation(npc, "daughter", "son");
       if (mysteryIsStepChildOf(root.id, npc.id, mystery, parentPairs)) return sexedRelation(npc, "step-daughter", "step-son");
-      return `${mysteryTreePossessiveRelation(currentLabel)} ${direct}`;
+      return sexedRelation(npc, "daughter", "son");
     }
     if (childLabels.includes(currentLabel) && ["daughter", "son"].includes(direct)) return sexedRelation(npc, "granddaughter", "grandson");
     if (["mother", "father"].includes(currentLabel) && ["mother", "father"].includes(direct)) return sexedRelation(npc, "grandmother", "grandfather");
@@ -5026,7 +6398,7 @@ export default function App() {
 
   function indirectMysteryTreeRelationshipLabel(root: MysteryNpc, npc: MysteryNpc, mystery: MysteryGame): string | null {
     const npcsById = new Map(mystery.npcs.map((candidate) => [candidate.id, candidate]));
-    const links = mysteryFamilyLinks(mystery);
+    const links = mysteryFamilyGraphEdges(mystery);
     const pending: { npc: MysteryNpc; label: string; depth: number }[] = [{ npc: root, label: "", depth: 0 }];
     const visited = new Set<string>([root.id]);
     while (pending.length > 0) {
@@ -5063,6 +6435,10 @@ export default function App() {
       const relatedChild = mystery.npcs.find((candidate) => candidate.id === childSiblingId);
       return `${mysteryTreePossessiveRelation(relatedChild ? sexedRelation(relatedChild, "daughter", "son") : "child")} ${sexedRelation(npc, "sister", "brother")}`;
     }
+    const directCousinIds = mysteryFamilyGraph(mystery).cousins
+      .filter((relationship) => relationship.aId === root.id || relationship.bId === root.id)
+      .map((relationship) => relationship.aId === root.id ? relationship.bId : relationship.aId);
+    if (directCousinIds.some((cousinId) => siblingPairs.has(pairKey(cousinId, npc.id)))) return "cousin";
     const indirect = indirectMysteryTreeRelationshipLabel(root, npc, mystery);
     if (indirect) return indirect;
     if (parentsOfRoot.some((parentId) => isParentOf(npc.id, parentId))) return sexedRelation(npc, "grandmother", "grandfather");
@@ -5230,6 +6606,24 @@ export default function App() {
     );
   }
 
+  function CompassMenuIcon() {
+    const glowOpacity = compassGlow.interpolate({
+      inputRange: [0, 0.35, 0.82, 1],
+      outputRange: [0.28, 0.52, 0.42, 0.78]
+    });
+    const glowScale = compassGlow.interpolate({
+      inputRange: [0, 0.35, 0.82, 1],
+      outputRange: [0.92, 1.08, 0.98, 1.18]
+    });
+    return (
+      <View style={styles.compassOuter}>
+        <Animated.View style={[styles.compassGlow, { opacity: glowOpacity, transform: [{ scale: glowScale }] }]} />
+        <Animated.View style={[styles.compassGlowCore, { opacity: glowOpacity }]} />
+        <Image source={ravenwoodCompassIcon} resizeMode="cover" style={styles.compassImage} />
+      </View>
+    );
+  }
+
   function Button({ label, onPress, disabled = false, small = false, variant = "accent" }: { label: string; onPress: () => void; disabled?: boolean; small?: boolean; variant?: "accent" | "warning" | "neutral" }) {
     const backgroundColor = disabled ? C.panel2 : variant === "warning" ? C.warning : variant === "neutral" ? C.panel2 : C.accent;
     return (
@@ -5262,12 +6656,13 @@ export default function App() {
     );
   }
 
-  function PortraitImage({ subject, size = "large", highlight = false }: { subject: PortraitSubject; size?: "hero" | "large" | "resident" | "map" | "thumb"; highlight?: boolean }) {
+  function PortraitImage({ subject, size = "large", highlight = false }: { subject: PortraitSubject; size?: "hero" | "large" | "resident" | "map" | "tree" | "thumb"; highlight?: boolean }) {
     const initials = `${subject.firstName?.[0] ?? "?"}${subject.familyName?.[0] ?? ""}`.toUpperCase();
     const isHero = size === "hero";
     const isLarge = size === "large" || isHero;
     const isResident = size === "resident";
     const isMap = size === "map";
+    const isTree = size === "tree";
     const ravenwoodPortrait = subject.ravenwoodPortraitKey ? ravenwoodPortraitByKey[subject.ravenwoodPortraitKey] : null;
     const frameStyle = isHero
       ? styles.portraitHeroFrame
@@ -5277,9 +6672,11 @@ export default function App() {
           ? styles.portraitResidentFrame
           : isMap
             ? styles.portraitMapFrame
-            : styles.portraitThumbFrame;
-    const frameWidth = isHero ? 114 : isLarge ? 72 : isResident ? 92 : isMap ? 42 : 36;
-    const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 156 : isMap ? 72 : 62;
+            : isTree
+              ? styles.portraitTreeFrame
+              : styles.portraitThumbFrame;
+    const frameWidth = isHero ? 114 : isLarge ? 72 : isResident ? 92 : isMap ? 42 : isTree ? 52 : 36;
+    const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 156 : isMap ? 66 : isTree ? 86 : 62;
     if (ravenwoodPortrait) {
       const isStaffPortrait = ravenwoodPortrait.sourceKind === "staff";
       const sourceWidth = ravenwoodPortrait.imageWidth;
@@ -5304,32 +6701,40 @@ export default function App() {
             ? 1.08
             : isMap
               ? 1.06
-              : 1.07
+              : isTree
+                ? 1.18
+                : 1.07
         : isHero
           ? 1.07
           : isResident
             ? 1.06
             : isMap
               ? 1.04
-              : 1.05;
+              : isTree
+                ? 1.16
+                : 1.05;
       const placementY = isStaffPortrait
         ? isHero
           ? 10
           : isResident
             ? 6
             : isMap
-              ? 3
-              : 5
+              ? 0
+              : isTree
+                ? 4
+                : 5
         : isHero
           ? 3
           : isResident
             ? 2
             : isMap
-              ? 1
-              : 1;
+              ? 0
+              : isTree
+                ? 3
+                : 1;
       const scale = Math.max(frameWidth / crop.width, frameHeight / crop.height) * scaleBoost;
       return (
-        <View style={[frameStyle, { borderColor: highlight ? C.accent : C.line, backgroundColor: C.panel2 }, subject.alive === false && styles.deadPortraitFrame]}>
+        <View style={[frameStyle, { borderColor: highlight ? C.accent : C.line, backgroundColor: C.panel2 }, highlight && isTree && styles.portraitTreeSelectedFrame, subject.alive === false && styles.deadPortraitFrame]}>
           <Image
             source={ravenwoodPortrait.source}
             resizeMode="stretch"
@@ -5349,7 +6754,7 @@ export default function App() {
       );
     }
     return (
-      <View style={[frameStyle, styles.picturelessPortrait, { borderColor: highlight ? C.accent : C.line, backgroundColor: C.panel2 }, subject.alive === false && styles.deadPortraitFrame]}>
+      <View style={[frameStyle, styles.picturelessPortrait, { borderColor: highlight ? C.accent : C.line, backgroundColor: C.panel2 }, highlight && isTree && styles.portraitTreeSelectedFrame, subject.alive === false && styles.deadPortraitFrame]}>
         <Text style={[styles.picturelessInitials, { color: subject.alive === false ? C.dim : C.text, fontSize: isHero ? 46 : isLarge ? 28 : isResident ? 18 : 13 }]}>{initials}</Text>
         <Text style={[styles.picturelessMeta, { color: C.dim, fontSize: isHero ? 14 : isLarge ? 12 : isResident ? 9 : 8 }]}>{subject.sex}</Text>
         {subject.alive === false ? <View pointerEvents="none" style={styles.deadPortraitWash} /> : null}
@@ -5383,6 +6788,13 @@ export default function App() {
         </Pressable>
         <Pressable onPress={() => setScreen("mysteryJournal")} style={[styles.bottomMenuItem, { borderColor: C.line }]}>
           <BottomMenuLabel icon="book" label="Journal" />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Gameplay chat"
+          onPress={() => setScreen("mystery")}
+          style={styles.compassMenuButton}
+        >
+          <CompassMenuIcon />
         </Pressable>
       </View>
     );
@@ -5459,9 +6871,15 @@ export default function App() {
       </>
     );
     const storyPanelContent = (
-      <ScrollView style={[styles.storyMessages, styles.mysteryStoryMessages]}>
+      <ScrollView ref={storyScrollRef} style={[styles.storyMessages, styles.mysteryStoryMessages]}>
         {visibleMessages.map((message) => (
-          <View key={message.id} style={styles.storyMessageBlock}>
+          <View
+            key={message.id}
+            style={styles.storyMessageBlock}
+            onLayout={(event: LayoutChangeEvent) => {
+              storyMessageOffsetsRef.current[message.id] = event.nativeEvent.layout.y;
+            }}
+          >
             <Text style={[styles.storySpeaker, { color: message.speaker === "Player" ? C.accent : C.gold }]}>{message.speaker}</Text>
             {message.speaker === "GM" ? <MysteryMessageText message={message} mystery={mystery} /> : <Text style={[styles.body, { color: C.text }]}>{message.text}</Text>}
             {message.roll ? <Text style={[styles.rollText, { color: C.dim }]}>{message.roll}</Text> : null}
@@ -5561,14 +6979,46 @@ export default function App() {
           <View style={[styles.modalCard, { backgroundColor: C.panel, borderColor: C.line }]}>
             <Text style={[styles.heading, { color: C.warning }]}>Solve Murder {solveMurderIndex !== null ? solveMurderIndex + 1 : ""}</Text>
             {murder ? <Text style={[styles.body, { color: C.text }]}>Victim: {mysteryNpcName(mystery, murder.victimId)}</Text> : null}
-            <Pressable onPress={cycleMysteryAccusationKiller} style={[styles.selectorRow, { borderColor: C.line, backgroundColor: C.panel2 }]}>
-              <Text style={[styles.rollText, { color: C.dim }]}>Killer</Text>
-              <Text style={[styles.body, { color: C.text }]}>{accused ? fullName(accused) : "No valid suspect"}</Text>
-            </Pressable>
-            <Pressable onPress={cycleMysteryAccusationProof} style={[styles.selectorRow, { borderColor: C.line, backgroundColor: C.panel2 }]}>
-              <Text style={[styles.rollText, { color: C.dim }]}>Proof From Inventory</Text>
-              <Text style={[styles.body, { color: C.text }]}>{accusationProofName ?? "No inventory item"}</Text>
-            </Pressable>
+            <View style={styles.dropdownGroup}>
+              <Pressable onPress={() => setAccusationDropdown((current) => current === "killer" ? null : "killer")} style={[styles.selectorRow, { borderColor: C.line, backgroundColor: C.panel2 }]}>
+                <View style={styles.rowBetween}>
+                  <Text style={[styles.rollText, { color: C.dim }]}>Killer</Text>
+                  <Text style={[styles.dropdownArrow, { color: C.accent }]}>{accusationDropdown === "killer" ? "^" : "v"}</Text>
+                </View>
+                <Text style={[styles.body, { color: C.text }]}>{accused ? fullName(accused) : "Choose a suspect"}</Text>
+              </Pressable>
+              {accusationDropdown === "killer" ? (
+                <ScrollView style={[styles.dropdownList, { borderColor: C.line, backgroundColor: C.panel2 }]} nestedScrollEnabled>
+                  {candidates.length === 0 ? <Text style={[styles.body, styles.dropdownEmpty, { color: C.dim }]}>No valid suspects.</Text> : null}
+                  {candidates.map((npc) => (
+                    <Pressable key={npc.id} onPress={() => selectMysteryAccusationKiller(npc.id)} style={[styles.dropdownOption, { borderColor: C.line, backgroundColor: npc.id === accusationKillerId ? C.accent : "transparent" }]}>
+                      <Text style={[styles.body, { color: npc.id === accusationKillerId ? "#fff" : C.text }]}>{fullName(npc)}</Text>
+                      <Text style={[styles.rollText, { color: npc.id === accusationKillerId ? "#fff" : C.dim }]}>{npc.role} - {npc.sex} - age {npc.age}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              ) : null}
+            </View>
+            <View style={styles.dropdownGroup}>
+              <Pressable onPress={() => setAccusationDropdown((current) => current === "proof" ? null : "proof")} style={[styles.selectorRow, { borderColor: C.line, backgroundColor: C.panel2 }]}>
+                <View style={styles.rowBetween}>
+                  <Text style={[styles.rollText, { color: C.dim }]}>Proof From Inventory</Text>
+                  <Text style={[styles.dropdownArrow, { color: C.accent }]}>{accusationDropdown === "proof" ? "^" : "v"}</Text>
+                </View>
+                <Text style={[styles.body, { color: C.text }]}>{accusationProofName ?? "Choose proof"}</Text>
+              </Pressable>
+              {accusationDropdown === "proof" ? (
+                <ScrollView style={[styles.dropdownList, { borderColor: C.line, backgroundColor: C.panel2 }]} nestedScrollEnabled>
+                  {mystery.inventory.length === 0 ? <Text style={[styles.body, styles.dropdownEmpty, { color: C.dim }]}>No inventory items.</Text> : null}
+                  {mystery.inventory.map((item) => (
+                    <Pressable key={item} onPress={() => selectMysteryAccusationProof(item)} style={[styles.dropdownOption, styles.dropdownInventoryOption, { borderColor: C.line, backgroundColor: item === accusationProofName ? C.accent : "transparent" }]}>
+                      <IconDumpIcon name={mysteryInventoryIconFor(item) ?? "document"} size={28} />
+                      <Text style={[styles.body, styles.dropdownOptionText, { color: item === accusationProofName ? "#fff" : C.text }]}>{item}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              ) : null}
+            </View>
             <TextInput
               value={accusationMotiveText}
               onChangeText={(value) => setAccusationMotiveText(value.slice(0, 280))}
@@ -5580,7 +7030,7 @@ export default function App() {
             />
             <View style={styles.wrapRow}>
               <Button small label="Submit" onPress={submitMysteryAccusation} disabled={!accused} />
-              <Button small label="Cancel" onPress={() => setSolveMurderIndex(null)} variant="neutral" />
+              <Button small label="Cancel" onPress={() => { setAccusationDropdown(null); setSolveMurderIndex(null); }} variant="neutral" />
             </View>
           </View>
         </ImageBackground>
@@ -5600,6 +7050,172 @@ export default function App() {
           </View>
         </ImageBackground>
       </Modal>
+    );
+  }
+
+  function MysteryBodyDiscoveryModal({ mystery }: { mystery: MysteryGame }) {
+    const popup = mystery.pendingBodyDiscoveryPopup;
+    const backdrop = appBackgroundForScreen(themeName, "mystery");
+    return (
+      <Modal visible={Boolean(popup)} transparent animationType="fade">
+        <ImageBackground source={backdrop} resizeMode="cover" style={styles.modalShade}>
+          <View style={[styles.modalCard, styles.bodyDiscoveryCard, { backgroundColor: C.panel, borderColor: "#c41338" }]}>
+            <View style={styles.bodyDiscoveryHeader}>
+              <View style={[styles.mysteryMessageIconBubble, styles.bodyDiscoveryIconBubble, { borderColor: "#c41338", backgroundColor: C.panel2 }]}>
+                <IconDumpIcon name="death" size={48} />
+              </View>
+              <Text style={[styles.heading, styles.bodyDiscoveryTitle, { color: "#ff5770" }]}>{popup?.title ?? ""}</Text>
+              <Pressable onPress={closeBodyDiscoveryPopup} style={[styles.modalCloseButton, { borderColor: C.line, backgroundColor: C.panel2 }]}>
+                <Text style={[styles.modalCloseText, { color: C.text }]}>X</Text>
+              </Pressable>
+            </View>
+            <Text style={[styles.body, { color: C.text }]}>{popup?.text ?? ""}</Text>
+          </View>
+        </ImageBackground>
+      </Modal>
+    );
+  }
+
+  function MysteryFinishedReport({ mystery }: { mystery: MysteryGame }) {
+    const happenedMurders = mystery.murders.filter((murder) =>
+      !murder.prevented &&
+      (murder.discovered || murder.solved || mysteryTimeHasArrived(mystery.day, mystery.daytime, murder.day, murder.daytime))
+    );
+    const preventedMurders = mystery.murders.filter((murder) => murder.prevented);
+    const killers = Array.from(new Set(happenedMurders.map((murder) => murder.killerId)))
+      .map((id) => mystery.npcs.find((npc) => npc.id === id))
+      .filter((npc): npc is MysteryNpc => Boolean(npc));
+    const victims = happenedMurders
+      .map((murder) => mystery.npcs.find((npc) => npc.id === murder.victimId))
+      .filter((npc): npc is MysteryNpc => Boolean(npc));
+    const collectedFindables = (mystery.findables ?? []).filter((findable) => findable.collected || mystery.inventory.includes(findable.name));
+    const proofItems = collectedFindables.filter((findable) => findable.kind === "Proof");
+    const notableItems = collectedFindables.filter((findable) => findable.kind !== "Proof").slice(0, 8);
+    const trustedNpcs = mystery.npcs
+      .filter((npc) => npc.trust >= 40 || npc.romance >= 20)
+      .sort((a, b) => Math.max(b.trust, b.romance) - Math.max(a.trust, a.romance))
+      .slice(0, 6);
+    const uncoveredRelationships = mystery.npcRelationships
+      .filter((relationship) => !relationship.hidden)
+      .map((relationship) => {
+        const from = mystery.npcs.find((npc) => npc.id === relationship.fromId);
+        const to = mystery.npcs.find((npc) => npc.id === relationship.toId);
+        if (!from || !to) return null;
+        if (relationship.kind === "Family" || relationship.kind === "Marriage") {
+          return mysteryRelationshipLinesFor(from, mystery.npcs, mystery.npcRelationships, mystery.day, mystery.daytime, mystery.player.firstName, mystery.familyGraph)
+            .find((line) => line.includes(fullName(to))) ?? relationship.detail;
+        }
+        return mysteryRelationshipDetailForSheet(relationship.detail, mystery.npcs, mystery.player.firstName);
+      })
+      .filter((line): line is string => Boolean(line))
+      .map(mysteryResidentRelationshipLineForDisplay)
+      .slice(0, 8);
+    const outcomeLine = mystery.summary ?? (mystery.won ? "The Ravenwood case was solved." : "The Ravenwood case ended unsolved.");
+    return (
+      <Shell>
+        <View style={styles.rowBetween}>
+          <Text style={[styles.titleSmall, { color: C.text }]}>Case Report</Text>
+          <Button small label="Back" onPress={() => setScreen("past")} />
+        </View>
+        <Card>
+          <View style={styles.reportHero}>
+            <PortraitImage subject={mysteryPlayerPortraitSubject(mystery.player)} size="resident" highlight={mystery.won} />
+            <View style={styles.reportHeroText}>
+              <Text style={[styles.heading, { color: C.text }]}>{mystery.title}</Text>
+              <Text style={[styles.body, { color: C.text }]}>{outcomeLine}</Text>
+              <Text style={[styles.rollText, { color: mystery.won ? C.good : C.warning }]}>{mystery.won ? "Outcome: solved" : "Outcome: lost"} on Day {mystery.day} {mystery.daytime}</Text>
+            </View>
+          </View>
+        </Card>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Crimes</Text>
+          {happenedMurders.length === 0 ? <Text style={[styles.body, { color: C.dim }]}>No murder was discovered before the case closed.</Text> : null}
+          {happenedMurders.map((murder, index) => {
+            const victim = mystery.npcs.find((npc) => npc.id === murder.victimId);
+            const killer = mystery.npcs.find((npc) => npc.id === murder.killerId);
+            const solvedText = murder.solved ? "Solved" : murder.discovered ? "Discovered" : "Unsolved";
+            return (
+              <View key={`report-murder-${index}`} style={[styles.reportCrimeRow, { borderColor: C.line }]}>
+                {victim ? <PortraitImage subject={victim} size="thumb" /> : <IconDumpIcon name="death" size={44} />}
+                <View style={styles.reportCrimeText}>
+                  <Text style={[styles.body, { color: C.text }]}>Murder {index + 1}: {victim ? fullName(victim) : "Unknown victim"} in {mysteryRoomName(mystery, murder.roomId)}</Text>
+                  <Text style={[styles.rollText, { color: C.dim }]}>Day {murder.day} {murder.daytime}. {murder.method}. {solvedText}.</Text>
+                  <Text style={[styles.rollText, { color: C.text }]}>Killer: {killer ? fullName(killer) : "Unknown"}. Motive: {cleanSentenceEnd(murder.motive)}.</Text>
+                </View>
+              </View>
+            );
+          })}
+          {preventedMurders.length > 0 ? (
+            <Text style={[styles.body, { color: C.good }]}>
+              Prevented: {preventedMurders.map((murder) => mysteryNpcName(mystery, murder.victimId)).join(", ")} survived because the case was stopped early.
+            </Text>
+          ) : null}
+        </Card>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Evidence</Text>
+          {proofItems.length === 0 ? <Text style={[styles.body, { color: C.dim }]}>No proof was secured before the ending.</Text> : null}
+          {proofItems.slice(0, 8).map((item) => (
+            <View key={item.id} style={styles.reportItemRow}>
+              <IconDumpIcon name={mysteryInventoryIconFor(item.name) ?? "document"} size={34} />
+              <Text style={[styles.body, styles.reportItemText, { color: C.text }]}>{item.name}</Text>
+            </View>
+          ))}
+          {notableItems.length > 0 ? <Text style={[styles.heading, styles.reportSubheading, { color: C.text }]}>Notable Items</Text> : null}
+          {notableItems.map((item) => (
+            <View key={item.id} style={styles.reportItemRow}>
+              <IconDumpIcon name={mysteryInventoryIconFor(item.name) ?? "bag"} size={34} />
+              <Text style={[styles.body, styles.reportItemText, { color: C.text }]}>{item.name}</Text>
+            </View>
+          ))}
+        </Card>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>People</Text>
+          {killers.length > 0 ? (
+            <>
+              <Text style={[styles.rollText, { color: C.dim }]}>Killer portrait{killers.length === 1 ? "" : "s"}</Text>
+              <View style={styles.reportPortraitRow}>
+                {killers.map((npc) => (
+                  <View key={npc.id} style={styles.reportPortraitTile}>
+                    <PortraitImage subject={npc} size="thumb" />
+                    <Text style={[styles.rollText, styles.reportPortraitLabel, { color: C.warning }]}>{fullName(npc)}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : null}
+          {victims.length > 0 ? (
+            <>
+              <Text style={[styles.rollText, { color: C.dim }]}>Victims</Text>
+              <View style={styles.reportPortraitRow}>
+                {victims.map((npc) => (
+                  <View key={npc.id} style={styles.reportPortraitTile}>
+                    <PortraitImage subject={npc} size="thumb" />
+                    <Text style={[styles.rollText, styles.reportPortraitLabel, { color: C.text }]}>{fullName(npc)}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : null}
+        </Card>
+        <Card>
+          <Text style={[styles.heading, { color: C.text }]}>Bonds And Discoveries</Text>
+          {trustedNpcs.length === 0 ? <Text style={[styles.body, { color: C.dim }]}>No strong resident bond was built before the case ended.</Text> : null}
+          {trustedNpcs.map((npc) => (
+            <View key={npc.id} style={styles.reportBondRow}>
+              <PortraitImage subject={npc} size="thumb" />
+              <View style={styles.reportCrimeText}>
+                <Text style={[styles.body, { color: C.text }]}>{fullName(npc)}</Text>
+                <Text style={[styles.rollText, { color: C.dim }]}>Trust {npc.trust}{npc.romance > 0 ? `, romance ${npc.romance}` : ""}</Text>
+              </View>
+            </View>
+          ))}
+          {uncoveredRelationships.length > 0 ? <Text style={[styles.heading, styles.reportSubheading, { color: C.text }]}>Uncovered Relationship Notes</Text> : null}
+          {uncoveredRelationships.length === 0 ? <Text style={[styles.body, { color: C.dim }]}>No relationship notes were uncovered.</Text> : null}
+          {uncoveredRelationships.map((line, index) => (
+            <Text key={`report-relation-${index}`} style={[styles.body, { color: C.text }]}>{line}</Text>
+          ))}
+        </Card>
+      </Shell>
     );
   }
 
@@ -5678,6 +7294,7 @@ export default function App() {
   }
 
   if (screen === "mysteryPortraitSelect") {
+    const selectedAgeQuirks = mysteryDetectiveQuirksFor(selectedMysteryDetective, selectedMysteryDetectiveAge);
     return (
       <Shell>
         <View style={styles.rowBetween}>
@@ -5703,7 +7320,7 @@ export default function App() {
             })}
           </View>
           <View style={styles.detectiveQuirkList}>
-            {selectedMysteryDetective.quirks.map((quirk) => (
+            {selectedAgeQuirks.map((quirk) => (
               <Text key={quirk.id} style={[styles.rollText, styles.gameHiddenText]}>{quirk.label}: {signedModifier(quirk.modifier)} {quirk.check}</Text>
             ))}
           </View>
@@ -5841,6 +7458,7 @@ export default function App() {
               </View>
             </View>
           </Modal>
+          {MysteryBodyDiscoveryModal({ mystery: activeMystery })}
           {MysteryAccusationModal({ mystery: activeMystery })}
           {MysteryAccusationFeedbackModal()}
         </>
@@ -5879,12 +7497,12 @@ export default function App() {
           </Card>
         ) : null}
         <Card>
-          <Text style={[styles.heading, { color: C.text }]}>Roll Modifiers</Text>
+          <Text style={[styles.heading, styles.gameHiddenText]}>Roll Modifiers</Text>
           <View style={styles.detectiveModifierGrid}>
             {mysteryRollTypes.map((check) => {
               const modifier = mysteryQuirkModifierFor(activeMystery.player.detectiveQuirks, check);
               return (
-                <Text key={check} style={[styles.rollText, modifier === 0 ? { color: C.dim } : styles.gameHiddenText]}>
+                <Text key={check} style={[styles.rollText, styles.gameHiddenText]}>
                   {check}: {signedModifier(modifier)}
                 </Text>
               );
@@ -5944,6 +7562,9 @@ export default function App() {
         {focusedMysteryNpcs.map((npc) => {
           const isDragging = draggingMysteryNpcId === npc.id;
           const familyStatus = mysteryDisplayFamilyStatus(npc, activeMystery);
+          const relationshipLines = mysteryRelationshipLinesFor(npc, activeMystery.npcs, activeMystery.npcRelationships ?? [], activeMystery.day, activeMystery.daytime, activeMystery.player.firstName, mysteryFamilyGraph(activeMystery))
+            .map(mysteryResidentRelationshipLineForDisplay)
+            .filter(Boolean);
           return (
             <Pressable
               key={npc.id}
@@ -5952,27 +7573,37 @@ export default function App() {
               style={[styles.card, { backgroundColor: C.panel, borderColor: C.line }, focusedMysteryNpcId === npc.id && styles.focusedMysteryNpcCard, isDragging && styles.relationCardDragging, !npc.alive && styles.deadTile, !npc.alive && styles.deadRelationCard]}
             >
               <View style={styles.relationHeader}>
-                <View style={styles.residentPortraitTools}>
-                  <PortraitImage subject={npc} size="resident" />
+                <PortraitImage subject={npc} size="resident" />
+                <View style={styles.residentHeaderBody}>
+                  <View>
+                    <Text style={[styles.heading, styles.relationName, { color: npc.alive ? C.text : C.dim }]}>{npc.firstName} {npc.familyName}</Text>
+                    <Text style={{ color: C.dim }}>{npc.role} - {npc.sex} - age {npc.age}{npc.isChild ? " - Child" : ""}</Text>
+                    {!npc.alive ? <Text style={{ color: C.warning }}>Dead</Text> : null}
+                  </View>
                   <Pressable onPress={() => openMysteryFamilyTree(npc.id)} style={[styles.mysteryPortraitMagnifierButton, { backgroundColor: C.panel2, borderColor: C.line }]}>
                     <IconDumpIcon name="magnifier" size={54} scaleBoost={0.74} />
                   </Pressable>
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.heading, styles.relationName, { color: npc.alive ? C.text : C.dim }]}>{npc.firstName} {npc.familyName}</Text>
-                  <Text style={{ color: C.dim }}>{npc.role} - {npc.sex} - age {npc.age}{npc.isChild ? " - Child" : ""}</Text>
-                  {!npc.alive ? <Text style={{ color: C.warning }}>Dead</Text> : null}
-                </View>
                 <MysteryTrustPill npc={npc} />
               </View>
-              {!npc.romanceRevealed ? <Text style={[styles.rollText, styles.discoverableHiddenText]}>Romance hidden until romantic action.</Text> : null}
               <View style={[styles.relationshipLedgerBox, { borderColor: C.line, backgroundColor: C.panel2 }]}>
-                <Text style={[styles.rollText, styles.gameHiddenText]}>NPC relationships for testing</Text>
-                {mysteryRelationshipLinesFor(npc, activeMystery.npcs, activeMystery.npcRelationships ?? [], activeMystery.day, activeMystery.daytime).length === 0 ? (
+                {relationshipLines.length === 0 ? (
                   <Text style={[styles.rollText, { color: C.dim }]}>No direct NPC relationship record.</Text>
-                ) : mysteryRelationshipLinesFor(npc, activeMystery.npcs, activeMystery.npcRelationships ?? [], activeMystery.day, activeMystery.daytime).map((line) => (
-                  <Text key={line} style={[styles.rollText, line.includes("(hidden") ? styles.discoverableHiddenText : { color: C.text }]}>{line}</Text>
-                ))}
+                ) : relationshipLines.map((line) => {
+                  const segments = line.split(/(\(available from [^)]*\):?|\(above 75\), or Charisma\/Persuasion roll 6 succeeds, or Deception\/Rizz roll 10 succeeds)/g).filter(Boolean);
+                  return (
+                    <Text key={line} style={styles.rollText}>
+                      {segments.map((segment, index) => (
+                        <Text
+                          key={`${index}-${segment}`}
+                          style={segment.startsWith("(available from ") || segment.startsWith("(above 75)") ? styles.gameHiddenText : styles.discoverableHiddenText}
+                        >
+                          {segment}
+                        </Text>
+                      ))}
+                    </Text>
+                  );
+                })}
               </View>
               <View style={styles.mysteryDossierGrid}>
                 {npc.substanceState !== "sober" ? (
@@ -5983,19 +7614,21 @@ export default function App() {
                   </View>
                 ) : null}
                 {mysterySubstanceLine(npc) ? <Text style={[styles.body, { color: npc.substanceState === "drunk" || npc.substanceState === "high" ? "#ff4d4d" : C.dim }]}>{mysterySubstanceLine(npc)}</Text> : null}
-                <Text style={[styles.body, familyStatus.toLowerCase().includes("secret") ? styles.discoverableHiddenText : { color: C.text }]}>Family status: {familyStatus}</Text>
-                <Text style={[styles.body, { color: C.text }]}>Education: {npc.education}</Text>
-                <Text style={[styles.body, { color: C.text }]}>Occupation: {npc.occupation}</Text>
-                <Text style={[styles.body, { color: C.text }]}>Interests: {npc.interests.join(", ")}</Text>
-                <Text style={[styles.body, { color: C.text }]}>Reason of stay: {npc.reasonOfStay}</Text>
-                <Text style={[styles.body, { color: C.text }]}>Current stay: {npc.currentStay ?? "Not recorded yet."}</Text>
-                <Text style={[styles.body, { color: C.text }]}>Planned stay: {npc.plannedStay ?? "Not recorded yet."}</Text>
-                <Text style={[styles.body, { color: C.text }]}>Previous stay: {npc.previousStay ?? "Not recorded yet."}</Text>
+                <Text style={[styles.body, { color: C.text }]}>Family status: <Text style={styles.discoverableHiddenText}>{familyStatus}</Text></Text>
+                <Text style={[styles.body, { color: C.text }]}>Education: <Text style={styles.discoverableHiddenText}>{mysteryDisplayEducation(npc.education)}</Text></Text>
+                <Text style={[styles.body, { color: C.text }]}>Occupation: <Text style={styles.discoverableHiddenText}>{mysteryDisplayOccupation(npc)}</Text></Text>
+                <Text style={[styles.body, { color: C.text }]}>Interests: <Text style={styles.discoverableHiddenText}>{npc.interests.join(", ")}</Text></Text>
+                <Text style={[styles.body, { color: C.text }]}>Reason of stay: <Text style={styles.discoverableHiddenText}>{mysteryDisplayReasonOfStay(npc, activeMystery)}</Text></Text>
+                <Text style={[styles.body, { color: C.text }]}>Current stay: <Text style={styles.discoverableHiddenText}>{npc.currentStay ?? "Not recorded yet."}</Text></Text>
+                <Text style={[styles.body, { color: C.text }]}>Planned stay: <Text style={styles.discoverableHiddenText}>{npc.plannedStay ?? "Not recorded yet."}</Text></Text>
+                <Text style={[styles.body, { color: C.text }]}>Previous stay: <Text style={styles.discoverableHiddenText}>{npc.previousStay ?? "Not recorded yet."}</Text></Text>
                 <Text style={[styles.body, styles.discoverableHiddenText]}>Secret: {readableMysterySecret(npc.secret)}</Text>
-                <Text style={[styles.body, { color: C.text }]}>Quirk: {npc.quirk}</Text>
-                <Text style={[styles.body, { color: C.dim }]}>Substance preference: {npc.substancePreference}</Text>
+                <Text style={[styles.body, { color: C.text }]}>Quirk: <Text style={styles.discoverableHiddenText}>{npc.quirk}</Text></Text>
+                <Text style={[styles.body, { color: C.dim }]}>Substance preference: <Text style={styles.discoverableHiddenText}>{mysteryDisplaySubstancePreference(npc)}</Text></Text>
                 <Text style={[styles.body, { color: C.dim }]}>Current location: {mysteryRoomName(activeMystery, currentMysteryNpcRoomId(activeMystery, npc))}</Text>
-                <Text style={[styles.body, { color: C.dim }]}>Room/station: {mysteryRoomName(activeMystery, npc.role === "Guest" ? npc.roomId : npc.stationRoomId)}</Text>
+                <Text style={[styles.body, { color: C.dim }]}>
+                  {npc.role === "Guest" ? "Room" : "Station"}: <Text style={styles.discoverableHiddenText}>{mysteryRoomName(activeMystery, npc.role === "Guest" ? npc.roomId : npc.stationRoomId)}</Text>
+                </Text>
               </View>
             </Pressable>
           );
@@ -6012,7 +7645,7 @@ export default function App() {
     const familyMemberIds = new Set(familyMembers.map((npc) => npc.id));
     const { parentPairs, pairKey } = mysteryParentAndSiblingSets(activeMystery);
     const isParentOf = (parentId: string, childId: string) => parentPairs.some((pair) => pair.parentId === parentId && pair.childId === childId);
-    const relationshipEdges = mysteryFamilyLinks(activeMystery)
+    const relationshipEdges = mysteryFamilyTreeEdges(activeMystery)
       .filter((link) => familyMemberIds.has(link.fromId) && familyMemberIds.has(link.toId))
       .filter((link, index, list) => list.findIndex((candidate) => pairKey(candidate.fromId, candidate.toId) === pairKey(link.fromId, link.toId) && candidate.kind === link.kind) === index);
     const generationById = new Map<string, number>();
@@ -6028,8 +7661,13 @@ export default function App() {
         if (!otherId || generationById.has(otherId)) continue;
         const otherNpc = activeMystery.npcs.find((npc) => npc.id === otherId);
         if (!otherNpc) continue;
+        const graphDelta = edge.kind === "parentChild"
+          ? isParentOf(currentId, otherId) ? 1 : -1
+          : edge.kind === "auntUncleNibling"
+            ? edge.fromId === currentId ? 1 : -1
+            : 0;
         const labelDelta = mysteryTreeGenerationDeltaForRelationLabel(directMysteryTreeRelationshipLabel(currentNpc, otherNpc, activeMystery));
-        const delta = labelDelta ?? (isParentOf(currentId, otherId) ? 1 : isParentOf(otherId, currentId) ? -1 : 0);
+        const delta = edge.kind === "parentChild" || edge.kind === "auntUncleNibling" ? graphDelta : labelDelta ?? graphDelta;
         generationById.set(otherId, currentGeneration + delta);
         pendingGenerationIds.push(otherId);
       }
@@ -6040,12 +7678,12 @@ export default function App() {
       generationById.set(npc.id, labelDelta ?? (npc.age >= root.age + 16 ? -1 : npc.age <= root.age - 16 || npc.isChild ? 1 : 0));
     }
     const generations = Array.from(new Set(familyMembers.map((npc) => generationById.get(npc.id) ?? 0))).sort((a, b) => a - b);
-    const nodeWidth = 170;
-    const nodeHeight = 82;
-    const nodeGapX = 38;
-    const generationGapY = 126;
-    const canvasPaddingX = 34;
-    const canvasPaddingY = 58;
+    const nodeWidth = 118;
+    const nodeHeight = 112;
+    const nodeGapX = 64;
+    const generationGapY = 112;
+    const canvasPaddingX = 50;
+    const canvasPaddingY = 86;
     const orderGenerationPeople = (people: MysteryNpc[]) => {
       const peopleIds = new Set(people.map((npc) => npc.id));
       const weightedNeighborScore = (npc: MysteryNpc) => relationshipEdges.reduce((score, edge) => {
@@ -6053,8 +7691,9 @@ export default function App() {
         if (!touchesNpc) return score;
         const otherId = edge.fromId === npc.id ? edge.toId : edge.fromId;
         if (!peopleIds.has(otherId)) return score;
-        if (edge.kind === "Marriage" || edge.kind === "Romance" || edge.kind === "Affair") return score + 80;
-        if (edge.kind === "Family") return score + 20;
+        if (edge.kind === "spouse" || edge.kind === "partner" || edge.kind === "lover") return score + 80;
+        if (edge.kind === "parentChild" || edge.kind === "auntUncleNibling") return score + 40;
+        if (edge.kind === "sibling" || edge.kind === "cousin") return score + 20;
         return score + 5;
       }, 0);
       const baseSorted = [...people].sort((a, b) =>
@@ -6067,18 +7706,18 @@ export default function App() {
       const strongestSameGenerationPartner = (npc: MysteryNpc) => {
         const partnerLinks = relationshipEdges
           .filter((edge) =>
-            (edge.kind === "Marriage" || edge.kind === "Romance" || edge.kind === "Affair") &&
+            (edge.kind === "spouse" || edge.kind === "partner" || edge.kind === "lover") &&
             (edge.fromId === npc.id || edge.toId === npc.id)
           )
           .map((edge) => ({
             edge,
             other: activeMystery.npcs.find((candidate) => candidate.id === (edge.fromId === npc.id ? edge.toId : edge.fromId))
           }))
-          .filter((entry): entry is { edge: MysteryNpcRelationship; other: MysteryNpc } => Boolean(entry.other && peopleIds.has(entry.other.id) && !assigned.has(entry.other.id)));
+          .filter((entry): entry is { edge: MysteryFamilyTreeEdge; other: MysteryNpc } => Boolean(entry.other && peopleIds.has(entry.other.id) && !assigned.has(entry.other.id)));
         return partnerLinks
           .sort((a, b) =>
-            (b.edge.kind === "Marriage" ? 3 : b.edge.kind === "Romance" ? 2 : 1) -
-            (a.edge.kind === "Marriage" ? 3 : a.edge.kind === "Romance" ? 2 : 1) ||
+            (b.edge.kind === "spouse" ? 3 : b.edge.kind === "partner" ? 2 : 1) -
+            (a.edge.kind === "spouse" ? 3 : a.edge.kind === "partner" ? 2 : 1) ||
             weightedNeighborScore(b.other) - weightedNeighborScore(a.other)
           )[0]?.other;
       };
@@ -6121,9 +7760,37 @@ export default function App() {
       const rowWidth = row.people.length * nodeWidth + Math.max(0, row.people.length - 1) * nodeGapX;
       const startX = (treeCanvasWidth - rowWidth) / 2;
       const y = canvasPaddingY + rowIndex * (nodeHeight + generationGapY);
-      row.people.forEach((npc, index) => {
-        const x = startX + index * (nodeWidth + nodeGapX);
-        nodeLayout.set(npc.id, { x, y, centerX: x + nodeWidth / 2, centerY: y + nodeHeight / 2, generation: row.generation });
+      const entries = row.people.map((npc, index) => {
+        const parentEdges = relationshipEdges
+          .filter((edge) => edge.kind === "parentChild" && edge.toId === npc.id)
+          .map((edge) => nodeLayout.get(edge.fromId))
+          .filter((layout): layout is { x: number; y: number; centerX: number; centerY: number; generation: number } => Boolean(layout && layout.generation < row.generation));
+        const preferredCenter = parentEdges.length > 0
+          ? parentEdges.reduce((sum, layout) => sum + layout.centerX, 0) / parentEdges.length
+          : null;
+        return {
+          npc,
+          baseCenter: startX + index * (nodeWidth + nodeGapX) + nodeWidth / 2,
+          preferredCenter
+        };
+      });
+      if (entries.some((entry) => entry.preferredCenter !== null)) {
+        entries.sort((a, b) =>
+          (a.preferredCenter ?? a.baseCenter) - (b.preferredCenter ?? b.baseCenter) ||
+          a.baseCenter - b.baseCenter
+        );
+      }
+      let nextX = canvasPaddingX;
+      const placed = entries.map((entry) => {
+        const preferredX = (entry.preferredCenter ?? entry.baseCenter) - nodeWidth / 2;
+        const x = Math.max(nextX, Math.min(treeCanvasWidth - canvasPaddingX - nodeWidth, preferredX));
+        nextX = x + nodeWidth + nodeGapX;
+        return { npc: entry.npc, x };
+      });
+      const overflow = Math.max(0, nextX - nodeGapX - (treeCanvasWidth - canvasPaddingX));
+      placed.forEach(({ npc, x }) => {
+        const adjustedX = Math.max(canvasPaddingX, x - overflow);
+        nodeLayout.set(npc.id, { x: adjustedX, y, centerX: adjustedX + nodeWidth / 2, centerY: y + nodeHeight / 2, generation: row.generation });
       });
     });
     const selectedTreeLayout = root ? nodeLayout.get(root.id) : null;
@@ -6132,34 +7799,84 @@ export default function App() {
       : null;
     const treeTone = themeName === "dark"
       ? {
-        frame: "#8b6a34",
-        shellBg: "#111015",
-        headerBg: "rgba(8, 8, 10, 0.88)",
+        frame: "#9d7540",
+        shellBg: "#10272d",
+        headerBg: "rgba(10, 28, 33, 0.88)",
         headerText: "#f5e3c8",
-        nodeBg: "rgba(26, 23, 24, 0.96)",
-        nodeBorder: "rgba(176, 135, 64, 0.64)",
-        nodeText: "#f4e4ca",
+        nodeBg: "transparent",
+        nodeBorder: "transparent",
+        nodeText: "#f8ead0",
         familyLine: "#d88932",
         loverLine: "#d43b35",
         partnerLine: "#9a62e8"
       }
       : {
         frame: "#d1a65d",
-        shellBg: "#fffaf2",
-        headerBg: "rgba(255, 250, 240, 0.94)",
-        headerText: "#5d4731",
-        nodeBg: "rgba(255, 251, 244, 0.97)",
-        nodeBorder: "rgba(190, 145, 72, 0.58)",
-        nodeText: "#5a4434",
+        shellBg: "#a9d3d8",
+        headerBg: "rgba(232, 250, 251, 0.9)",
+        headerText: "#4b493b",
+        nodeBg: "transparent",
+        nodeBorder: "transparent",
+        nodeText: "#27343a",
         familyLine: "#c9772c",
         loverLine: "#c93434",
         partnerLine: "#8d55d8"
       };
-    const lineColorFor = (kind: MysteryNpcRelationshipKind) => kind === "Affair" ? treeTone.loverLine : kind === "Romance" || kind === "Marriage" ? treeTone.partnerLine : treeTone.familyLine;
-    const lineWidthFor = (kind: MysteryNpcRelationshipKind) => kind === "Family" ? 3 : 4;
+    const lineColorFor = (kind: MysteryFamilyTreeEdgeKind) => kind === "lover" ? treeTone.loverLine : kind === "partner" || kind === "spouse" ? treeTone.partnerLine : treeTone.familyLine;
+    const lineWidthFor = (kind: MysteryFamilyTreeEdgeKind) => kind === "parentChild" || kind === "sibling" || kind === "cousin" || kind === "auntUncleNibling" ? 2 : 3;
     const LineSegment = ({ x, y, width, height, color }: { x: number; y: number; width: number; height: number; color: string }) => (
       <View pointerEvents="none" style={[styles.mysteryFamilyTreeLineSegment, { left: x, top: y, width: Math.max(2, width), height: Math.max(2, height), backgroundColor: color }]} />
     );
+    const treeHorizontal = (x1: number, x2: number, y: number, color: string, thickness: number, key: string) => (
+      <LineSegment key={key} x={Math.min(x1, x2)} y={y - thickness / 2} width={Math.abs(x2 - x1)} height={thickness} color={color} />
+    );
+    const treeVertical = (x: number, y1: number, y2: number, color: string, thickness: number, key: string) => (
+      <LineSegment key={key} x={x - thickness / 2} y={Math.min(y1, y2)} width={thickness} height={Math.abs(y2 - y1)} color={color} />
+    );
+    const siblingRailSegments = (() => {
+      const sameGenerationSiblings = relationshipEdges.filter((edge) => {
+        if (edge.kind !== "sibling") return false;
+        const from = nodeLayout.get(edge.fromId);
+        const to = nodeLayout.get(edge.toId);
+        return Boolean(from && to && from.generation === to.generation);
+      });
+      const groups: string[][] = [];
+      for (const edge of sameGenerationSiblings) {
+        const leftGroup = groups.find((group) => group.includes(edge.fromId));
+        const rightGroup = groups.find((group) => group.includes(edge.toId));
+        if (leftGroup && rightGroup && leftGroup !== rightGroup) {
+          leftGroup.push(...rightGroup);
+          groups.splice(groups.indexOf(rightGroup), 1);
+        } else if (leftGroup) {
+          leftGroup.push(edge.toId);
+        } else if (rightGroup) {
+          rightGroup.push(edge.fromId);
+        } else {
+          groups.push([edge.fromId, edge.toId]);
+        }
+      }
+      const railCountsByGeneration = new Map<number, number>();
+      return groups.flatMap((group) => {
+        const uniqueIds = Array.from(new Set(group));
+        const layouts = uniqueIds
+          .map((id) => nodeLayout.get(id))
+          .filter((layout): layout is { x: number; y: number; centerX: number; centerY: number; generation: number } => Boolean(layout))
+          .sort((a, b) => a.centerX - b.centerX);
+        if (layouts.length < 2) return [];
+        const generation = layouts[0].generation;
+        const count = railCountsByGeneration.get(generation) ?? 0;
+        railCountsByGeneration.set(generation, count + 1);
+        const thickness = 4;
+        const railY = Math.max(18, Math.min(...layouts.map((layout) => layout.y)) - 34 - count * 14);
+        const minX = layouts[0].centerX;
+        const maxX = layouts[layouts.length - 1].centerX;
+        const keyBase = `sibling-rail-${generation}-${uniqueIds.sort().join("-")}`;
+        return [
+          treeHorizontal(minX, maxX, railY, treeTone.familyLine, thickness, `${keyBase}-horizontal`),
+          ...layouts.map((layout, index) => treeVertical(layout.centerX, railY, layout.y, treeTone.familyLine, thickness, `${keyBase}-drop-${index}`))
+        ];
+      });
+    })();
     const sameGenerationCounts = new Map<number, number>();
     const edgeSegments = relationshipEdges.flatMap((edge) => {
       const from = nodeLayout.get(edge.fromId);
@@ -6169,25 +7886,25 @@ export default function App() {
       const toNpc = activeMystery.npcs.find((npc) => npc.id === edge.toId);
       const color = lineColorFor(edge.kind);
       const thickness = lineWidthFor(edge.kind);
-      const horizontal = (x1: number, x2: number, y: number, key: string) => (
-        <LineSegment key={key} x={Math.min(x1, x2)} y={y - thickness / 2} width={Math.abs(x2 - x1)} height={thickness} color={color} />
-      );
-      const vertical = (x: number, y1: number, y2: number, key: string) => (
-        <LineSegment key={key} x={x - thickness / 2} y={Math.min(y1, y2)} width={thickness} height={Math.abs(y2 - y1)} color={color} />
-      );
       if (from.generation === to.generation) {
+        if (edge.kind === "sibling") return [];
+        if (edge.kind === "spouse" || edge.kind === "partner" || edge.kind === "lover") {
+          const left = from.centerX <= to.centerX ? from : to;
+          const right = from.centerX <= to.centerX ? to : from;
+          return [treeHorizontal(left.x + nodeWidth - 5, right.x + 5, left.centerY - 8, color, thickness, `${edge.id}-same-direct`)];
+        }
         const count = sameGenerationCounts.get(from.generation) ?? 0;
         sameGenerationCounts.set(from.generation, count + 1);
         const sameLevelLabel = fromNpc && toNpc ? directMysteryTreeRelationshipLabel(fromNpc, toNpc, activeMystery) : "";
-        const routeAbove = edge.kind === "Family" && Boolean(sameLevelLabel?.match(/\b(sister|brother|cousin)\b/));
+        const routeAbove = edge.kind === "cousin" || Boolean(sameLevelLabel?.match(/\b(sister|brother|cousin)\b/));
         const routeBelow = !routeAbove && from.y < treeCanvasHeight - nodeHeight - 90;
         const routeY = routeBelow ? from.y + nodeHeight + 22 + count * 13 : from.y - 22 - count * 13;
         const fromAnchorY = routeBelow ? from.y + nodeHeight : from.y;
         const toAnchorY = routeBelow ? to.y + nodeHeight : to.y;
         return [
-          vertical(from.centerX, fromAnchorY, routeY, `${edge.id}-same-from`),
-          horizontal(from.centerX, to.centerX, routeY, `${edge.id}-same-mid`),
-          vertical(to.centerX, toAnchorY, routeY, `${edge.id}-same-to`)
+          treeVertical(from.centerX, fromAnchorY, routeY, color, thickness, `${edge.id}-same-from`),
+          treeHorizontal(from.centerX, to.centerX, routeY, color, thickness, `${edge.id}-same-mid`),
+          treeVertical(to.centerX, toAnchorY, routeY, color, thickness, `${edge.id}-same-to`)
         ];
       }
       const fromLower = from.y < to.y;
@@ -6195,9 +7912,9 @@ export default function App() {
       const toAnchorY = fromLower ? to.y : to.y + nodeHeight;
       const routeY = (fromAnchorY + toAnchorY) / 2;
       return [
-        vertical(from.centerX, fromAnchorY, routeY, `${edge.id}-from`),
-        horizontal(from.centerX, to.centerX, routeY, `${edge.id}-mid`),
-        vertical(to.centerX, toAnchorY, routeY, `${edge.id}-to`)
+        treeVertical(from.centerX, fromAnchorY, routeY, color, thickness, `${edge.id}-from`),
+        treeHorizontal(from.centerX, to.centerX, routeY, color, thickness, `${edge.id}-mid`),
+        treeVertical(to.centerX, toAnchorY, routeY, color, thickness, `${edge.id}-to`)
       ];
     });
 
@@ -6225,6 +7942,7 @@ export default function App() {
             <ScrollView ref={mysteryTreeVerticalRef} nestedScrollEnabled showsVerticalScrollIndicator>
               <View style={[styles.mysteryFamilyTreeCanvas, { width: treeCanvasWidth, height: treeCanvasHeight }]}>
                 <View pointerEvents="none" style={styles.mysteryFamilyTreeLineLayer}>
+                  {siblingRailSegments}
                   {edgeSegments}
                 </View>
                 {familyMembers.map((npc) => {
@@ -6244,7 +7962,7 @@ export default function App() {
                         selected && [styles.mysteryFamilyTreeNodeSelected, { borderColor: C.gold, shadowColor: C.gold }]
                       ]}
                     >
-                      <PortraitImage subject={npc} size="map" highlight={selected} />
+                      <PortraitImage subject={npc} size="tree" highlight={selected} />
                       {hasRelationLabel ? (
                         <View style={styles.mysteryFamilyTreeNodeText}>
                           <Text style={[styles.mysteryFamilyTreeNodeName, { color: treeTone.nodeText }]} numberOfLines={1}>{relationLabel}</Text>
@@ -6300,6 +8018,8 @@ export default function App() {
   }
 
   if (screen === "mysteryJournal" && activeMystery) {
+    if (activeMystery.finished) return <MysteryFinishedReport mystery={activeMystery} />;
+
     const archiveMessagesByDay = activeMystery.journal.reduce<
       Record<number, StoryMessage[]>
     >((groups, message) => {
@@ -6341,12 +8061,16 @@ export default function App() {
       const murderLabel = findable.relatedMurderIndex !== undefined ? `, murder ${findable.relatedMurderIndex + 1}` : "";
       return `${findable.kind}${findable.origin ? `/${findable.origin}` : ""}: ${findable.name}${murderLabel}. ${findable.description} Location: ${room}; holder/source: ${holder}; available from ${mysteryAvailabilityLabel(findable.availableDay, findable.availableDaytime)}.${findable.collected ? " Collected." : ""}`;
     });
+    const sanityLedger = activeMystery.sanityLedger ?? ["No ledger recorded for this older save."];
+    const rosterStartIndex = sanityLedger.findIndex((line) => line === "NPC roster:");
+    const visibleSanityLedger = rosterStartIndex >= 0 ? sanityLedger.slice(0, rosterStartIndex) : sanityLedger;
+    const rosterSanityLedger = rosterStartIndex >= 0 ? sanityLedger.slice(rosterStartIndex) : [];
     return Shell({
       children: (
         <>
         <View style={styles.rowBetween}>
-          <Text style={[styles.titleSmall, { color: C.text }]}>Journal</Text>
-          <Button small label="Back" onPress={() => setScreen("mystery")} />
+          <Text style={[styles.titleSmall, { color: C.text }]}>{activeMystery.finished ? "Finished Game Report" : "Journal"}</Text>
+          <Button small label="Back" onPress={() => setScreen(activeMystery.finished ? "past" : "mystery")} />
         </View>
         {Card({
           children: (
@@ -6391,10 +8115,26 @@ export default function App() {
         <Card>
           <Text style={[styles.heading, styles.gameHiddenText]}>Sanity Ledger</Text>
           <View style={[styles.ledgerBox, { borderColor: C.line, backgroundColor: C.panel2 }]}>
-            {(activeMystery.sanityLedger ?? ["No ledger recorded for this older save."]).map((line, index) => (
+            {visibleSanityLedger.map((line, index) => (
               <Text key={`${index}-${line}`} style={[styles.ledgerText, styles.gameHiddenText]}>{line}</Text>
             ))}
           </View>
+          {rosterSanityLedger.length > 0 ? (
+            <>
+              <Button
+                small
+                label={expandedMysteryDebugRoster ? "Hide NPC roster debug" : "Show NPC roster debug"}
+                onPress={() => setExpandedMysteryDebugRoster((current) => !current)}
+              />
+              {expandedMysteryDebugRoster ? (
+                <View style={[styles.ledgerBox, { borderColor: C.line, backgroundColor: C.panel2 }]}>
+                  {rosterSanityLedger.map((line, index) => (
+                    <Text key={`roster-${index}-${line}`} style={[styles.ledgerText, styles.gameHiddenText]}>{line}</Text>
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : null}
         </Card>
         <Text style={[styles.heading, { color: C.text }]}>
           Story Archive
@@ -6552,7 +8292,10 @@ export default function App() {
             <Text style={[styles.heading, { color: C.text }]}>{mystery.title}</Text>
             <Text style={[styles.body, { color: C.text }]}>{mystery.summary ?? (mystery.won ? "The case was solved." : "The case ended unsolved.")}</Text>
             <Text style={[styles.rollText, { color: mystery.won ? C.good : C.warning }]}>{mystery.won ? "Won" : "Lost"}</Text>
-            <Button small label="Delete Report" onPress={() => removeMystery(mystery.id)} />
+            <View style={styles.row}>
+              <Button small label="Open Report" onPress={() => { setActiveMysteryId(mystery.id); setScreen("mysteryJournal"); }} />
+              <Button small label="Delete Report" onPress={() => removeMystery(mystery.id)} variant="warning" />
+            </View>
           </Card>
         ))}
         <Button label="Back" onPress={() => setScreen("menu")} />
@@ -6683,7 +8426,9 @@ const styles = StyleSheet.create({
   portraitImage: { width: "100%", height: "100%" },
   ravenwoodPortraitSheet: { position: "absolute" },
   portraitResidentFrame: { width: 92, height: 156, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
-  portraitMapFrame: { width: 42, height: 72, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitMapFrame: { width: 42, height: 66, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitTreeFrame: { width: 52, height: 86, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  portraitTreeSelectedFrame: { borderWidth: 3, borderColor: "#ff3048", shadowColor: "#ff3048", shadowOpacity: 0.95, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 10 },
   portraitThumbFrame: { width: 36, height: 62, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
   portraitThumb: { width: "100%", height: "100%" },
   picturelessPortrait: { alignItems: "center", justifyContent: "center", gap: 4 },
@@ -6716,16 +8461,22 @@ const styles = StyleSheet.create({
   intoxicatedTrustPill: { shadowColor: "#ff2222", shadowOpacity: 0.45, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   mysteryTrustPillLabel: { fontSize: 8, lineHeight: 10, fontWeight: "900", textTransform: "uppercase" },
   mysteryTrustPillValue: { fontSize: 18, lineHeight: 20, fontWeight: "800" },
+  // Purple is debug/testing only; blue is discoverable information hidden in real play.
   gameHiddenText: { color: "#b97cff", fontWeight: "800" },
   discoverableHiddenText: { color: "#8fd3ff", fontWeight: "800" },
   characterHeader: { flexDirection: "row", alignItems: "center", gap: 14 },
   characterHeaderText: { flex: 1, minWidth: 0, gap: 4 },
   fixedBottomMenu: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
-  bottomMenu: { flexDirection: "row", borderWidth: 1, borderRadius: 8, overflow: "hidden", marginTop: 8 },
+  bottomMenu: { flexDirection: "row", borderWidth: 1, borderRadius: 8, marginTop: 8, position: "relative" },
   bottomMenuItem: { flex: 1, minHeight: 94, alignItems: "center", justifyContent: "center", paddingHorizontal: 4, paddingVertical: 7, borderRightWidth: 1 },
   bottomMenuLabel: { minHeight: 78, alignItems: "center", justifyContent: "center", gap: 3 },
   bottomMenuIconStage: { width: 66, height: 58, alignItems: "center", justifyContent: "center" },
   bottomMenuText: { fontSize: 12, lineHeight: 14, fontWeight: "800", textAlign: "center" },
+  compassMenuButton: { position: "absolute", left: "50%", top: -28, width: 74, height: 74, marginLeft: -37, alignItems: "center", justifyContent: "center", zIndex: 12 },
+  compassOuter: { width: 68, height: 68, borderRadius: 34, alignItems: "center", justifyContent: "center", overflow: "visible", shadowColor: "#f0c45c", shadowOpacity: 0.55, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 12 },
+  compassGlow: { position: "absolute", width: 92, height: 92, borderRadius: 46, backgroundColor: "#f0c45c" },
+  compassGlowCore: { position: "absolute", width: 76, height: 76, borderRadius: 38, backgroundColor: "#fff1a8" },
+  compassImage: { width: 68, height: 68, borderRadius: 34 },
   iconDumpFrame: { overflow: "hidden", alignItems: "center", justifyContent: "center" },
   iconDumpSheet: { position: "absolute" },
   mysteryHeaderProfile: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 10, flex: 1, minWidth: 0 },
@@ -6760,13 +8511,20 @@ const styles = StyleSheet.create({
   mysteryFloorBlock: { gap: 8, marginTop: 8 },
   mysteryFloorTitle: { fontSize: 15, fontWeight: "800", textTransform: "uppercase" },
   mysteryDossierGrid: { gap: 4 },
-  residentPortraitTools: { flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 },
+  residentHeaderBody: { flex: 1, minWidth: 0, alignItems: "flex-start", gap: 10 },
   mysteryPortraitMagnifierButton: { width: 74, height: 74, borderWidth: 1, borderRadius: 8, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   solveButtonRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   solveButton: { minWidth: 138, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "#b5122b", borderWidth: 1, borderColor: "#f0c45c" },
   solveButtonText: { color: "#fff4ec", fontSize: 12, lineHeight: 15, fontWeight: "900" },
   solveButtonSub: { color: "#f6d7c7", fontSize: 10, lineHeight: 13, marginTop: 2 },
   selectorRow: { borderWidth: 1, borderRadius: 8, padding: 10, gap: 4 },
+  dropdownGroup: { gap: 4 },
+  dropdownArrow: { fontSize: 15, lineHeight: 18, fontWeight: "900" },
+  dropdownList: { maxHeight: 190, borderWidth: 1, borderRadius: 8 },
+  dropdownOption: { borderBottomWidth: 1, paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
+  dropdownInventoryOption: { flexDirection: "row", alignItems: "center", gap: 8 },
+  dropdownOptionText: { flex: 1, minWidth: 0 },
+  dropdownEmpty: { padding: 10 },
   accusationMotiveInput: { minHeight: 92, textAlignVertical: "top" },
   substanceBubbleRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 2 },
   substanceBubble: { overflow: "hidden", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#ff2222", color: "#fff", fontSize: 10, lineHeight: 13, fontWeight: "900", textTransform: "uppercase" },
@@ -6784,16 +8542,33 @@ const styles = StyleSheet.create({
   mysteryFamilyTreeCanvas: { minWidth: 620, minHeight: 390, position: "relative" },
   mysteryFamilyTreeLineLayer: { ...StyleSheet.absoluteFillObject },
   mysteryFamilyTreeLineSegment: { position: "absolute", borderRadius: 8 },
-  mysteryFamilyTreeNode: { position: "absolute", width: 170, minHeight: 82, borderWidth: 2, borderRadius: 8, padding: 7, flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 9 },
+  mysteryFamilyTreeNode: { position: "absolute", width: 118, minHeight: 112, borderWidth: 0, borderRadius: 8, padding: 4, flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 5 },
   mysteryFamilyTreeNodeNoText: { justifyContent: "center" },
-  mysteryFamilyTreeNodeSelected: { borderWidth: 3, shadowOpacity: 0.78, shadowRadius: 13, shadowOffset: { width: 0, height: 0 }, elevation: 9 },
-  mysteryFamilyTreeNodeText: { flex: 1, minWidth: 96 },
-  mysteryFamilyTreeNodeName: { fontSize: 12, lineHeight: 16, fontWeight: "900", textTransform: "lowercase" },
-  mysteryFamilyTreeNodeMeta: { fontSize: 9, lineHeight: 12, fontWeight: "800" },
+  mysteryFamilyTreeNodeSelected: { shadowOpacity: 0.78, shadowRadius: 13, shadowOffset: { width: 0, height: 0 }, elevation: 9 },
+  mysteryFamilyTreeNodeText: { width: "100%", alignItems: "center" },
+  mysteryFamilyTreeNodeName: { fontSize: 10, lineHeight: 13, fontWeight: "900", textTransform: "lowercase", textAlign: "center" },
+  mysteryFamilyTreeNodeMeta: { fontSize: 8, lineHeight: 11, fontWeight: "800", textAlign: "center" },
   itemRow: { borderTopWidth: 1, paddingTop: 10, gap: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" },
   itemNameRow: { flex: 1, minWidth: 190, flexDirection: "row", alignItems: "center", gap: 9 },
   inventoryItemIconBubble: { width: 40, height: 40, borderWidth: 1, borderRadius: 8, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   itemName: { flex: 1, minWidth: 0, flexShrink: 1, fontWeight: "800" },
   modalShade: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.62)", alignItems: "center", justifyContent: "center", padding: 20 },
-  modalCard: { width: "100%", maxWidth: 420, borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 }
+  modalCard: { width: "100%", maxWidth: 420, borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 },
+  bodyDiscoveryCard: { borderWidth: 2, shadowColor: "#c41338", shadowOpacity: 0.38, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 10 },
+  bodyDiscoveryHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  bodyDiscoveryIconBubble: { width: 62, height: 62, borderWidth: 2 },
+  bodyDiscoveryTitle: { flex: 1, minWidth: 0 },
+  modalCloseButton: { width: 38, height: 38, borderWidth: 1, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  modalCloseText: { fontSize: 18, lineHeight: 22, fontWeight: "900" },
+  reportHero: { flexDirection: "row", alignItems: "center", gap: 14 },
+  reportHeroText: { flex: 1, minWidth: 0, gap: 6 },
+  reportCrimeRow: { borderTopWidth: 1, paddingTop: 10, marginTop: 6, flexDirection: "row", alignItems: "center", gap: 10 },
+  reportCrimeText: { flex: 1, minWidth: 0, gap: 3 },
+  reportItemRow: { flexDirection: "row", alignItems: "center", gap: 9, marginTop: 6 },
+  reportItemText: { flex: 1, minWidth: 0 },
+  reportSubheading: { marginTop: 12 },
+  reportPortraitRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 8 },
+  reportPortraitTile: { width: 74, alignItems: "center", gap: 4 },
+  reportPortraitLabel: { textAlign: "center" },
+  reportBondRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 7 }
 });
