@@ -880,7 +880,7 @@ const mysteryWitnessClues = [
   "Witness: {witness} saw {killer} near the crime scene at an unusual hour and is frightened to say it openly.",
   "Witness: {witness} noticed {killer} changing clothes after the esitimated time of the murder, but will only speak after trust is gained.",
   "Witness: {witness} overheard {killer} and {victim} arguing about something, but will only speak after trust is gained.",
-  "Witness: {witness} saw {killer} pass by a service route that does not match their public alibi and is frightened to say it openly."
+  "Witness: {witness} saw {killer} pass by a service route shortly after {victim} died that does not match their public alibi and is frightened to say it openly."
 ];
 const mysteryMotiveTemplates = [
   "To prevent {victim} from exposing {killer}'s affair with {linked_character}.",
@@ -1749,6 +1749,14 @@ function mysteryFindablesForScenario(murders: MysteryMurder[], npcs: MysteryNpc[
 
 function mysteryWitnessSummaryFor(killer: MysteryNpc, victim: MysteryNpc, witness: MysteryNpc, roomName: string, method: string, motive: string, proofHint?: string): string {
   const motiveDetail = cleanSentenceEnd(motive).replace(/^To\b/i, "to");
+  const witnessProof = proofHint?.trim();
+  if (witnessProof && /^Witness:/i.test(witnessProof)) {
+    return cleanSentenceEnd(witnessProof)
+      .replace(/^Witness:\s*/i, "")
+      .replace(/,\s*but\s+[^.]*?\bwill only speak after trust is gained\./i, ".")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
   const proofDetail = proofHint
     ? cleanSentenceEnd(proofHint.split("; can be found")[0].split(". Can be found")[0])
     : `evidence connected to ${fullName(victim)}'s death`;
@@ -2784,14 +2792,31 @@ function mysterySecretSentenceForNpc(npc: MysteryNpc): string {
   return `${fullName(npc)} ${secret.charAt(0).toLowerCase()}${secret.slice(1)}.`;
 }
 
-function mysteryServantKnowledgeDetail(staffMember: MysteryNpc, guest: MysteryNpc): string {
+function mysteryServantKnowledgeDetail(staffMember: MysteryNpc, guest: MysteryNpc, npcs: MysteryNpc[] = [staffMember, guest]): string {
   const facts = [
     `reason of stay - ${guest.reasonOfStay}`,
     `interests - ${guest.interests.join(", ")}`,
     `quirk - ${cleanSentenceEnd(guest.quirk)}`,
-    `secret - ${cleanSentenceEnd(guest.secret)}`
+    `secret - ${cleanSentenceEnd(mysteryResolveNpcSecretPlaceholders(guest.secret, guest, npcs))}`
   ];
   return `${fullName(staffMember)} regularly serves ${fullName(guest)} and knows their habits: ${facts.join("; ")}.`;
+}
+
+function mysteryServantKnowledgeDetailForSheet(detail: string, npcs: MysteryNpc[]): string {
+  const match = detail.match(/^(.+?) regularly serves (.+?) and knows their habits:/i);
+  if (!match) return detail;
+  const servedName = match[2].trim().toLowerCase();
+  const guest = [...npcs]
+    .sort((a, b) => fullName(b).length - fullName(a).length)
+    .find((candidate) => fullName(candidate).toLowerCase() === servedName);
+  if (!guest) return detail;
+  const facts = [
+    `reason of stay - ${guest.reasonOfStay}`,
+    `interests - ${guest.interests.join(", ")}`,
+    `quirk - ${cleanSentenceEnd(guest.quirk)}`,
+    `secret - ${cleanSentenceEnd(mysteryResolveNpcSecretPlaceholders(guest.secret, guest, npcs))}`
+  ];
+  return `${match[1].trim()} regularly serves ${fullName(guest)} and knows their habits: ${facts.join("; ")}.`;
 }
 
 function mysteryRelationshipDetailWithKnownSecret(detail: string, npcs: MysteryNpc[], playerFirstName?: string): string {
@@ -2805,11 +2830,21 @@ function mysteryRelationshipDetailWithKnownSecret(detail: string, npcs: MysteryN
 }
 
 function mysteryRelationshipDetailForSheet(detail: string, npcs: MysteryNpc[], playerFirstName?: string): string {
-  return mysteryRelationshipDetailWithKnownSecret(detail, npcs, playerFirstName)
+  return mysteryServantKnowledgeDetailForSheet(mysteryRelationshipDetailWithKnownSecret(detail, npcs, playerFirstName), npcs)
+    .replace(/^.*?\b(Witness:\s*)/i, "$1")
+    .replace(/\b(heard|saw|noticed|overheard)\s+([^.!?]*?)\s+tuck away\s+Witness:\s*/i, "Witness: ")
+    .replace(/,\s*but\s+[^.]*?\bwon't tell the player unless[^.]*\./gi, ".")
+    .replace(/,\s*but\s+[^.]*?\bwill not tell the player unless[^.]*\./gi, ".")
+    .replace(/,\s*but\s+[^.]*?\bwill only speak after trust is gained\./gi, ".")
+    .replace(/\bpass by a service route that does not match their public alibi and is frightened to say it openly shortly after ([^.!?]+?) died\b/gi, "pass by a service route shortly after $1 died that does not match their public alibi and is frightened to say it openly")
+    .replace(/\bshortly after ([^.!?]+?) died,\s*but\b/gi, "shortly after $1 died")
     .replace(/became romantically involved during an earlier Ravenwood stay/gi, "became romantically involved during private time at Ravenwood")
     .replace(/has been meeting (.*?) in private again after a previous stay/gi, "has been meeting $1 in private around Ravenwood")
     .replace(/became close during an earlier Ravenwood stay and have remained loyal friends/gi, "became close during their time around Ravenwood and have remained loyal friends")
-    .replace(/which could ruin more than one reputation/gi, "which could ruin both of their reputations");
+    .replace(/which could ruin more than one reputation/gi, "which could ruin both of their reputations")
+    .replace(/^Witness:\s*/i, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function mysteryRelationshipLinesFor(npc: MysteryNpc, npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], currentDay?: number, currentDaytime?: Daytime, playerFirstName?: string, familyGraph?: MysteryFamilyGraph): string[] {
@@ -2820,11 +2855,7 @@ function mysteryRelationshipLinesFor(npc: MysteryNpc, npcs: MysteryNpc[], relati
       const otherId = relationship.fromId === npc.id ? relationship.toId : relationship.fromId;
       const other = npcs.find((candidate) => candidate.id === otherId);
       const availableFrom = relationship.availableDay && relationship.availableDaytime
-        ? `, available from ${mysteryAvailabilityLabel(relationship.availableDay, relationship.availableDaytime)}${
-          currentDay && currentDaytime && !mysteryTimeHasArrived(currentDay, currentDaytime, relationship.availableDay, relationship.availableDaytime)
-            ? ", not yet knowable in real play"
-            : ""
-        }`
+        ? `, available from ${mysteryAvailabilityLabel(relationship.availableDay, relationship.availableDaytime)}`
         : "";
       const visibility = relationship.hidden ? `hidden, testing visible${availableFrom}` : "known";
       const graphRolePhrase = other && (relationship.kind === "Family" || relationship.kind === "Marriage")
@@ -2852,7 +2883,7 @@ function mysteryRelationshipLinesFor(npc: MysteryNpc, npcs: MysteryNpc[], relati
 
 function mysteryResidentRelationshipLineForDisplay(line: string): string {
   return line
-    .replace(/\(hidden, testing visible,\s*([^)]*)\):\s*/g, "($1): ")
+    .replace(/\(hidden, testing visible(?:,\s*[^)]*)?\):\s*/g, "")
     .replace(/\(hidden, testing visible\):?\s*/g, "")
     .replace(/\(known\):?\s*/g, "")
     .replace(/\s+\./g, ".")
@@ -3356,21 +3387,21 @@ function mysteryFriendshipDetail(from: MysteryNpc, to: MysteryNpc): string {
     return pick([
       `${fullName(from)} and ${fullName(to)} built a good friendship while working at Ravenwood and still trust each other more than most people in the house.`,
       `${fullName(from)} quietly looks out for ${fullName(to)} because their staff friendship has survived several difficult shifts.`,
-      `${fullName(from)} and ${fullName(to)} often defend each other when staff gossip begins.`
+      `${fullName(from)} and ${fullName(to)} defend each other when gossip begins.`
     ]);
   }
   if (context === "mixed") {
     return pick([
       `${fullName(from)} and ${fullName(to)} became friendly through repeated Ravenwood visits and still trust each other more than most people in the house.`,
       `${fullName(from)} quietly looks out for ${fullName(to)} because their friendship crosses the staff-guest divide.`,
-      `${fullName(from)} and ${fullName(to)} often defend each other when gossip begins in the house.`
+      `${fullName(from)} and ${fullName(to)} defend each other when gossip begins.`
     ]);
   }
   return pick([
     `${fullName(from)} and ${fullName(to)} share an old friendship and still trust each other more than most people at Ravenwood.`,
     `${fullName(from)} and ${fullName(to)} became close during their time around Ravenwood and have remained loyal friends.`,
     `${fullName(from)} quietly looks out for ${fullName(to)} because their friendship has survived several difficult years.`,
-    `${fullName(from)} and ${fullName(to)} often defend each other when gossip begins in the house.`
+    `${fullName(from)} and ${fullName(to)} defend each other when gossip begins.`
   ]);
 }
 
@@ -3396,7 +3427,7 @@ function buildMysteryNpcRelationshipPool(npcs: MysteryNpc[], relationships: Myst
   for (const staffMember of staff) {
     const guest = guests.length > 0 ? pick(guests) : undefined;
     if (guest && roll(0.38)) {
-      const detail = mysteryServantKnowledgeDetail(staffMember, guest);
+      const detail = mysteryServantKnowledgeDetail(staffMember, guest, npcs);
       ensureSharedRavenwoodHistory(staffMember, guest);
       addRandom(staffMember, guest, pick<MysteryNpcRelationshipKind>(["Work", "Suspicion", "Protection"]), detail, roll(0.45), rand(-8, 6), rand(1, 7));
     }
