@@ -304,31 +304,83 @@ function appBackgroundForScreen(themeName: ThemeName, screen: Screen): ImageSour
   return backgrounds[index % backgrounds.length];
 }
 
-type IconDumpKey = "magnifier" | "book" | "candle" | "shadowPortrait" | "bag" | "key" | "letter" | "document" | "money" | "death" | "cards" | "vial" | "bettingSlip" | "childrenToy" | "cuffLink" | "lipstick" | "matchBox" | "newspaper" | "weddingInvitation" | "funeralProgramme" | "cigarettes" | "handgun";
-const iconAssets: Record<IconDumpKey, { source: ImageSourcePropType; width: number; height: number; scale?: number; offsetX?: number; offsetY?: number }> = {
-  magnifier: { source: require("./assets/ravenwood/icons/magnifier.png"), width: 138, height: 158, scale: 0.96, offsetX: -1, offsetY: 1 },
-  book: { source: require("./assets/ravenwood/icons/book.png"), width: 158, height: 168, scale: 0.96, offsetX: -1, offsetY: 2 },
-  candle: { source: require("./assets/ravenwood/icons/candle.png"), width: 160, height: 202, scale: 0.98, offsetY: -1 },
-  shadowPortrait: { source: require("./assets/ravenwood/icons/shadow-portrait.png"), width: 146, height: 164, scale: 0.96, offsetY: 1 },
-  bag: { source: require("./assets/ravenwood/icons/bag.png"), width: 168, height: 180, scale: 0.96, offsetY: 1 },
-  key: { source: require("./assets/ravenwood/icons/key.png"), width: 179, height: 176, scale: 0.96 },
-  letter: { source: require("./assets/ravenwood/icons/letter.png"), width: 185, height: 174, scale: 0.96 },
-  document: { source: require("./assets/ravenwood/icons/document.png"), width: 177, height: 189, scale: 0.96 },
-  money: { source: require("./assets/ravenwood/icons/money.png"), width: 158, height: 177, scale: 0.96 },
-  death: { source: require("./assets/ravenwood/icons/death.png"), width: 178, height: 170, scale: 0.96 },
-  cards: { source: require("./assets/ravenwood/icons/cards.png"), width: 198, height: 218, scale: 0.96 },
-  vial: { source: require("./assets/ravenwood/icons/vial.png"), width: 178, height: 182, scale: 0.96 },
-  bettingSlip: { source: require("./assets/ravenwood/icons/optimized/betting_slip.png"), width: 320, height: 213, scale: 1.02 },
+type IconAsset = { source: ImageSourcePropType; width: number; height: number; scale?: number; offsetX?: number; offsetY?: number };
+const iconAssets = {
+  magnifier: { source: require("./assets/ravenwood/icons/optimized/magnifier.png"), width: 175, height: 179, scale: 0.96, offsetX: -1, offsetY: 1 },
+  book: { source: require("./assets/ravenwood/icons/optimized/book.png"), width: 179, height: 175, scale: 0.96, offsetX: -1, offsetY: 2 },
+  candle: { source: require("./assets/ravenwood/icons/optimized/candle.png"), width: 183, height: 194, scale: 0.98, offsetY: -1 },
+  shadowPortrait: { source: require("./assets/ravenwood/icons/optimized/shadow_portrait.png"), width: 162, height: 188, scale: 0.96, offsetY: 1 },
+  bag: { source: require("./assets/ravenwood/icons/optimized/bag.png"), width: 189, height: 180, scale: 0.96, offsetY: 1 },
+  key: { source: require("./assets/ravenwood/icons/optimized/key.png"), width: 179, height: 176, scale: 0.96 },
+  letter: { source: require("./assets/ravenwood/icons/optimized/letter.png"), width: 185, height: 174, scale: 0.96 },
+  document: { source: require("./assets/ravenwood/icons/optimized/document.png"), width: 177, height: 189, scale: 0.96 },
+  money: { source: require("./assets/ravenwood/icons/optimized/money.png"), width: 158, height: 177, scale: 0.96 },
+  death: { source: require("./assets/ravenwood/icons/optimized/death.png"), width: 178, height: 170, scale: 0.96 },
+  cards: { source: require("./assets/ravenwood/icons/optimized/cards.png"), width: 198, height: 218, scale: 0.96 },
+  bettingSlip: { source: require("./assets/ravenwood/icons/optimized/betting_slip.png"), width: 320, height: 320, scale: 1.02 },
+  bettingSlipWithMoney: { source: require("./assets/ravenwood/icons/optimized/betting_slip_with_money.png"), width: 320, height: 320, scale: 1.02 },
+  bribeNote: { source: require("./assets/ravenwood/icons/optimized/bribe_note.png"), width: 320, height: 320, scale: 1.02 },
+  camera: { source: require("./assets/ravenwood/icons/optimized/camera.png"), width: 320, height: 320, scale: 1.02 },
+  candlestick: { source: require("./assets/ravenwood/icons/optimized/candlestick.png"), width: 320, height: 320, scale: 1.02 },
+  cassette: { source: require("./assets/ravenwood/icons/optimized/casette.png"), width: 320, height: 320, scale: 1.02 },
   childrenToy: { source: require("./assets/ravenwood/icons/optimized/children_toy.png"), width: 213, height: 320, scale: 1.03 },
-  cuffLink: { source: require("./assets/ravenwood/icons/optimized/cuff_link.png"), width: 320, height: 320, scale: 1.02 },
-  lipstick: { source: require("./assets/ravenwood/icons/optimized/lipstick.png"), width: 213, height: 320, scale: 1.03 },
-  matchBox: { source: require("./assets/ravenwood/icons/optimized/match_box.png"), width: 320, height: 320, scale: 1.02 },
-  newspaper: { source: require("./assets/ravenwood/icons/optimized/newspaper.png"), width: 320, height: 320, scale: 1.02 },
-  weddingInvitation: { source: require("./assets/ravenwood/icons/optimized/wedding_invitation.png"), width: 320, height: 320, scale: 1.02 },
-  funeralProgramme: { source: require("./assets/ravenwood/icons/optimized/funeral_programme.png"), width: 213, height: 320, scale: 1.03 },
+  childToy: { source: require("./assets/ravenwood/icons/optimized/child_toy.png"), width: 320, height: 320, scale: 1.02 },
   cigarettes: { source: require("./assets/ravenwood/icons/optimized/cigarettes.png"), width: 320, height: 320, scale: 1.02 },
-  handgun: { source: require("./assets/ravenwood/icons/optimized/hanggun.png"), width: 320, height: 213, scale: 1.02 }
-};
+  cigaretteCase: { source: require("./assets/ravenwood/icons/optimized/engraved_cigarette_case.png"), width: 320, height: 213, scale: 1.02 },
+  cuffLink: { source: require("./assets/ravenwood/icons/optimized/cuff_link.png"), width: 320, height: 320, scale: 1.02 },
+  cup: { source: require("./assets/ravenwood/icons/optimized/cup.png"), width: 320, height: 320, scale: 1.02 },
+  diary: { source: require("./assets/ravenwood/icons/optimized/diary.png"), width: 320, height: 320, scale: 1.02 },
+  diaryKey: { source: require("./assets/ravenwood/icons/optimized/diary_key.png"), width: 320, height: 320, scale: 1.02 },
+  electricalWire: { source: require("./assets/ravenwood/icons/optimized/electrical_wire.png"), width: 320, height: 320, scale: 1.02 },
+  forgedId: { source: require("./assets/ravenwood/icons/optimized/forged_id.png"), width: 320, height: 320, scale: 1.02 },
+  forgedWill: { source: require("./assets/ravenwood/icons/optimized/forged_will.png"), width: 320, height: 320, scale: 1.02 },
+  funeralProgramme: { source: require("./assets/ravenwood/icons/optimized/funeral_programme.png"), width: 213, height: 320, scale: 1.03 },
+  guestRoomKey: { source: require("./assets/ravenwood/icons/optimized/guest_room_key.png"), width: 320, height: 320, scale: 1.02 },
+  gloves: { source: require("./assets/ravenwood/icons/optimized/feminine_gloves.png"), width: 320, height: 320, scale: 1.02 },
+  hairLock: { source: require("./assets/ravenwood/icons/optimized/hair_lock.png"), width: 320, height: 320, scale: 1.02 },
+  handgun: { source: require("./assets/ravenwood/icons/optimized/hanggun.png"), width: 320, height: 213, scale: 1.02 },
+  knife: { source: require("./assets/ravenwood/icons/optimized/letter_opener_or_knife.png"), width: 320, height: 320, scale: 1.02 },
+  letterWithDocument: { source: require("./assets/ravenwood/icons/optimized/letter_with_document.png"), width: 320, height: 320, scale: 1.02 },
+  lighter: { source: require("./assets/ravenwood/icons/optimized/lighter.png"), width: 320, height: 213, scale: 1.02 },
+  lipstick: { source: require("./assets/ravenwood/icons/optimized/lipstick.png"), width: 213, height: 320, scale: 1.03 },
+  locket: { source: require("./assets/ravenwood/icons/optimized/locket.png"), width: 320, height: 320, scale: 1.02 },
+  lockpicks: { source: require("./assets/ravenwood/icons/optimized/lock_picking_tools.png"), width: 320, height: 320, scale: 1.02 },
+  map: { source: require("./assets/ravenwood/icons/optimized/map.png"), width: 320, height: 213, scale: 1.02 },
+  masterKey: { source: require("./assets/ravenwood/icons/optimized/master_key.png"), width: 320, height: 320, scale: 1.02 },
+  matchBox: { source: require("./assets/ravenwood/icons/optimized/match_box.png"), width: 320, height: 320, scale: 1.02 },
+  moneyEnvelope: { source: require("./assets/ravenwood/icons/optimized/money_in_envelope.png"), width: 320, height: 213, scale: 1.02 },
+  newspaper: { source: require("./assets/ravenwood/icons/optimized/newspaper.png"), width: 320, height: 320, scale: 1.02 },
+  newspaperClipping: { source: require("./assets/ravenwood/icons/optimized/part_of_newspaper.png"), width: 320, height: 320, scale: 1.02 },
+  notes: { source: require("./assets/ravenwood/icons/optimized/notes.png"), width: 320, height: 320, scale: 1.02 },
+  pen: { source: require("./assets/ravenwood/icons/optimized/pen.png"), width: 320, height: 320, scale: 1.02 },
+  pencil: { source: require("./assets/ravenwood/icons/optimized/pencil.png"), width: 320, height: 320, scale: 1.02 },
+  perfume: { source: require("./assets/ravenwood/icons/optimized/perfume.png"), width: 320, height: 320, scale: 1.02 },
+  plate: { source: require("./assets/ravenwood/icons/optimized/plate.png"), width: 320, height: 320, scale: 1.02 },
+  pocketWatch: { source: require("./assets/ravenwood/icons/optimized/pocket_watch.png"), width: 320, height: 320, scale: 1.02 },
+  poison: { source: require("./assets/ravenwood/icons/optimized/poison.png"), width: 310, height: 320, scale: 1.02 },
+  policeBadge: { source: require("./assets/ravenwood/icons/optimized/police_badge.png"), width: 320, height: 320, scale: 1.02 },
+  portrait: { source: require("./assets/ravenwood/icons/optimized/portrait.png"), width: 320, height: 320, scale: 1.02 },
+  redLiquid: { source: require("./assets/ravenwood/icons/optimized/red_liquid.png"), width: 320, height: 320, scale: 1.02 },
+  romanceNovel: { source: require("./assets/ravenwood/icons/optimized/romance_novel.png"), width: 320, height: 320, scale: 1.02 },
+  screwdriver: { source: require("./assets/ravenwood/icons/optimized/screwdriver.png"), width: 213, height: 320, scale: 1.03 },
+  serviceKeys: { source: require("./assets/ravenwood/icons/optimized/service_keys.png"), width: 320, height: 320, scale: 1.02 },
+  sewingKit: { source: require("./assets/ravenwood/icons/optimized/sewing_kit.png"), width: 320, height: 320, scale: 1.02 },
+  shovel: { source: require("./assets/ravenwood/icons/optimized/shovel.png"), width: 320, height: 320, scale: 1.02 },
+  sleepingPills: { source: require("./assets/ravenwood/icons/optimized/sleeping_pills.png"), width: 320, height: 320, scale: 1.02 },
+  spoon: { source: require("./assets/ravenwood/icons/optimized/spoon.png"), width: 320, height: 320, scale: 1.02 },
+  sweetWrapper: { source: require("./assets/ravenwood/icons/optimized/sweet_wrapper.png"), width: 320, height: 320, scale: 1.02 },
+  syringe: { source: require("./assets/ravenwood/icons/optimized/syringe.png"), width: 320, height: 320, scale: 1.02 },
+  thread: { source: require("./assets/ravenwood/icons/optimized/thread.png"), width: 320, height: 320, scale: 1.02 },
+  ticket: { source: require("./assets/ravenwood/icons/optimized/ticket.png"), width: 320, height: 320, scale: 1.02 },
+  tornFabric: { source: require("./assets/ravenwood/icons/optimized/torn_fabric.png"), width: 320, height: 320, scale: 1.02 },
+  towel: { source: require("./assets/ravenwood/icons/optimized/towel_or_cloth.png"), width: 320, height: 320, scale: 1.02 },
+  vial: { source: require("./assets/ravenwood/icons/optimized/vial.png"), width: 196, height: 185, scale: 0.96 },
+  wallet: { source: require("./assets/ravenwood/icons/optimized/wallet.png"), width: 320, height: 320, scale: 1.02 },
+  weddingInvitation: { source: require("./assets/ravenwood/icons/optimized/wedding_invitation.png"), width: 320, height: 320, scale: 1.02 },
+  wineGlass: { source: require("./assets/ravenwood/icons/optimized/wine_glass.png"), width: 320, height: 320, scale: 1.02 },
+  wrench: { source: require("./assets/ravenwood/icons/optimized/wrench.png"), width: 320, height: 320, scale: 1.02 }
+} satisfies Record<string, IconAsset>;
+type IconDumpKey = keyof typeof iconAssets;
 const ravenwoodCompassIcon = require("./assets/ravenwood/icons/optimized/compass.png");
 
 type MysteryRollOutcome = {
@@ -1253,22 +1305,73 @@ function mysteryFindableAvailability(findable: MysteryFindable, day: number, day
 
 function mysteryInventoryIconFor(item: string): IconDumpKey | undefined {
   const lower = item.toLowerCase();
+  if (/\b(betting slip|wager|gambling|bookmaker|racing stub)\b/.test(lower) && /\b(money|cash|note|debt|desperate)\b/.test(lower)) return "bettingSlipWithMoney";
   if (/\b(betting slip|wager|gambling|bookmaker|racing stub)\b/.test(lower)) return "bettingSlip";
+  if (/\b(bribe|bribing|bribery)\b/.test(lower)) return "bribeNote";
+  if (/\b(master room key|master key)\b/.test(lower)) return "masterKey";
+  if (/\b(service key|service keys|staff key|staff keys|grand hall service key)\b/.test(lower)) return "serviceKeys";
+  if (/\b(guest room|room key)\b/.test(lower)) return "guestRoomKey";
+  if (/\bdiary key\b/.test(lower)) return "diaryKey";
+  if (/\bgarage key\b/.test(lower)) return "key";
   if (/\b(wedding invitation|wedding invite|engagement invitation)\b/.test(lower)) return "weddingInvitation";
   if (/\b(funeral programme|funeral program|memorial programme|memorial program)\b/.test(lower)) return "funeralProgramme";
-  if (/\b(newspaper|newspapers|article|articles|scandal column|columns|press clipping|clipping)\b/.test(lower)) return "newspaper";
-  if (/\b(cigarette|cigarettes|cigarette case|tobacco|cigar|cigars)\b/.test(lower)) return "cigarettes";
-  if (/\b(matchbox|match box|matchbook|match book|matches|lighter)\b/.test(lower)) return "matchBox";
+  if (/\b(press clipping|clipping|part of newspaper)\b/.test(lower)) return "newspaperClipping";
+  if (/\b(newspaper|newspapers|article|articles|scandal column|columns)\b/.test(lower)) return "newspaper";
+  if (/\b(cigarette case|silver cigarette case|engraved cigarette case)\b/.test(lower)) return "cigaretteCase";
+  if (/\b(cigarette|cigarettes|tobacco|cigar|cigars)\b/.test(lower)) return "cigarettes";
+  if (/\b(lighter)\b/.test(lower)) return "lighter";
+  if (/\b(matchbox|match box|matchbook|match book|matches)\b/.test(lower)) return "matchBox";
   if (/\b(handgun|gun|pistol|revolver|firearm|bullet|bullets|cartridge|cartridges)\b/.test(lower)) return "handgun";
+  if (/\b(knife|letter opener|blade|sharp tool)\b/.test(lower)) return "knife";
+  if (/\b(screwdriver)\b/.test(lower)) return "screwdriver";
+  if (/\b(wrench|gas valve)\b/.test(lower)) return "wrench";
+  if (/\b(electrical wire|wire|copper residue|tampered wire)\b/.test(lower)) return "electricalWire";
+  if (/\b(lock-picking|lock picking|lockpick|lockpicks)\b/.test(lower)) return "lockpicks";
+  if (/\b(fishing line)\b/.test(lower)) return "thread";
+  if (/\b(thread|sewing|sewing kit)\b/.test(lower)) return "sewingKit";
+  if (/\b(fabric strip|torn fabric|scarf|ribbon)\b/.test(lower)) return "tornFabric";
+  if (/\b(towel|cloth|handkerchief|napkin|rag|dusty sheet|linen)\b/.test(lower)) return "towel";
+  if (/\b(candlestick|candle stick|brass candlestick)\b/.test(lower)) return "candlestick";
+  if (/\b(candle|lantern)\b/.test(lower)) return "candle";
+  if (/\b(wine glass|champagne glass|broken glass|poisoned glass|glass)\b/.test(lower)) return "wineGlass";
+  if (/\b(coffee cup|cup)\b/.test(lower)) return "cup";
+  if (/\b(serving plate|plate)\b/.test(lower)) return "plate";
+  if (/\b(teaspoon|spoon)\b/.test(lower)) return "spoon";
+  if (/\b(polaroid|camera|photo machine|disposable camera)\b/.test(lower)) return "camera";
+  if (/\b(cassette|tape|recorded argument)\b/.test(lower)) return "cassette";
+  if (/\b(pocket watch|watch)\b/.test(lower)) return "pocketWatch";
   if (/\b(cufflink|cufflinks|cuff link|cuff links|button|buttons|jewellery|jewelry)\b/.test(lower)) return "cuffLink";
-  if (/\b(lipstick|makeup|make-up|rouge|powder compact|compact|perfume)\b/.test(lower)) return "lipstick";
-  if (/\b(toy|doll|teddy|child's|children's|childrens|drawing|crayon|marble|marbles)\b/.test(lower)) return "childrenToy";
-  if (/\b(vial|vials|medicine|prescription|aspirin|sleeping-pill|sleeping pill|drug container|drug containers|empty drug|ampoule|ampoules|syringe|poison|rat poison|cleaning fluid)\b/.test(lower)) return "vial";
+  if (/\b(locket|ring|engagement ring|medal|token)\b/.test(lower)) return "locket";
+  if (/\b(lipstick|makeup|make-up|rouge|powder compact|compact)\b/.test(lower)) return "lipstick";
+  if (/\b(perfume)\b/.test(lower)) return "perfume";
+  if (/\b(hair lock|lock of hair)\b/.test(lower)) return "hairLock";
+  if (/\b(toy|doll|teddy|child's|children's|childrens|crayon|marble|marbles)\b/.test(lower)) return "childToy";
+  if (/\b(drawing)\b/.test(lower)) return "childrenToy";
+  if (/\b(syringe)\b/.test(lower)) return "syringe";
+  if (/\b(sleeping-pill|sleeping pill|sleeping-pills|sleeping pills)\b/.test(lower)) return "sleepingPills";
+  if (/\b(poison|rat poison|cleaning fluid)\b/.test(lower)) return "poison";
+  if (/\b(vial|vials|medicine|prescription|aspirin|drug container|drug containers|empty drug|ampoule|ampoules|medicine tin)\b/.test(lower)) return "vial";
+  if (/\b(wallet)\b/.test(lower)) return "wallet";
+  if (/\b(gloves|latex gloves)\b/.test(lower)) return "gloves";
+  if (/\b(shovel)\b/.test(lower)) return "shovel";
+  if (/\b(comb)\b/.test(lower)) return "bag";
+  if (/\b(sweet wrapper|wrapper)\b/.test(lower)) return "sweetWrapper";
+  if (/\b(romance novel|novel|book)\b/.test(lower)) return "romanceNovel";
+  if (/\b(pencil)\b/.test(lower)) return "pencil";
+  if (/\b(fountain pen|pen)\b/.test(lower)) return "pen";
+  if (/\b(forged id|id card|identification card|university identification)\b/.test(lower)) return "forgedId";
+  if (/\b(will|inheritance)\b/.test(lower)) return "forgedWill";
+  if (/\b(badge)\b/.test(lower)) return "policeBadge";
+  if (/\b(ticket|calling card|membership card|business card|card)\b/.test(lower)) return "ticket";
+  if (/\b(map)\b/.test(lower)) return "map";
+  if (/\b(photo|photograph|portrait)\b/.test(lower)) return "portrait";
+  if (/\b(ledger page|ledger note|debt ledger|room ledger|notebook|notes|list|statement)\b/.test(lower)) return "notes";
+  if (/\b(letter with document|divorce papers|adoption document|document draft|papers)\b/.test(lower)) return "letterWithDocument";
   if (/\b(card|cards|deck)\b/.test(lower)) return "cards";
   if (/\bkey\b/.test(lower)) return "key";
   if (/\b(letter|letters|envelope|envelopes|apology|threatening)\b/.test(lower)) return "letter";
   if (/\b(money|coin|coins|gold|cash|bill|bills|fund|funds|currency)\b/.test(lower)) return "money";
-  if (/\b(candle|candlestick|lantern)\b/.test(lower)) return "candle";
+  if (/\b(receipt|programme|program|permit|contract|deed|certificate|catalogue|catalog|schedule|tag|chit)\b/.test(lower)) return "document";
   if (/\b(document|documents|paper|papers|ledger|slip|slips|will|id card|identification|receipt|programme|program|permit|contract|deed|certificate|notebook|note|newspaper|article|catalogue|catalog|map|photo|photograph|drawing|invitation|badge|ticket|statement|list)\b/.test(lower)) return "document";
   return "bag";
 }
@@ -3466,7 +3569,7 @@ function buildMysteryNpcRelationshipPool(npcs: MysteryNpc[], relationships: Myst
       const detail = kind === "Friendship"
         ? mysteryFriendshipDetail(from, to)
         : pick([
-          `${fullName(from)} owes ${fullName(to)} a favor and resents the reminder.`,
+          `${fullName(from)} owes ${fullName(to)} a favor.`,
           `${fullName(from)} and ${fullName(to)} were seen arguing before the house was sealed.`,
           `${fullName(from)} knows an embarrassing secret about ${fullName(to)}.`,
           `${fullName(from)} considers ${fullName(to)} useful, but not trustworthy.`,
@@ -4065,10 +4168,13 @@ inventory,
 finished: false,
 won: false,
   };
-  return {
-    ...mystery,
-    sanityLedger: [...buildMysterySanityLedger(mystery), ...familySanityLines, ...profileSanityLines, ...finalFamilySanityLines, ...finalProfileSanityLines, ...scenarioSanityLines].slice(-600)
-  };
+  void buildMysterySanityLedger;
+  void familySanityLines;
+  void profileSanityLines;
+  void finalFamilySanityLines;
+  void finalProfileSanityLines;
+  void scenarioSanityLines;
+  return mystery;
 }
 
 export default function App() {
@@ -4089,7 +4195,6 @@ export default function App() {
   const [ravenwoodAiTestInput, setRavenwoodAiTestInput] = useState("Ask Nadine what she noticed after dinner.");
   const [ravenwoodAiTestOutput, setRavenwoodAiTestOutput] = useState("");
   const [expandedMysteryArchiveDays, setExpandedMysteryArchiveDays] = useState<Record<number, boolean>>({});
-  const [expandedMysteryDebugRoster, setExpandedMysteryDebugRoster] = useState(false);
   const [mysteryTreeViewport, setMysteryTreeViewport] = useState({ width: 0, height: 0 });
   const [solveMurderIndex, setSolveMurderIndex] = useState<number | null>(null);
   const [accusationKillerId, setAccusationKillerId] = useState<string | null>(null);
@@ -4108,6 +4213,7 @@ export default function App() {
   const detectiveCarouselRef = useRef<ScrollView | null>(null);
   const detectiveCarouselOffsetRef = useRef(0);
   const storyScrollRef = useRef<ScrollView | null>(null);
+  const scrollStoryTopFromCompassRef = useRef(false);
   const storyMessageOffsetsRef = useRef<Record<string, number>>({});
   const compassGlow = useRef(new Animated.Value(0)).current;
   const C = themes[themeName];
@@ -4117,6 +4223,10 @@ export default function App() {
     () => ravenwoodDetectiveProfiles.find((profile) => profile.id === selectedMysteryDetectiveId) ?? ravenwoodDetectiveProfiles[0],
     [selectedMysteryDetectiveId]
   );
+
+  useEffect(() => {
+    setMysteries((current) => current.map((mystery) => (mystery.sanityLedger?.length ? { ...mystery, sanityLedger: [] } : mystery)));
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return;
@@ -4171,6 +4281,15 @@ export default function App() {
     }, 80);
     return () => clearTimeout(timer);
   }, [screen, activeMystery?.storyFocusMessageId, activeMysteryVisibleMessageKey]);
+
+  useEffect(() => {
+    if (screen !== "mystery" || !scrollStoryTopFromCompassRef.current) return;
+    const timer = setTimeout(() => {
+      storyScrollRef.current?.scrollTo({ y: 0, animated: true });
+      scrollStoryTopFromCompassRef.current = false;
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [screen, activeMysteryVisibleMessageKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4235,7 +4354,10 @@ export default function App() {
   }
 
   function patchMystery(mutator: (mystery: MysteryGame) => MysteryGame) {
-    setMysteries((current) => current.map((mystery) => (mystery.id === activeMysteryId ? mutator(mystery) : mystery)));
+    setMysteries((current) => current.map((mystery) => {
+      const cleaned = { ...mystery, sanityLedger: [] };
+      return mystery.id === activeMysteryId ? { ...mutator(cleaned), sanityLedger: [] } : cleaned;
+    }));
   }
 
   function mysteryRoomName(mystery: MysteryGame, roomId: string): string {
@@ -6574,7 +6696,7 @@ export default function App() {
   }
 
   function IconDumpIcon({ name, size = 22, style, scaleBoost }: { name: IconDumpKey; size?: number; style?: StyleProp<ViewStyle>; scaleBoost?: number }) {
-    const icon = iconAssets[name];
+    const icon: IconAsset = iconAssets[name];
     const scale = Math.min(size / icon.width, size / icon.height) * (scaleBoost ?? icon.scale ?? 1);
     return (
       <View style={[styles.iconDumpFrame, { width: size, height: size }, style]}>
@@ -6679,6 +6801,7 @@ export default function App() {
     const frameHeight = isHero ? 190 : isLarge ? 128 : isResident ? 156 : isMap ? 66 : isTree ? 86 : 62;
     if (ravenwoodPortrait) {
       const isStaffPortrait = ravenwoodPortrait.sourceKind === "staff";
+      const isGuestPortrait = ravenwoodPortrait.sourceKind === "guest";
       const sourceWidth = ravenwoodPortrait.imageWidth;
       const sourceHeight = ravenwoodPortrait.imageHeight;
       const cropPaddingX = 0;
@@ -6733,6 +6856,9 @@ export default function App() {
                 ? 3
                 : 1;
       const scale = Math.max(frameWidth / crop.width, frameHeight / crop.height) * scaleBoost;
+      const centeredTop = -crop.y * scale + (frameHeight - crop.height * scale) / 2 + placementY;
+      const guestTopAnchoredTop = -crop.y * scale;
+      const imageTop = isGuestPortrait && crop.height * scale > frameHeight ? guestTopAnchoredTop : centeredTop;
       return (
         <View style={[frameStyle, { borderColor: highlight ? C.accent : C.line, backgroundColor: C.panel2 }, highlight && isTree && styles.portraitTreeSelectedFrame, subject.alive === false && styles.deadPortraitFrame]}>
           <Image
@@ -6744,7 +6870,7 @@ export default function App() {
                 width: sourceWidth * scale,
                 height: sourceHeight * scale,
                 left: -crop.x * scale + (frameWidth - crop.width * scale) / 2,
-                top: -crop.y * scale + (frameHeight - crop.height * scale) / 2 + placementY,
+                top: imageTop,
                 opacity: subject.alive === false ? 0.56 : 1
               }
             ]}
@@ -6774,6 +6900,14 @@ export default function App() {
     );
   }
 
+  function openMysteryChatFromCompass() {
+    scrollStoryTopFromCompassRef.current = true;
+    setScreen("mystery");
+    if (screen === "mystery") {
+      setTimeout(() => storyScrollRef.current?.scrollTo({ y: 0, animated: true }), 0);
+    }
+  }
+
   function MysteryBottomMenu() {
     return (
       <View style={[styles.bottomMenu, { backgroundColor: C.panel, borderColor: C.line }]}>
@@ -6791,7 +6925,7 @@ export default function App() {
         </Pressable>
         <Pressable
           accessibilityLabel="Gameplay chat"
-          onPress={() => setScreen("mystery")}
+          onPress={openMysteryChatFromCompass}
           style={styles.compassMenuButton}
         >
           <CompassMenuIcon />
@@ -7277,12 +7411,11 @@ export default function App() {
                 <Text style={[styles.heading, styles.detectiveName, { color: C.text }]}>{profile.firstName} {profile.familyName}</Text>
                 <Text style={[styles.rollText, { color: C.dim }]}>{profile.sex} - age 24 portrait</Text>
                 <View style={styles.detectiveQuirkList}>
-                  {profile.quirks.map((quirk) => (
-                    <View key={quirk.id} style={[styles.detectiveQuirkRow, { borderColor: C.line }]}>
-                      <Text style={[styles.body, styles.detectiveQuirkText, { color: C.text }]}>{quirk.label}</Text>
-                      <Text style={[styles.rollText, styles.gameHiddenText]}>{signedModifier(quirk.modifier)} {quirk.check}</Text>
-                    </View>
-                  ))}
+                {profile.quirks.map((quirk) => (
+                  <View key={quirk.id} style={[styles.detectiveQuirkRow, { borderColor: C.line }]}>
+                    <Text style={[styles.body, styles.detectiveQuirkText, { color: C.text }]}>{quirk.label}</Text>
+                  </View>
+                ))}
                 </View>
               </Pressable>
             );
@@ -7321,7 +7454,7 @@ export default function App() {
           </View>
           <View style={styles.detectiveQuirkList}>
             {selectedAgeQuirks.map((quirk) => (
-              <Text key={quirk.id} style={[styles.rollText, styles.gameHiddenText]}>{quirk.label}: {signedModifier(quirk.modifier)} {quirk.check}</Text>
+              <Text key={quirk.id} style={[styles.body, { color: C.text }]}>{quirk.label}</Text>
             ))}
           </View>
         </Card>
@@ -7490,8 +7623,8 @@ export default function App() {
           <Card>
             <Text style={[styles.heading, { color: C.text }]}>Quirks</Text>
             {activeMystery.player.detectiveQuirks.map((quirk) => (
-              <Text key={quirk.id} style={[styles.body, { color: C.text }]}>
-                {quirk.label} <Text style={styles.gameHiddenText}>({signedModifier(quirk.modifier)} {quirk.check})</Text>
+            <Text key={quirk.id} style={[styles.body, { color: C.text }]}>
+                {quirk.label}
               </Text>
             ))}
           </Card>
@@ -7981,24 +8114,27 @@ export default function App() {
   }
 
   if (screen === "mysteryMap" && activeMystery) {
+    const mapVisibleRooms = activeMystery.rooms.filter((room) => room.accessible || room.kind === "public" || room.id === activeMystery.currentRoomId);
+    const visibleFloors = [1, 2, 3].filter((floor) => mapVisibleRooms.some((room) => room.floor === floor));
     return (
       <Shell>
         <View style={styles.rowBetween}>
           <Text style={[styles.titleSmall, { color: C.text }]}>Mansion Map</Text>
           <Button small label="Back" onPress={() => setScreen("mystery")} />
         </View>
-        {[1, 2, 3].map((floor) => (
+        {visibleFloors.map((floor) => (
           <Card key={floor}>
             <Text style={[styles.heading, { color: C.text }]}>Floor {floor}</Text>
             <View style={styles.mysteryMapGrid}>
-              {activeMystery.rooms.filter((room) => room.floor === floor).map((room) => {
+              {mapVisibleRooms.filter((room) => room.floor === floor).map((room) => {
                 const people = mysteryPeopleInRoom(activeMystery, room.id);
-                const accessible = mysteryPlayerCanAccessRoom(activeMystery, room);
+                const isCurrentRoom = activeMystery.currentRoomId === room.id;
+                const accessible = room.accessible || room.kind === "public" || isCurrentRoom;
                 return (
                   <View key={room.id} style={[styles.mysteryRoomTile, { borderColor: accessible ? C.accent : C.line, backgroundColor: accessible ? C.panel2 : "rgba(100, 100, 105, 0.15)" }]}>
                     <Text style={[styles.mysteryRoomName, { color: C.text }]}>{room.name}</Text>
                     {room.bedSetup ? <Text style={[styles.rollText, { color: C.dim }]}>{titleCase(room.bedSetup)}</Text> : null}
-                    <Text style={[styles.rollText, { color: accessible ? C.good : C.dim }]}>{accessible ? "Accessible" : "Locked"}</Text>
+                    <Text style={[styles.rollText, { color: accessible ? C.good : C.dim }]}>{isCurrentRoom ? "You are here" : "Accessible"}</Text>
                     <View style={styles.row}>
                       {people.slice(0, 5).map((person) => (
                         <Pressable key={person.id} onPress={() => focusMysteryNpc(person.id)} style={styles.mapPortraitButton}>
@@ -8037,34 +8173,6 @@ export default function App() {
       .map(Number)
       .sort((a, b) => b - a);
 
-    const blueprint = activeMystery.murders.map((murder, index) => {
-      const victimName = mysteryNpcName(activeMystery, murder.victimId);
-      const killerName = mysteryNpcName(activeMystery, murder.killerId);
-      const roomName = mysteryRoomName(activeMystery, murder.roomId);
-      const fallbackRoom = murder.alternateRoomId ? mysteryRoomName(activeMystery, murder.alternateRoomId) : null;
-      const proofLines = (activeMystery.findables ?? [])
-        .filter((findable) => findable.kind === "Proof" && findable.relatedMurderIndex === index)
-        .map((findable) => {
-          const proofText = findable.proofText ?? findable.description;
-          const rollNote = /search roll|roll above|roll \d+/i.test(proofText) ? "" : `; search roll ${mysteryRollTargetNumber(findable.searchDifficulty)}`;
-          const timeNote = `available from ${mysteryAvailabilityLabel(findable.availableDay, findable.availableDaytime)}`;
-          return `${proofText} ${timeNote}${rollNote}`;
-        });
-      const witness = murder.witnessId ? activeMystery.npcs.find((npc) => npc.id === murder.witnessId) : undefined;
-      const witnessLine = murder.witnessSummary && witness ? `${murder.witnessSummary}, but ${mysteryWitnessAccessText(witness)}.` : undefined;
-      const clues = [...(proofLines.length > 0 ? proofLines : (murder.proofs?.length ? murder.proofs : [murder.proof])), ...(witnessLine ? [witnessLine] : [])];
-      return `Murder ${index + 1}: ${victimName} by ${killerName} on day ${murder.day} ${murder.daytime} in ${roomName}${fallbackRoom ? ` (if occupied by player at murder time, fallback: ${fallbackRoom})` : ""}, ${murder.method}. Motive: ${cleanSentenceEnd(murder.motive)}. Clues/proof: ${clues.join(", ")}.`;
-    });
-    const findableBlueprint = (activeMystery.findables ?? []).map((findable) => {
-      const room = findable.roomId ? mysteryRoomName(activeMystery, findable.roomId) : "no fixed room";
-      const holder = findable.holderNpcId ? mysteryNpcName(activeMystery, findable.holderNpcId) : "no holder";
-      const murderLabel = findable.relatedMurderIndex !== undefined ? `, murder ${findable.relatedMurderIndex + 1}` : "";
-      return `${findable.kind}${findable.origin ? `/${findable.origin}` : ""}: ${findable.name}${murderLabel}. ${findable.description} Location: ${room}; holder/source: ${holder}; available from ${mysteryAvailabilityLabel(findable.availableDay, findable.availableDaytime)}.${findable.collected ? " Collected." : ""}`;
-    });
-    const sanityLedger = activeMystery.sanityLedger ?? ["No ledger recorded for this older save."];
-    const rosterStartIndex = sanityLedger.findIndex((line) => line === "NPC roster:");
-    const visibleSanityLedger = rosterStartIndex >= 0 ? sanityLedger.slice(0, rosterStartIndex) : sanityLedger;
-    const rosterSanityLedger = rosterStartIndex >= 0 ? sanityLedger.slice(rosterStartIndex) : [];
     return Shell({
       children: (
         <>
@@ -8104,38 +8212,6 @@ export default function App() {
             </>
           )
         })}
-        <Card>
-          <Text style={[styles.heading, styles.gameHiddenText]}>Case Blueprint For Testing</Text>
-          {blueprint.map((line) => <Text key={line} style={[styles.body, styles.gameHiddenText]}>{line}</Text>)}
-          <Text style={[styles.heading, styles.gameHiddenText]}>Generated Findable Items For Testing</Text>
-          {findableBlueprint.length === 0 ? <Text style={[styles.body, styles.gameHiddenText]}>No generated findables in this older save.</Text> : null}
-          {findableBlueprint.map((line) => <Text key={line} style={[styles.body, styles.gameHiddenText]}>{line}</Text>)}
-          {activeMystery.discoveredProof.length > 0 ? <Text style={[styles.body, styles.discoverableHiddenText]}>Discovered proof: {activeMystery.discoveredProof.join(", ")}</Text> : null}
-        </Card>
-        <Card>
-          <Text style={[styles.heading, styles.gameHiddenText]}>Sanity Ledger</Text>
-          <View style={[styles.ledgerBox, { borderColor: C.line, backgroundColor: C.panel2 }]}>
-            {visibleSanityLedger.map((line, index) => (
-              <Text key={`${index}-${line}`} style={[styles.ledgerText, styles.gameHiddenText]}>{line}</Text>
-            ))}
-          </View>
-          {rosterSanityLedger.length > 0 ? (
-            <>
-              <Button
-                small
-                label={expandedMysteryDebugRoster ? "Hide NPC roster debug" : "Show NPC roster debug"}
-                onPress={() => setExpandedMysteryDebugRoster((current) => !current)}
-              />
-              {expandedMysteryDebugRoster ? (
-                <View style={[styles.ledgerBox, { borderColor: C.line, backgroundColor: C.panel2 }]}>
-                  {rosterSanityLedger.map((line, index) => (
-                    <Text key={`roster-${index}-${line}`} style={[styles.ledgerText, styles.gameHiddenText]}>{line}</Text>
-                  ))}
-                </View>
-              ) : null}
-            </>
-          ) : null}
-        </Card>
         <Text style={[styles.heading, { color: C.text }]}>
           Story Archive
         </Text>
