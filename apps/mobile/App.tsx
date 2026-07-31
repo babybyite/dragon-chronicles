@@ -761,7 +761,7 @@ function roll(chance: number): boolean {
 }
 
 function fullName(person: { firstName: string; familyName: string }): string {
-  return `${person.firstName} ${person.familyName}`;
+  return `${cleanRavenwoodNameText(person.firstName)} ${cleanRavenwoodNameText(person.familyName)}`;
 }
 
 function titleCase(value: string): string {
@@ -773,6 +773,59 @@ function titleCase(value: string): string {
 
 function stableHash(value: string): number {
   return value.split("").reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7);
+}
+
+function cleanRavenwoodNameText(value: string): string {
+  return value
+    .replace(/Nicol(?:Ăˇ|Ã¡)s/g, "Nicolas")
+    .replace(/In(?:Ă©|Ã©)s/g, "Ines")
+    .replace(/Z(?:Ă©|Ã©)lie/g, "Zelie")
+    .replace(/Alarc(?:Ăł|Ã³|Ã)?n/g, "Alarcon")
+    .replace(/Vald(?:Ă©|Ã©|Ã)?s/g, "Valdes");
+}
+
+function cleanMysteryNameEncoding(mystery: MysteryGame): MysteryGame {
+  const cleanOptional = (value?: string) => value === undefined ? undefined : cleanRavenwoodNameText(value);
+  const cleanMessage = (message: StoryMessage): StoryMessage => ({
+    ...message,
+    text: cleanRavenwoodNameText(message.text),
+    roll: cleanOptional(message.roll),
+    rich: message.rich?.map((segment) => ({ ...segment, text: cleanRavenwoodNameText(segment.text) }))
+  });
+  const playerFirstName = cleanRavenwoodNameText(mystery.player.firstName);
+  const playerFamilyName = cleanRavenwoodNameText(mystery.player.familyName);
+  const npcs = mystery.npcs.map((npc) => ({
+    ...npc,
+    firstName: cleanRavenwoodNameText(npc.firstName),
+    familyName: cleanRavenwoodNameText(npc.familyName)
+  }));
+  return {
+    ...mystery,
+    player: { ...mystery.player, firstName: playerFirstName, familyName: playerFamilyName },
+    npcs,
+    npcRelationships: (mystery.npcRelationships ?? []).map((relationship) => ({ ...relationship, detail: cleanRavenwoodNameText(relationship.detail) })),
+    murders: (mystery.murders ?? []).map((murder) => ({
+      ...murder,
+      method: cleanRavenwoodNameText(murder.method),
+      motive: cleanRavenwoodNameText(murder.motive),
+      proof: cleanRavenwoodNameText(murder.proof),
+      proofs: (murder.proofs ?? []).map(cleanRavenwoodNameText),
+      witnessSummary: cleanOptional(murder.witnessSummary)
+    })),
+    findables: (mystery.findables ?? []).map((findable) => ({
+      ...findable,
+      name: cleanRavenwoodNameText(findable.name),
+      description: cleanRavenwoodNameText(findable.description),
+      proofText: cleanOptional(findable.proofText)
+    })),
+    messages: (mystery.messages ?? []).map(cleanMessage),
+    journal: (mystery.journal ?? []).map(cleanMessage),
+    inventory: (mystery.inventory ?? []).map(cleanRavenwoodNameText),
+    discoveredProof: (mystery.discoveredProof ?? []).map(cleanRavenwoodNameText),
+    aiMemory: (mystery.aiMemory ?? []).map(cleanRavenwoodNameText),
+    aiConversationSummaries: (mystery.aiConversationSummaries ?? []).map(cleanRavenwoodNameText),
+    summary: cleanOptional(mystery.summary)
+  };
 }
 
 function fallbackRavenwoodPlayerPortrait(subject: Pick<PortraitSubject, "firstName" | "familyName" | "sex" | "visualRace">): RavenwoodGuestPortraitAsset | null {
@@ -1083,7 +1136,7 @@ const mysteryGuestCareerProfiles: { minAge: number; occupation: string; educatio
   { minAge: 55, occupation: "Retired", educations: ["High school diploma", "Trade apprenticeship", "Office administration training"] }
 ];
 const staffStations = ["kitchen", "staff-corridor", "servants-hall", "laundry", "pantry", "garden-terrace", "back-stairs"];
-const ravenwoodMaleNames = ["Theodore", "Asher", "Cedric", "Soraaro", "Adrian", "Alaric", "Ambrose", "Arthur", "Bastian", "Benedict", "Blaise", "Caspian", "Dorian", "Edgar", "Edmund", "Elias", "Felix", "Florian", "Gabriel", "Gideon", "Hugo", "Jasper", "Julian", "Laurent", "Leander", "Leon", "Lucian", "Magnus", "Marcel", "Marius", "Oliver", "Percival", "Raphael", "Remy", "Rowan", "Sebastian", "Silas", "Soren", "Tristan", "Victor", "Vincent", "Xavier", "Elio", "Mael", "Noel", "Rafael", "Thierry", "Alejandro", "Alonso", "Cruz", "Diego", "Esteban", "Javier", "Leandro", "Lorenzo", "Mateo", "Santiago", "Dimitri", "Ilya", "Nikolai", "Stefan", "Akira", "Daichi", "Haru", "Hiro", "Itsuki", "Kaoru", "Kenji", "Ren", "Riku", "Sora", "Taejin", "Jun", "Minho", "Seojun", "Yichen", "Jian", "Lian", "Ming", "Renji", "Toma", "Alden", "Arden", "August", "Claude", "Corvin", "Elian", "Emil", "Evander", "Hadrian", "Hector", "Isidore", "Matthias", "Nicolas", "Octavian", "Orion", "Roman", "Sylvain", "Valentin", "Aurel", "Cassiel", "Lucien", "NicolĂˇs", "Aleksi", "Emilian", "Kasimir", "Lev", "Mikhail", "Emiliaric", "Laurenvin", "Sorenan", "Jasperric", "Hiroien", "Soraair", "Ilyaas", "Alaricien", "Rafaelien", "Yichenvren", "Kenjiar", "Junen", "Valesian", "Asheran", "Emilia", "Javierian", "Matthiasas", "Alaricrel", "Felixric", "Thierren", "Itsukiric", "Oliveris", "Silasis", "Mariusor", "Aurelar", "Rikuric", "Mikhaiiel", "Gabrievar", "Sylvairiel", "Isideo", "Sebastiaian", "Marcelvon", "Abel", "Abraham", "Achilles", "Adam", "Adelard", "Adrianus", "Aeneas", "Aidan", "Alban", "Albert", "Albin", "Albrecht", "Alessio", "Alfonso", "Alfred", "Alistair", "Alonzo", "Amadeo", "Ansel", "Anselm", "Anton", "Antonio", "Archer", "Armand", "Armin", "Arnold", "Arsen", "Arturo", "Auberon", "Augustin", "Aurelio", "Baptiste", "Barnaby", "Barrett", "Bartholomew", "Beau", "Bellamy", "Berenger", "Bernard", "Bertrand", "Blaine", "Boris", "Bowen", "Bram", "Brendan", "Briar", "Broderick", "Byron", "Caelan", "Caesar", "Caius", "Callum", "Calvin", "Cassian", "Cato", "Cillian", "Cyril", "Damian", "Dante", "Darius", "Dashiell", "Declan", "Desmond", "Dominic", "Donovan", "Drake", "Eamon", "Easton", "Edric", "Edwin", "Elric", "Emmanuel", "Enzo", "Eric", "Ernest", "Eryk", "Ethan", "Eugene", "Fabian", "Fabio", "Ferdinand", "Finn", "Finnian", "Francis", "Frederick", "Gareth", "Gaston", "Gael", "Geoffrey", "George", "Gerard", "Godric", "Grayson", "Gregor", "Griffin", "Hamish", "Harold", "Harlan", "Harvey", "Henrik", "Ignatius", "Isaac", "Ivan", "Jace", "James", "Jerome", "Joel", "Jonah", "Jonathan", "Jordan", "Kai", "Kieran", "Killian", "Kristian", "Lachlan", "Lars", "Lawrence", "Lazar", "Lennox", "Liam", "Linus", "Lionel", "Lorcan", "Louis", "Luca", "Lukas", "Luther", "Malachi", "Malcolm", "Manuel", "Marco", "Marcus", "Maxim", "Maximilian", "Micah", "Milan", "Miles", "Milo", "Morgan", "Nathaniel", "Neil", "Nero", "Neville", "Oscar", "Osric", "Owen", "Pascal", "Patrick", "Philip", "Pierce", "Quentin", "Quill", "Raoul", "Raymond", "Reece", "Reid", "Rhys", "Roderick", "Roland", "Ronan", "Rory", "Ruben", "Rufus", "Rupert", "Samson", "Samuel", "Saul", "Scott", "Shae", "Sheridan", "Simon", "Stellan", "Sullivan", "Tobias", "Ulric", "Ulysses", "Vaughn", "Viggo", "Walter", "Warren", "Wilfred", "William", "Wolfgang", "Wyatt", "Yannick", "Yorick", "Zachary", "Zane", "Zephyr", "Aldric", "Cassien", "Darien", "Elarion", "Lucarien", "Valeric", "Soravian", "Raphaelor", "Mikhailen", "Dorianis", "Cassianor", "Alarien", "Renjior", "Sylveric", "Leandros", "Evandriel", "Hadrien", "Lucanor", "Aurelios", "Theodren", "Kaelian", "Renvar", "Tavian", "Asterion", "Corvian", "Elianor", "Magnor", "Valerian", "Julorien", "Bastior", "Emilien"];
+const ravenwoodMaleNames = ["Theodore", "Asher", "Cedric", "Soraaro", "Adrian", "Alaric", "Ambrose", "Arthur", "Bastian", "Benedict", "Blaise", "Caspian", "Dorian", "Edgar", "Edmund", "Elias", "Felix", "Florian", "Gabriel", "Gideon", "Hugo", "Jasper", "Julian", "Laurent", "Leander", "Leon", "Lucian", "Magnus", "Marcel", "Marius", "Oliver", "Percival", "Raphael", "Remy", "Rowan", "Sebastian", "Silas", "Soren", "Tristan", "Victor", "Vincent", "Xavier", "Elio", "Mael", "Noel", "Rafael", "Thierry", "Alejandro", "Alonso", "Cruz", "Diego", "Esteban", "Javier", "Leandro", "Lorenzo", "Mateo", "Santiago", "Dimitri", "Ilya", "Nikolai", "Stefan", "Akira", "Daichi", "Haru", "Hiro", "Itsuki", "Kaoru", "Kenji", "Ren", "Riku", "Sora", "Taejin", "Jun", "Minho", "Seojun", "Yichen", "Jian", "Lian", "Ming", "Renji", "Toma", "Alden", "Arden", "August", "Claude", "Corvin", "Elian", "Emil", "Evander", "Hadrian", "Hector", "Isidore", "Matthias", "Nicolas", "Octavian", "Orion", "Roman", "Sylvain", "Valentin", "Aurel", "Cassiel", "Lucien", "Nicolas", "Aleksi", "Emilian", "Kasimir", "Lev", "Mikhail", "Emiliaric", "Laurenvin", "Sorenan", "Jasperric", "Hiroien", "Soraair", "Ilyaas", "Alaricien", "Rafaelien", "Yichenvren", "Kenjiar", "Junen", "Valesian", "Asheran", "Emilia", "Javierian", "Matthiasas", "Alaricrel", "Felixric", "Thierren", "Itsukiric", "Oliveris", "Silasis", "Mariusor", "Aurelar", "Rikuric", "Mikhaiiel", "Gabrievar", "Sylvairiel", "Isideo", "Sebastiaian", "Marcelvon", "Abel", "Abraham", "Achilles", "Adam", "Adelard", "Adrianus", "Aeneas", "Aidan", "Alban", "Albert", "Albin", "Albrecht", "Alessio", "Alfonso", "Alfred", "Alistair", "Alonzo", "Amadeo", "Ansel", "Anselm", "Anton", "Antonio", "Archer", "Armand", "Armin", "Arnold", "Arsen", "Arturo", "Auberon", "Augustin", "Aurelio", "Baptiste", "Barnaby", "Barrett", "Bartholomew", "Beau", "Bellamy", "Berenger", "Bernard", "Bertrand", "Blaine", "Boris", "Bowen", "Bram", "Brendan", "Briar", "Broderick", "Byron", "Caelan", "Caesar", "Caius", "Callum", "Calvin", "Cassian", "Cato", "Cillian", "Cyril", "Damian", "Dante", "Darius", "Dashiell", "Declan", "Desmond", "Dominic", "Donovan", "Drake", "Eamon", "Easton", "Edric", "Edwin", "Elric", "Emmanuel", "Enzo", "Eric", "Ernest", "Eryk", "Ethan", "Eugene", "Fabian", "Fabio", "Ferdinand", "Finn", "Finnian", "Francis", "Frederick", "Gareth", "Gaston", "Gael", "Geoffrey", "George", "Gerard", "Godric", "Grayson", "Gregor", "Griffin", "Hamish", "Harold", "Harlan", "Harvey", "Henrik", "Ignatius", "Isaac", "Ivan", "Jace", "James", "Jerome", "Joel", "Jonah", "Jonathan", "Jordan", "Kai", "Kieran", "Killian", "Kristian", "Lachlan", "Lars", "Lawrence", "Lazar", "Lennox", "Liam", "Linus", "Lionel", "Lorcan", "Louis", "Luca", "Lukas", "Luther", "Malachi", "Malcolm", "Manuel", "Marco", "Marcus", "Maxim", "Maximilian", "Micah", "Milan", "Miles", "Milo", "Morgan", "Nathaniel", "Neil", "Nero", "Neville", "Oscar", "Osric", "Owen", "Pascal", "Patrick", "Philip", "Pierce", "Quentin", "Quill", "Raoul", "Raymond", "Reece", "Reid", "Rhys", "Roderick", "Roland", "Ronan", "Rory", "Ruben", "Rufus", "Rupert", "Samson", "Samuel", "Saul", "Scott", "Shae", "Sheridan", "Simon", "Stellan", "Sullivan", "Tobias", "Ulric", "Ulysses", "Vaughn", "Viggo", "Walter", "Warren", "Wilfred", "William", "Wolfgang", "Wyatt", "Yannick", "Yorick", "Zachary", "Zane", "Zephyr", "Aldric", "Cassien", "Darien", "Elarion", "Lucarien", "Valeric", "Soravian", "Raphaelor", "Mikhailen", "Dorianis", "Cassianor", "Alarien", "Renjior", "Sylveric", "Leandros", "Evandriel", "Hadrien", "Lucanor", "Aurelios", "Theodren", "Kaelian", "Renvar", "Tavian", "Asterion", "Corvian", "Elianor", "Magnor", "Valerian", "Julorien", "Bastior", "Emilien"];
 const ravenwoodFemaleNames = ["Adeline", "Aurelia", "Beatrice", "Belladonna", "Camille", "Cassandra", "Celeste", "Celine", "Clara", "Cordelia", "Dahlia", "Delphine", "Eleanor", "Elise", "Elodie", "Emmeline", "Estelle", "Evangeline", "Flora", "Genevieve", "Giselle", "Helena", "Isadora", "Ivy", "Josephine", "Juliette", "Lenore", "Lilian", "Lorelei", "Lucille", "Madeleine", "Margot", "Marielle", "Mireille", "Nadine", "Noelle", "Odette", "Ophelia", "Rosalie", "Sabine", "Selene", "Seraphine", "Sylvie", "Theodora", "Valentina", "Vesper", "Victoria", "Vivienne", "Willow", "Amara", "Aveline", "Cressida", "Elara", "Fleur", "Isabeau", "Lavinia", "Melisande", "Ondine", "Alba", "Amalia", "Catalina", "Elena", "Esmeralda", "InĂ©s", "Isabella", "Lucia", "Marisol", "Paloma", "Anastasia", "Danica", "Irina", "Katya", "Milena", "Nadia", "Oksana", "Svetlana", "Tatiana", "Zoya", "Aiko", "Akari", "Emi", "Hana", "Haruka", "Kaede", "Mei", "Miyu", "Reina", "Yuna", "Chaewon", "Haeun", "Jisoo", "Nari", "Sora", "Xia", "Yue", "Lian", "Meilin", "Rin", "InĂ©syne", "Jisooa", "Sabineina", "Josephinora", "Reinaalia", "Isada", "Willowyne", "Irinaia", "Valentinis", "Isadorira", "Katyais", "Seraphi", "Aikois", "Marieuna", "Seleneuna", "Palomarea", "Elenaenne", "Helenaa", "InĂ©selle", "Naria", "Chaewira", "Xiaea", "Sabineora", "Evangelineora", "Meiis", "Rinea", "Hanaette", "Kaedeenne", "Harukaina", "Danicaia", "Emiora", "Giselleline", "Briaris", "Akariyne", "Emieria", "Irinavenne", "Loreleiia", "Reinaina", "Aikoira", "Abigail", "Adelaide", "Adelina", "Adriana", "Agatha", "Agnes", "Alessandra", "Alessia", "Alexandra", "Alice", "Alicia", "Alina", "Althea", "Amanda", "Amber", "Amelia", "Amelie", "Anastasie", "Angelique", "Annabelle", "Annalise", "Annika", "Antonia", "Arabella", "Ariadne", "Ariella", "Astrid", "Athena", "Audrey", "Autumn", "Avelina", "Azalea", "Bianca", "Blair", "Blythe", "Briony", "Calista", "Calliope", "Camellia", "Carina", "Caroline", "Catriona", "Cecelia", "Cecilia", "Cerise", "Charlotte", "Chiara", "Chloe", "Clarissa", "Clementine", "Colette", "Cosette", "Cynthia", "Daphne", "Delia", "Diana", "Dominique", "Edith", "Eileen", "Eleanora", "Eliana", "Elina", "Elisa", "Eliska", "Elliana", "Eloisa", "Elowen", "Elsa", "Emilia", "Emilie", "Enya", "Erika", "Esme", "Eulalia", "Eulalie", "Euphemia", "Evelyn", "Faith", "Felicia", "Felicity", "Fern", "Fiorella", "Florence", "Francesca", "Freya", "Gabriella", "Gemma", "Georgiana", "Gwendolyn", "Gwyneth", "Hazel", "Heidi", "Honora", "Imogen", "Iona", "Iris", "Isabelle", "Isolde", "Jacinta", "Jade", "Jessamine", "Joanna", "Jocelyn", "June", "Karina", "Katarina", "Laurel", "Leona", "Leontine", "Letitia", "Liora", "Lisette", "Loretta", "Louisa", "Louise", "Lucinda", "Lydia", "Lyra", "Mabel", "Maeve", "Magnolia", "Marceline", "Marina", "Matilda", "Meredith", "Minerva", "Mirabel", "Miranda", "Monica", "Morgana", "Nerissa", "Nina", "Oriana", "Ottilie", "Pandora", "Penelope", "Petra", "Philippa", "Phoebe", "Primrose", "Regina", "Renata", "Rosalind", "Rosemary", "Roxanne", "Ruby", "Sabrina", "Samantha", "Scarlett", "Serena", "Simone", "Sofia", "Sophie", "Stella", "Susanna", "Tabitha", "Thalia", "Theresa", "Tiffany", "Ursula", "Vanessa", "Vera", "Veronica", "Violet", "Virginia", "Willa", "Winifred", "Winter", "Yvette", "Zara", "Zinnia", "Altheia", "Araminta", "Belinda", "Bernadette", "Capucine", "Carlotta", "Celestine", "Clarimond", "Corinne", "Desiree", "Dominiquea", "Dorothea", "Eleanore", "Elisabetta", "Ernestine", "Euphrasie", "Florentine", "Geraldine", "Henrietta", "Hestia", "Isaline", "Jessamyn", "Leonie", "Lilou", "Liselotte", "Maelle", "Magdalene", "Maribelle", "Marigold", "Melina", "Mirabelle", "Noemi", "Ottavia", "Prisca", "Romilly", "Solene", "Tatienne", "Valencia", "Verena", "Yolande", "ZĂ©lie"];
 const ravenwoodSurnames = ["Ash", "Black", "Briar", "Crow", "Dusk", "Elder", "Ember", "Ever", "Fair", "Fallow", "Fern", "Frost", "Glen", "Grey", "Hallow", "Hawke", "Hazel", "Hollow", "Iron", "Ivory", "Lark", "Marlowe", "Mist", "Moon", "Night", "Oak", "Raven", "Rose", "Rowan", "Sable", "Shadow", "Silver", "Snow", "Star", "Stone", "Storm", "Thorn", "Vale", "Vane", "Winter", "Wren", "Wilde", "Wood", "Bell", "Blake", "Byron", "Carrow", "Dacre", "Darcy", "Devereux", "Fairfax", "Graves", "Hale", "Harrow", "Hart", "Huxley", "Locke", "March", "Morrow", "Poe", "Quill", "Reeve", "Sinclair", "Sterling", "Thorne", "Voss", "Whitlock", "Wycliffe", "Arden", "Beaumont", "Bellefleur", "Clairmont", "Delacroix", "Desmarais", "Duval", "Fontaine", "Laurent", "Lenoir", "Moreau", "Rochefort", "Valmont", "Villiers", "AlarcĂłn", "Delgado", "Montoya", "Navarro", "Salazar", "Serrano", "ValdĂ©s", "Vega", "Volkov", "Morozov", "Orlov", "Petrov", "Romanov", "Sokolov", "Vasiliev", "Dragomir", "Takeda", "Kuroda", "Mori", "Akiyama", "Hayashi", "Ishikawa", "Han", "Seo", "Kang", "Jin", "Lin", "Shen", "Wei", "Zhao", "Crowbyron", "La Zhaofield", "Von Crowhurst", "La Salazarvane", "La Duvalclair", "Della Mistmere", "La Thornewick", "St. Lockebridge", "Del Fernember", "Du Thornridge", "Bellbridge", "St. Zhaowood", "Von Irondell", "St. Fallowclair", "Delgadoquill", "Villiersstone", "Du Wycliffehart", "Le Wood", "Von Seostorm", "Hayashihayashi", "Du Seomont", "Blakefield", "Le Fontainemoor", "De Fernwell", "Larkmist", "Le Halerose", "De Jinsokolov", "Le Snowfield", "Shadowwinter", "Van Fairfaxthorne", "La Stonestar", "Della Morozovstone", "Von Vasilievwood", "Ravenwinter", "Van Elderhurst", "Vasilievshade", "Du Ravenshade", "Du Darcy", "Evercliff", "Von Duvalmont", "Le Jinhurst", "Del Starsterling", "De Hallow", "De Thornerose", "La Ravenarden", "De Ardenbrook", "Della Fallowwood", "La Fallowclair", "La Fontainecourt", "La Beaumontbridge", "Silverwinter", "Glenhart", "St. Hazelzhao", "De Huxleyrose", "St. Clairmontromanov", "Devereuxhurst", "Roseshade", "Del Vasilievgrave", "Van Romanovwick", "Du Fairthorne","Ashcroft", "Ashbourne", "Ashfield", "Ashmere", "Ashford", "Ashwell", "Blackthorn", "Blackwood", "Blackwell", "Blackridge", "Blackmoor", "Blackstone", "Briarwood", "Briarfield", "Briarwell", "Crowhurst", "Crowley", "Crowmere", "Crowfield", "Crowstone", "Duskridge", "Duskmere", "Duskwood", "Elderwood", "Eldermere", "Elderbrook", "Elderfield", "Emberstone", "Emberwood", "Emberfield", "Everbrook", "Everfield", "Evermere", "Fairbrook", "Fairmont", "Fairfield", "Fallowmere", "Fallowbrook", "Fernbrook", "Fernfield", "Fernwick", "Frostmere", "Frostfield", "Frostwick", "Glenbrook", "Glenmere", "Greybrook", "Greyfield", "Greywick", "Greyhaven", "Greymoor", "Hallowmere", "Hallowbrook", "Hawkridge", "Hawkstone", "Hazelbrook", "Hazelfield", "Hazelwick", "Hollowbrook", "Hollowmere", "Ironbrook", "Ironfield", "Ivorybrook", "Ivoryfield", "Larkfield", "Larkwood", "Mistbrook", "Mistfield", "Mistmere", "Moonbrook", "Moonridge", "Nightbrook", "Nightfield", "Oakridge", "Oakmere", "Oakfield", "Ravenhurst", "Ravenwood", "Ravenmere", "Rosebrook", "Rosefield", "Rowanbrook", "Sablewood", "Sablemere", "Shadowbrook", "Shadowmere", "Silverbrook", "Silvermere", "Snowbrook", "Snowmere", "Starbrook", "Starfield", "Stonebrook", "Stonefield", "Stormbrook", "Stormfield", "Thornbrook", "Thornfield", "Thornmere", "Valebrook", "Valefield", "Winterbrook", "Wintermere", "Wrenfield", "Wildemere", "Woodcroft", "Woodmere"];
 
@@ -2152,11 +2205,13 @@ function uniqueRavenwoodFirstName(
   usedFirstNames: Set<string>,
   preferred?: string
 ): string {
-  const bank = sex === "Male" ? ravenwoodMaleNames : ravenwoodFemaleNames;
+  const bank = Array.from(new Set((sex === "Male" ? ravenwoodMaleNames : ravenwoodFemaleNames).map(cleanRavenwoodNameText)));
+  const cleanFamilyName = cleanRavenwoodNameText(familyName);
+  const cleanPreferred = preferred ? cleanRavenwoodNameText(preferred) : "";
 
-  if (preferred && bank.includes(preferred)) {
-    const preferredFirstNameKey = preferred.toLowerCase();
-    const preferredFullNameKey = `${preferred} ${familyName}`.toLowerCase();
+  if (cleanPreferred && bank.includes(cleanPreferred)) {
+    const preferredFirstNameKey = cleanPreferred.toLowerCase();
+    const preferredFullNameKey = `${cleanPreferred} ${cleanFamilyName}`.toLowerCase();
 
     if (
       !usedFirstNames.has(preferredFirstNameKey) &&
@@ -2164,13 +2219,13 @@ function uniqueRavenwoodFirstName(
     ) {
       usedFirstNames.add(preferredFirstNameKey);
       usedNames.add(preferredFullNameKey);
-      return preferred;
+      return cleanPreferred;
     }
   }
 
   const availableNames = shuffled(bank).filter((name) => {
     const firstNameKey = name.toLowerCase();
-    const fullNameKey = `${name} ${familyName}`.toLowerCase();
+    const fullNameKey = `${name} ${cleanFamilyName}`.toLowerCase();
 
     return (
       !usedFirstNames.has(firstNameKey) &&
@@ -2182,7 +2237,7 @@ function uniqueRavenwoodFirstName(
     const selectedName = availableNames[0];
 
     usedFirstNames.add(selectedName.toLowerCase());
-    usedNames.add(`${selectedName} ${familyName}`.toLowerCase());
+    usedNames.add(`${selectedName} ${cleanFamilyName}`.toLowerCase());
 
     return selectedName;
   }
@@ -2193,22 +2248,24 @@ function uniqueRavenwoodFirstName(
 
   while (
     usedFirstNames.has(fallback.toLowerCase()) ||
-    usedNames.has(`${fallback} ${familyName}`.toLowerCase())
+    usedNames.has(`${fallback} ${cleanFamilyName}`.toLowerCase())
   ) {
     suffix += 1;
     fallback = `${fallbackBaseName} ${suffix}`;
   }
 
   usedFirstNames.add(fallback.toLowerCase());
-  usedNames.add(`${fallback} ${familyName}`.toLowerCase());
+  usedNames.add(`${fallback} ${cleanFamilyName}`.toLowerCase());
 
   return fallback;
 }
 
 function ravenwoodFamilyName(preferred?: string, blockedFamilyNames = new Set<string>()): string {
-  if (preferred && ravenwoodSurnames.includes(preferred) && !blockedFamilyNames.has(preferred.toLowerCase())) return preferred;
-  const available = ravenwoodSurnames.filter((name) => !blockedFamilyNames.has(name.toLowerCase()));
-  return pick(available.length > 0 ? available : ravenwoodSurnames);
+  const bank = Array.from(new Set(ravenwoodSurnames.map(cleanRavenwoodNameText)));
+  const cleanPreferred = preferred ? cleanRavenwoodNameText(preferred) : "";
+  if (cleanPreferred && bank.includes(cleanPreferred) && !blockedFamilyNames.has(cleanPreferred.toLowerCase())) return cleanPreferred;
+  const available = bank.filter((name) => !blockedFamilyNames.has(name.toLowerCase()));
+  return pick(available.length > 0 ? available : bank);
 }
 
 function mysteryFamilyStatusFor(age: number, role: MysteryNpc["role"]): string {
@@ -2932,8 +2989,18 @@ function mysteryRelationshipDetailWithKnownSecret(detail: string, npcs: MysteryN
   return `${detail} (${mysterySecretSentenceForNpc(target)})`;
 }
 
+function mysteryOverheardMeaningDetailForSheet(detail: string, npcs: MysteryNpc[]): string {
+  const adultCleaned = npcs
+    .filter((npc) => !npc.isChild && npc.age >= 18)
+    .reduce((text, npc) => text.replace(
+      new RegExp(`\\b${escapeRegExp(fullName(npc))} overheard ([^.!?]+?) arguing and has not understood the meaning yet\\.`, "gi"),
+      `${fullName(npc)} overheard $1 arguing with someone.`
+    ), detail);
+  return adultCleaned.replace(/\boverheard ([^.!?]+?) arguing\./gi, "overheard $1 arguing with someone.");
+}
+
 function mysteryRelationshipDetailForSheet(detail: string, npcs: MysteryNpc[], playerFirstName?: string): string {
-  return mysteryServantKnowledgeDetailForSheet(mysteryRelationshipDetailWithKnownSecret(detail, npcs, playerFirstName), npcs)
+  return mysteryServantKnowledgeDetailForSheet(mysteryOverheardMeaningDetailForSheet(mysteryRelationshipDetailWithKnownSecret(detail, npcs, playerFirstName), npcs), npcs)
     .replace(/^.*?\b(Witness:\s*)/i, "$1")
     .replace(/\b(heard|saw|noticed|overheard)\s+([^.!?]*?)\s+tuck away\s+Witness:\s*/i, "Witness: ")
     .replace(/,\s*but\s+[^.]*?\bwon't tell the player unless[^.]*\./gi, ".")
@@ -2950,6 +3017,13 @@ function mysteryRelationshipDetailForSheet(detail: string, npcs: MysteryNpc[], p
     .trim();
 }
 
+function mysteryRelationshipDetailForDisplay(relationship: MysteryNpcRelationship, from: MysteryNpc, to: MysteryNpc, npcs: MysteryNpc[], playerFirstName?: string): string {
+  if (relationship.kind === "Debt" && /\bowes\b.+\ba favor\b/i.test(relationship.detail)) {
+    return `${fullName(from)} owes ${fullName(to)} money.`;
+  }
+  return mysteryRelationshipDetailForSheet(relationship.detail, npcs, playerFirstName);
+}
+
 function mysteryRelationshipLinesFor(npc: MysteryNpc, npcs: MysteryNpc[], relationships: MysteryNpcRelationship[], currentDay?: number, currentDaytime?: Daytime, playerFirstName?: string, familyGraph?: MysteryFamilyGraph): string[] {
   const directRelationships = mysteryRelationshipsWithSingleSpouses(relationships)
     .filter((relationship) => relationship.fromId === npc.id || relationship.toId === npc.id)
@@ -2964,11 +3038,15 @@ function mysteryRelationshipLinesFor(npc: MysteryNpc, npcs: MysteryNpc[], relati
       const graphRolePhrase = other && (relationship.kind === "Family" || relationship.kind === "Marriage")
         ? mysteryGraphFamilyRolePhrase(npc, other, familyGraph)
         : null;
+      const from = npcs.find((candidate) => candidate.id === relationship.fromId);
+      const to = npcs.find((candidate) => candidate.id === relationship.toId);
       const detail = other && graphRolePhrase
         ? `${fullName(npc)} is ${graphRolePhrase} ${fullName(other)}.`
         : other && relationship.kind === "Family"
           ? mysteryFamilyRelationshipSentence(npc, other, relationship)
-          : mysteryRelationshipDetailForSheet(relationship.detail, npcs, playerFirstName);
+          : from && to
+            ? mysteryRelationshipDetailForDisplay(relationship, from, to, npcs, playerFirstName)
+            : mysteryRelationshipDetailForSheet(relationship.detail, npcs, playerFirstName);
       const hiddenMarker = relationship.hidden ? `(${visibility}): ` : "";
       return `${hiddenMarker}${detail}`;
     });
@@ -3508,6 +3586,36 @@ function mysteryFriendshipDetail(from: MysteryNpc, to: MysteryNpc): string {
   ]);
 }
 
+function mysteryRandomRelationshipDetail(from: MysteryNpc, to: MysteryNpc, kind: MysteryNpcRelationshipKind): string {
+  if (kind === "Friendship") return mysteryFriendshipDetail(from, to);
+  if (kind === "Debt") {
+    return pick([
+      `${fullName(from)} owes ${fullName(to)} money.`,
+      `${fullName(from)} borrowed money from ${fullName(to)} and has not paid it back.`,
+      `${fullName(to)} has been pressing ${fullName(from)} to repay a private debt.`
+    ]);
+  }
+  if (kind === "Blackmail") {
+    return pick([
+      `${fullName(from)} knows an embarrassing secret about ${fullName(to)}.`,
+      `${fullName(from)} has been quietly blackmailing ${fullName(to)}.`,
+      `${fullName(to)} fears ${fullName(from)} will expose a private disgrace.`
+    ]);
+  }
+  if (kind === "Rivalry") {
+    return pick([
+      `${fullName(from)} and ${fullName(to)} were seen arguing before the house was sealed.`,
+      `${fullName(from)} and ${fullName(to)} absolutely despise each other.`,
+      `${fullName(from)} and ${fullName(to)} have been competing bitterly for attention at Ravenwood.`
+    ]);
+  }
+  return pick([
+    `${fullName(from)} considers ${fullName(to)} useful, but not trustworthy.`,
+    `${fullName(from)} has been warned not to trust ${fullName(to)}.`,
+    `${fullName(from)} suspects ${fullName(to)} is hiding something important.`
+  ]);
+}
+
 function buildMysteryNpcRelationshipPool(npcs: MysteryNpc[], relationships: MysteryNpcRelationship[]) {
   const guests = npcs.filter((npc) => npc.role === "Guest");
   const staff = npcs.filter((npc) => npc.role === "Staff");
@@ -3544,10 +3652,15 @@ function buildMysteryNpcRelationshipPool(npcs: MysteryNpc[], relationships: Myst
     const toCandidates = pool.filter((npc) => npc.id !== from.id);
     const to = pick(toCandidates);
     if (from.age < 18 || to.age < 18) {
+      const argumentPartnerCandidates = npcs.filter((npc) => npc.id !== from.id && npc.id !== to.id);
+      const argumentPartner = argumentPartnerCandidates.length > 0 ? pick(argumentPartnerCandidates) : undefined;
+      const argumentPartnerName = argumentPartner ? fullName(argumentPartner) : "someone";
       addRandom(from, to, pick<MysteryNpcRelationshipKind>(["Friendship", "Protection", "Suspicion"]), pick([
         `${fullName(from)} trusts ${fullName(to)} more than most people in the house.`,
         `${fullName(from)} has been warned not to be alone with ${fullName(to)}.`,
-        `${fullName(from)} overheard ${fullName(to)} arguing and has not understood the meaning yet.`
+        from.isChild
+          ? `${fullName(from)} overheard ${fullName(to)} arguing with ${argumentPartnerName} and has not understood the meaning yet.`
+          : `${fullName(from)} overheard ${fullName(to)} arguing with ${argumentPartnerName}.`
       ]), roll(0.42), rand(-4, 8), rand(0, 4));
     } else if (roll(0.14)) {
       const romanticTo = mysteryPickWeightedRomanticCandidate(
@@ -3566,15 +3679,7 @@ function buildMysteryNpcRelationshipPool(npcs: MysteryNpc[], relationships: Myst
       addRandom(from, romanticTo, romanceKind, romanceDetail, true, rand(-10, 12), rand(5, 14));
     } else {
       const kind = pick<MysteryNpcRelationshipKind>(["Friendship", "Rivalry", "Debt", "Blackmail", "Suspicion"]);
-      const detail = kind === "Friendship"
-        ? mysteryFriendshipDetail(from, to)
-        : pick([
-          `${fullName(from)} owes ${fullName(to)} a favor.`,
-          `${fullName(from)} and ${fullName(to)} were seen arguing before the house was sealed.`,
-          `${fullName(from)} knows an embarrassing secret about ${fullName(to)}.`,
-          `${fullName(from)} considers ${fullName(to)} useful, but not trustworthy.`,
-          `${fullName(from)} and ${fullName(to)} absolutely despise each other.`
-        ]);
+      const detail = mysteryRandomRelationshipDetail(from, to, kind);
       if (detail.includes("absolutely despise")) ensureSharedRavenwoodHistory(from, to);
       addRandom(from, to, kind, detail, roll(0.5), kind === "Friendship" ? rand(6, 14) : rand(-14, 10), kind === "Friendship" ? rand(0, 4) : rand(2, 12));
     }
@@ -3744,7 +3849,7 @@ function makeMysteryNpc(
   usedQuirks = new Set<string>()
 ): MysteryNpc {
   const sex = input.sex ?? pick<Sex>(["Female", "Male"]);
-  const familyName = input.familyName ?? ravenwoodFamilyName(undefined, blockedFamilyNames);
+  const familyName = input.familyName ? cleanRavenwoodNameText(input.familyName) : ravenwoodFamilyName(undefined, blockedFamilyNames);
   if (!input.familyName) blockedFamilyNames.add(familyName.toLowerCase());
   const normalizedAge = clamp(input.age, input.role === "Staff" ? RAVENWOOD_MIN_STAFF_AGE : RAVENWOOD_MIN_NPC_AGE, RAVENWOOD_MAX_NPC_AGE);
   const isChild = normalizedAge < 14;
@@ -3758,7 +3863,7 @@ function makeMysteryNpc(
   );
   return {
     id: input.id ?? uid(),
-    firstName: input.firstName ?? uniqueRavenwoodFirstName(sex, familyName, usedNames, usedFirstNames),
+    firstName: input.firstName ? cleanRavenwoodNameText(input.firstName) : uniqueRavenwoodFirstName(sex, familyName, usedNames, usedFirstNames),
     familyName,
     sex,
     age: normalizedAge,
@@ -3804,17 +3909,17 @@ function createMysteryGameFromDraft(
   const usedQuirks = new Set<string>();
 
   const playerFamilyName = detectiveProfile
-    ? detectiveProfile.familyName.trim()
+    ? cleanRavenwoodNameText(detectiveProfile.familyName.trim())
     : ravenwoodFamilyName(playerInput.familyName.trim());
 
   const playerFirstName = detectiveProfile
-    ? detectiveProfile.firstName.trim()
+    ? cleanRavenwoodNameText(detectiveProfile.firstName.trim())
     : uniqueRavenwoodFirstName(
         playerInput.sex,
         playerFamilyName,
         usedNames,
         usedFirstNames,
-        playerInput.firstName.trim()
+        cleanRavenwoodNameText(playerInput.firstName.trim())
       );
 
   usedFirstNames.add(playerFirstName.toLowerCase());
@@ -4212,6 +4317,7 @@ export default function App() {
   const mysteryTreeSinglePressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detectiveCarouselRef = useRef<ScrollView | null>(null);
   const detectiveCarouselOffsetRef = useRef(0);
+  const mysteryPageScrollRef = useRef<ScrollView | null>(null);
   const storyScrollRef = useRef<ScrollView | null>(null);
   const scrollStoryTopFromCompassRef = useRef(false);
   const storyMessageOffsetsRef = useRef<Record<string, number>>({});
@@ -4225,7 +4331,10 @@ export default function App() {
   );
 
   useEffect(() => {
-    setMysteries((current) => current.map((mystery) => (mystery.sanityLedger?.length ? { ...mystery, sanityLedger: [] } : mystery)));
+    setMysteries((current) => current.map((mystery) => {
+      const cleaned = cleanMysteryNameEncoding(mystery);
+      return cleaned.sanityLedger?.length ? { ...cleaned, sanityLedger: [] } : cleaned;
+    }));
   }, []);
 
   useEffect(() => {
@@ -4285,6 +4394,7 @@ export default function App() {
   useEffect(() => {
     if (screen !== "mystery" || !scrollStoryTopFromCompassRef.current) return;
     const timer = setTimeout(() => {
+      mysteryPageScrollRef.current?.scrollTo({ y: 0, animated: true });
       storyScrollRef.current?.scrollTo({ y: 0, animated: true });
       scrollStoryTopFromCompassRef.current = false;
     }, 80);
@@ -6904,7 +7014,11 @@ export default function App() {
     scrollStoryTopFromCompassRef.current = true;
     setScreen("mystery");
     if (screen === "mystery") {
-      setTimeout(() => storyScrollRef.current?.scrollTo({ y: 0, animated: true }), 0);
+      setTimeout(() => {
+        mysteryPageScrollRef.current?.scrollTo({ y: 0, animated: true });
+        storyScrollRef.current?.scrollTo({ y: 0, animated: true });
+        scrollStoryTopFromCompassRef.current = false;
+      }, 0);
     }
   }
 
@@ -7239,7 +7353,7 @@ export default function App() {
           return mysteryRelationshipLinesFor(from, mystery.npcs, mystery.npcRelationships, mystery.day, mystery.daytime, mystery.player.firstName, mystery.familyGraph)
             .find((line) => line.includes(fullName(to))) ?? relationship.detail;
         }
-        return mysteryRelationshipDetailForSheet(relationship.detail, mystery.npcs, mystery.player.firstName);
+        return mysteryRelationshipDetailForDisplay(relationship, from, to, mystery.npcs, mystery.player.firstName);
       })
       .filter((line): line is string => Boolean(line))
       .map(mysteryResidentRelationshipLineForDisplay)
@@ -7469,6 +7583,7 @@ export default function App() {
     );
 
     return Shell({
+      scrollRef: mysteryPageScrollRef,
       children: (
         <>
           {MysteryHeader({ mystery: activeMystery })}
@@ -7603,7 +7718,7 @@ export default function App() {
     return (
       <Shell>
         <View style={styles.rowBetween}>
-          <Text style={[styles.titleSmall, { color: C.text }]}>Character</Text>
+          <Text style={[styles.titleSmall, { color: C.text }]}>Character Inventory</Text>
           <Button small label="Back" onPress={() => setScreen("mystery")} />
         </View>
         <Card>
@@ -7966,15 +8081,44 @@ export default function App() {
     const treeVertical = (x: number, y1: number, y2: number, color: string, thickness: number, key: string) => (
       <LineSegment key={key} x={x - thickness / 2} y={Math.min(y1, y2)} width={thickness} height={Math.abs(y2 - y1)} color={color} />
     );
-    const siblingRailSegments = (() => {
-      const sameGenerationSiblings = relationshipEdges.filter((edge) => {
-        if (edge.kind !== "sibling") return false;
+    const parentChildRailKeys = new Set<string>();
+    const parentChildRailSegments = (() => {
+      const childIdsByParent = new Map<string, string[]>();
+      for (const edge of relationshipEdges.filter((candidate) => candidate.kind === "parentChild")) {
+        childIdsByParent.set(edge.fromId, [...(childIdsByParent.get(edge.fromId) ?? []), edge.toId]);
+      }
+      return Array.from(childIdsByParent.entries()).flatMap(([parentId, childIds]) => {
+        const parent = nodeLayout.get(parentId);
+        const children = childIds
+          .map((childId) => ({ childId, layout: nodeLayout.get(childId) }))
+          .filter((entry): entry is { childId: string; layout: { x: number; y: number; centerX: number; centerY: number; generation: number } } => Boolean(entry.layout))
+          .filter((entry) => parent ? entry.layout.generation > parent.generation : false)
+          .sort((a, b) => a.layout.centerX - b.layout.centerX);
+        if (!parent || children.length === 0) return [];
+
+        children.forEach((child) => parentChildRailKeys.add(`parent-child-${parentId}-${child.childId}`));
+        const thickness = lineWidthFor("parentChild");
+        const childTopY = Math.min(...children.map((child) => child.layout.y));
+        const railY = parent.y + nodeHeight + Math.max(24, Math.min(62, (childTopY - (parent.y + nodeHeight)) * 0.5));
+        const minChildX = children[0].layout.centerX;
+        const maxChildX = children[children.length - 1].layout.centerX;
+        const keyBase = `parent-child-rail-${parentId}-${children.map((child) => child.childId).join("-")}`;
+        return [
+          treeVertical(parent.centerX, parent.y + nodeHeight, railY, treeTone.familyLine, thickness, `${keyBase}-parent`),
+          ...(children.length > 1 ? [treeHorizontal(minChildX, maxChildX, railY, treeTone.familyLine, thickness, `${keyBase}-rail`)] : []),
+          ...children.map((child) => treeVertical(child.layout.centerX, railY, child.layout.y, treeTone.familyLine, thickness, `${keyBase}-child-${child.childId}`))
+        ];
+      });
+    })();
+    const sameGenerationFamilyRailSegments = (() => {
+      const sameGenerationFamilyEdges = relationshipEdges.filter((edge) => {
+        if (edge.kind !== "sibling" && edge.kind !== "cousin") return false;
         const from = nodeLayout.get(edge.fromId);
         const to = nodeLayout.get(edge.toId);
         return Boolean(from && to && from.generation === to.generation);
       });
       const groups: string[][] = [];
-      for (const edge of sameGenerationSiblings) {
+      for (const edge of sameGenerationFamilyEdges) {
         const leftGroup = groups.find((group) => group.includes(edge.fromId));
         const rightGroup = groups.find((group) => group.includes(edge.toId));
         if (leftGroup && rightGroup && leftGroup !== rightGroup) {
@@ -7988,7 +8132,6 @@ export default function App() {
           groups.push([edge.fromId, edge.toId]);
         }
       }
-      const railCountsByGeneration = new Map<number, number>();
       return groups.flatMap((group) => {
         const uniqueIds = Array.from(new Set(group));
         const layouts = uniqueIds
@@ -7997,20 +8140,20 @@ export default function App() {
           .sort((a, b) => a.centerX - b.centerX);
         if (layouts.length < 2) return [];
         const generation = layouts[0].generation;
-        const count = railCountsByGeneration.get(generation) ?? 0;
-        railCountsByGeneration.set(generation, count + 1);
         const thickness = 4;
-        const railY = Math.max(18, Math.min(...layouts.map((layout) => layout.y)) - 34 - count * 14);
+        const rowLayouts = familyMembers
+          .map((npc) => nodeLayout.get(npc.id))
+          .filter((layout): layout is { x: number; y: number; centerX: number; centerY: number; generation: number } => Boolean(layout && layout.generation === generation));
+        const railY = Math.max(18, Math.min(...rowLayouts.map((layout) => layout.y)) - 34);
         const minX = layouts[0].centerX;
         const maxX = layouts[layouts.length - 1].centerX;
-        const keyBase = `sibling-rail-${generation}-${uniqueIds.sort().join("-")}`;
+        const keyBase = `same-generation-family-rail-${generation}-${uniqueIds.sort().join("-")}`;
         return [
           treeHorizontal(minX, maxX, railY, treeTone.familyLine, thickness, `${keyBase}-horizontal`),
           ...layouts.map((layout, index) => treeVertical(layout.centerX, railY, layout.y, treeTone.familyLine, thickness, `${keyBase}-drop-${index}`))
         ];
       });
     })();
-    const sameGenerationCounts = new Map<number, number>();
     const edgeSegments = relationshipEdges.flatMap((edge) => {
       const from = nodeLayout.get(edge.fromId);
       const to = nodeLayout.get(edge.toId);
@@ -8019,19 +8162,18 @@ export default function App() {
       const toNpc = activeMystery.npcs.find((npc) => npc.id === edge.toId);
       const color = lineColorFor(edge.kind);
       const thickness = lineWidthFor(edge.kind);
+      if (edge.kind === "parentChild" && parentChildRailKeys.has(edge.id)) return [];
       if (from.generation === to.generation) {
-        if (edge.kind === "sibling") return [];
+        if (edge.kind === "sibling" || edge.kind === "cousin") return [];
         if (edge.kind === "spouse" || edge.kind === "partner" || edge.kind === "lover") {
           const left = from.centerX <= to.centerX ? from : to;
           const right = from.centerX <= to.centerX ? to : from;
           return [treeHorizontal(left.x + nodeWidth - 5, right.x + 5, left.centerY - 8, color, thickness, `${edge.id}-same-direct`)];
         }
-        const count = sameGenerationCounts.get(from.generation) ?? 0;
-        sameGenerationCounts.set(from.generation, count + 1);
         const sameLevelLabel = fromNpc && toNpc ? directMysteryTreeRelationshipLabel(fromNpc, toNpc, activeMystery) : "";
-        const routeAbove = edge.kind === "cousin" || Boolean(sameLevelLabel?.match(/\b(sister|brother|cousin)\b/));
+        const routeAbove = Boolean(sameLevelLabel?.match(/\b(sister|brother|cousin)\b/));
         const routeBelow = !routeAbove && from.y < treeCanvasHeight - nodeHeight - 90;
-        const routeY = routeBelow ? from.y + nodeHeight + 22 + count * 13 : from.y - 22 - count * 13;
+        const routeY = routeBelow ? from.y + nodeHeight + 22 : from.y - 22;
         const fromAnchorY = routeBelow ? from.y + nodeHeight : from.y;
         const toAnchorY = routeBelow ? to.y + nodeHeight : to.y;
         return [
@@ -8075,7 +8217,8 @@ export default function App() {
             <ScrollView ref={mysteryTreeVerticalRef} nestedScrollEnabled showsVerticalScrollIndicator>
               <View style={[styles.mysteryFamilyTreeCanvas, { width: treeCanvasWidth, height: treeCanvasHeight }]}>
                 <View pointerEvents="none" style={styles.mysteryFamilyTreeLineLayer}>
-                  {siblingRailSegments}
+                  {parentChildRailSegments}
+                  {sameGenerationFamilyRailSegments}
                   {edgeSegments}
                 </View>
                 {familyMembers.map((npc) => {
@@ -8173,6 +8316,25 @@ export default function App() {
       .map(Number)
       .sort((a, b) => b - a);
 
+    const murderDetails = activeMystery.murders.map((murder, index) => {
+      const proofItems = activeMystery.findables
+        .filter((findable) => findable.kind === "Proof" && findable.relatedMurderIndex === index)
+        .map((findable) => findable.name);
+      const witness = murder.witnessId ? activeMystery.npcs.find((npc) => npc.id === murder.witnessId) : undefined;
+      const details = [
+        `${mysteryNpcName(activeMystery, murder.victimId)} killed by ${mysteryNpcName(activeMystery, murder.killerId)}`,
+        `Day ${murder.day} ${murder.daytime}`,
+        mysteryRoomName(activeMystery, murder.roomId),
+        murder.alternateRoomId ? `fallback ${mysteryRoomName(activeMystery, murder.alternateRoomId)}` : "",
+        murder.method,
+        `motive: ${cleanSentenceEnd(murder.motive)}`,
+        proofItems.length > 0 ? `proof: ${proofItems.join(" | ")}` : "",
+        witness ? `witness: ${fullName(witness)}` : ""
+      ].filter(Boolean);
+
+      return `Murder ${index + 1}: ${details.join("; ")}.`;
+    });
+
     return Shell({
       children: (
         <>
@@ -8209,6 +8371,20 @@ export default function App() {
                   }
                 ]}
               />
+            </>
+          )
+        })}
+        {Card({
+          children: (
+            <>
+              <Text style={[styles.heading, styles.gameHiddenText]}>
+                Murder Details
+              </Text>
+              {murderDetails.map((line) => (
+                <Text key={line} style={[styles.body, styles.gameHiddenText]}>
+                  {line}
+                </Text>
+              ))}
             </>
           )
         })}
