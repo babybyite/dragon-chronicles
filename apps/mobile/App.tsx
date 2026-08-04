@@ -33,6 +33,11 @@ type ThemeName = "dark" | "pastel";
 type Screen = "menu" | "load" | "past" | "settings" | "mysteryBookSelect" | "mysteryDetectiveSelect" | "mysteryPortraitSelect" | "mystery" | "mysteryCharacter" | "mysteryRelations" | "mysteryFamilyTree" | "mysteryMap" | "mysteryJournal";
 type Sex = "Female" | "Male";
 
+const canUseBrowserWindowScroll = () => typeof window !== "undefined" && typeof window.scrollTo === "function";
+const scrollBrowserWindowToTop = () => {
+  if (canUseBrowserWindowScroll()) window.scrollTo(0, 0);
+};
+
 type CharacterDraft = {
   firstName: string;
   familyName: string;
@@ -5539,7 +5544,7 @@ export default function App() {
     body.style.overflow = "hidden";
     html.style.height = "100%";
     body.style.height = "100%";
-    window.scrollTo(0, 0);
+    scrollBrowserWindowToTop();
     return () => {
       window.history.scrollRestoration = previousScrollRestoration;
       html.style.overflow = previousHtmlOverflow;
@@ -5550,7 +5555,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") window.scrollTo(0, 0);
+    scrollBrowserWindowToTop();
   }, [screen, activeMysteryId]);
 
   useEffect(() => {
